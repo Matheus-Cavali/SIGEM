@@ -1,0 +1,19 @@
+# IntelliJ e IDEs
+.idea/
+*.iml
+*.iws
+.vscode/
+
+# Java / Maven
+target/
+*.class
+
+# React / Node
+node_modules/
+dist/
+.env
+.env.local
+
+# Sistema
+.DS_Store
+Thumbs.db
