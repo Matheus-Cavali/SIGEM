@@ -3,6 +3,7 @@
 *.iml
 *.iws
 .vscode/
+config.properties
 
 # Java / Maven
 target/
