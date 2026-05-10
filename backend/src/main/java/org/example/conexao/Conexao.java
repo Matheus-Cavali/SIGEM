@@ -20,9 +20,9 @@ public class Conexao {
             props.load(input);
             input.close();
 
-            String url = props.getProperty("DB_URL");
-            String user = props.getProperty("DB_USER");
-            String pass = props.getProperty("DB_PASS");
+            String url = props.getProperty("db.url");
+            String user = props.getProperty("db.user");
+            String pass = props.getProperty("db.password");
 
             Class.forName("org.postgresql.Driver");
             return DriverManager.getConnection(url, user, pass);

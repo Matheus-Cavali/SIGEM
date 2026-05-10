@@ -11,6 +11,7 @@ import org.example.util.Token;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 
 public class CUsuario implements HttpHandler {
 
@@ -38,14 +39,18 @@ public class CUsuario implements HttpHandler {
 
         if ("POST".equalsIgnoreCase(metodo)) {
             if ("/api/login".equals(path)) {
-                processarLogin(exchange);
+                try {
+                    processarLogin(exchange);
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
             } else if ("/api/cadastrar".equals(path)) {
                 processarCadastro(exchange);
             }
         }
     }
 
-    private void processarLogin(HttpExchange exchange) throws IOException {
+    private void processarLogin(HttpExchange exchange) throws IOException, SQLException {
         byte[] bytes = exchange.getRequestBody().readAllBytes();
         String jsonRecebido = new String(bytes, StandardCharsets.UTF_8);
 
@@ -59,15 +64,17 @@ public class CUsuario implements HttpHandler {
 
 
         if (usuarioDoBanco != null && Criptografia.verificarSenha(usuarioLogin.getSenha(), usuarioDoBanco.getSenha())) {
+            if (usuarioDoBanco.isPrimeiroAcesso()) {
+                String resposta = "{\"status\":\"TROCA_OBRIGATORIA\", \"mensagem\":\"Primeiro acesso detectado. Altere a sua senha.\"}";
 
-
-            String token = Token.gerarToken(usuarioDoBanco.getEmail());
-
-            String resposta = "{\"token\":\"" + token + "\", \"mensagem\":\"Login realizado!\"}";
-            enviarResposta(exchange, resposta, 200);
-
+                enviarResposta(exchange, resposta, 200);
+            }
+            else{
+                String token = Token.gerarToken(usuarioDoBanco.getEmail());
+                String resposta = "{\"token\":\"" + token + "\", \"mensagem\":\"Login realizado!\"}";
+                enviarResposta(exchange, resposta, 200);
+            }
         } else {
-
             enviarResposta(exchange, "{\"erro\":\"E-mail ou senha incorretos\"}", 401);
         }
     }
@@ -88,6 +95,26 @@ public class CUsuario implements HttpHandler {
             enviarResposta(exchange, "{\"mensagem\":\"Cadastro realizado!\"}", 201);
         }
         enviarResposta(exchange, "{\"mensagem\":\"Cadastro não recebido!\"}", 500);
+    }
+
+    private void processarAlteracaoSenha(HttpExchange exchange) throws IOException {
+        byte[] bytes = exchange.getRequestBody().readAllBytes();
+        String jsonRecebido = new String(bytes, StandardCharsets.UTF_8);
+
+        Gson gson = new Gson();
+        Usuario dadosNovos = gson.fromJson(jsonRecebido, Usuario.class);
+
+        String senhaNova = Criptografia.hashSenha(dadosNovos.getSenha());
+        String cpf = dadosNovos.getCpf();
+
+
+        UsuarioDao dao = new UsuarioDao();
+        boolean sucesso = dao.mudarSenha(cpf, senhaNova);
+        if (sucesso) {
+            enviarResposta(exchange, "{\"mensagem\":\"Senha alterada! Faça login novamente.\"}", 200);
+        } else {
+            enviarResposta(exchange, "{\"erro\":\"Erro ao atualizar a senha.\"}", 500);
+        }
     }
 
     private void enviarResposta(HttpExchange exchange, String json, int status) throws IOException {

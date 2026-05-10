@@ -17,6 +17,7 @@ public class Usuario {
     private boolean statusAtivo;
     private String tipoUsuario;
     private String data;
+    private boolean primeiroAcesso;
 
     public Usuario() {}
 
@@ -73,4 +74,8 @@ public class Usuario {
     public void setData(String data) {
         this.data = data;
     }
+
+    public boolean isPrimeiroAcesso() { return primeiroAcesso; }
+
+    public void setPrimeiroAcesso(boolean primeiroAcesso) { this.primeiroAcesso = primeiroAcesso; }
 }
