@@ -39,18 +39,18 @@ public class CUsuario implements HttpHandler {
 
         if ("POST".equalsIgnoreCase(metodo)) {
             if ("/api/login".equals(path)) {
-                try {
-                    processarLogin(exchange);
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
-            } else if ("/api/cadastrar".equals(path)) {
+                processarLogin(exchange);
+            }
+            else if ("/api/cadastrar".equals(path)) {
                 processarCadastro(exchange);
+            }
+            else if ("/api/alterar-Primeira-Senha".equals(path)) {
+                processarAlteracaoSenha(exchange);
             }
         }
     }
 
-    private void processarLogin(HttpExchange exchange) throws IOException, SQLException {
+    private void processarLogin(HttpExchange exchange) throws IOException {
         byte[] bytes = exchange.getRequestBody().readAllBytes();
         String jsonRecebido = new String(bytes, StandardCharsets.UTF_8);
 

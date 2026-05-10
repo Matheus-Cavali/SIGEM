@@ -17,6 +17,7 @@ public class Main {
 
             server.createContext("/api/login", CUsuario.getInstancia());
             server.createContext("/api/cadastrar", CUsuario.getInstancia());
+            server.createContext("/api/alterar-Primeira-Senha", CUsuario.getInstancia());
 
             server.setExecutor(null);
             server.start();

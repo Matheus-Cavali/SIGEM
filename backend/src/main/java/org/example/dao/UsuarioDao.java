@@ -111,6 +111,7 @@ public class UsuarioDao {
                     usu.setEmail(rs.getString("email"));
                     usu.setSenha(rs.getString("senha"));
                     usu.setTipoUsuario(rs.getString("tipo_usuario"));
+                    usu.setPrimeiroAcesso(rs.getBoolean("primeiro_acesso"));
 
                     return usu;
                 }
@@ -145,7 +146,7 @@ public class UsuarioDao {
     }
 
     public boolean mudarSenha(String cpf, String novasenha) {
-        String sql = "UPDATE usuario SET senha = ? primeiro_acesso = false WHERE CPF = ?";
+        String sql = "UPDATE usuario SET senha = ?, primeiro_acesso = false WHERE CPF = ?";
         try (Connection conn = Conexao.getConexao();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 

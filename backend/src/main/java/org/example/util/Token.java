@@ -2,14 +2,33 @@ package org.example.util;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import java.io.InputStream;
 import java.util.Date;
+import java.util.Properties;
 
-public class Token{
-    private static final String SECRET_KEY = System.getenv("JWT_SECRET");
+public class Token {
+    private static String SECRET_KEY;
 
     static {
-        if (SECRET_KEY == null) {
-            System.err.println("ERRO CRÍTICO: A variável JWT_SECRET não foi configurada!");
+        try {
+            Properties props = new Properties();
+
+            InputStream input = Token.class.getResourceAsStream("/properties/config.properties");
+
+            if (input == null) {
+                throw new RuntimeException("Arquivo config.properties não encontrado em resources/properties/");
+            }
+
+            props.load(input);
+            input.close();
+
+            SECRET_KEY = props.getProperty("jwt.secret");
+
+            if (SECRET_KEY == null || SECRET_KEY.trim().isEmpty()) {
+                System.err.println("ERRO CRÍTICO: A variável jwt.secret não foi configurada no config.properties!");
+            }
+        } catch (Exception e) {
+            System.err.println("Erro ao carregar a chave do Token: " + e.getMessage());
         }
     }
 
