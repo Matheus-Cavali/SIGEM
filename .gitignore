@@ -2,18 +2,43 @@
 .idea/
 *.iml
 *.iws
+*.ipr
 .vscode/
-config.properties
 
 # Java / Maven
 target/
 *.class
+!.mvn/wrapper/maven-wrapper.jar
 
 # React / Node
 node_modules/
 dist/
 .env
 .env.local
+
+# Config
+config.properties
+proprieties/config.properties
+
+# Kotlin
+.kotlin
+
+# Eclipse
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
 
 # Sistema
 .DS_Store
