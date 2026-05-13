@@ -41,104 +41,113 @@ public class CInvestimento implements HttpHandler {
 
         if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
             exchange.sendResponseHeaders(204, -1);
-            return;
-        }
+        } else {
+            String path = exchange.getRequestURI().getPath();
+            String metodo = exchange.getRequestMethod();
 
-        String path = exchange.getRequestURI().getPath();
-        String metodo = exchange.getRequestMethod();
-
-        try {
-            if ("POST".equalsIgnoreCase(metodo) && "/api/investimentos".equals(path)) {
-                registrarInvestimento(exchange);
+            try {
+                if ("POST".equalsIgnoreCase(metodo) && "/api/investimentos".equals(path)) {
+                    registrarInvestimento(exchange);
+                }
+                else if ("GET".equalsIgnoreCase(metodo) && "/api/investimentos".equals(path)) {
+                    listarInvestimentos(exchange);
+                }
+                else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/investimentos/\\d+")) {
+                    buscarInvestimento(exchange);
+                }
+                else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/investimentos/\\d+")) {
+                    atualizarInvestimento(exchange);
+                }
+                else if ("GET".equalsIgnoreCase(metodo) && (path.matches("/api/investimentos/\\d+/aportes") || path.matches("/api/investimentos/\\d+/aporte"))) {
+                    listarAportes(exchange);
+                }
+                else if ("POST".equalsIgnoreCase(metodo) && (path.matches("/api/investimentos/\\d+/aportes") || path.matches("/api/investimentos/\\d+/aporte"))) {
+                    lancarAporte(exchange);
+                }
+                else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/investimentos/\\d+")) {
+                    removerInvestimento(exchange);
+                }
+                else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/investimentos/\\d+/aportes/\\d+")) {
+                    removerAporte(exchange);
+                }
+                else {
+                    enviarResposta(exchange, "{\"erro\":\"Rota n\u00e3o encontrada\"}", 404);
+                }
+            } catch (Exception e) {
+                System.err.println("ERRO no CInvestimento: " + e.getMessage());
+                e.printStackTrace();
+                String msg = e.getMessage() != null ? e.getMessage().replace("\"", "'").replace("\n", " ") : "Erro desconhecido";
+                enviarResposta(exchange, "{\"erro\":\"" + msg + "\"}", 500);
             }
-            else if ("GET".equalsIgnoreCase(metodo) && "/api/investimentos".equals(path)) {
-                listarInvestimentos(exchange);
-            }
-            else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/investimentos/\\d+")) {
-                buscarInvestimento(exchange);
-            }
-            else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/investimentos/\\d+")) {
-                atualizarInvestimento(exchange);
-            }
-            else if ("GET".equalsIgnoreCase(metodo) && (path.matches("/api/investimentos/\\d+/aportes") || path.matches("/api/investimentos/\\d+/aporte"))) {
-                listarAportes(exchange);
-            }
-            else if ("POST".equalsIgnoreCase(metodo) && (path.matches("/api/investimentos/\\d+/aportes") || path.matches("/api/investimentos/\\d+/aporte"))) {
-                lancarAporte(exchange);
-            }
-            else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/investimentos/\\d+")) {
-                removerInvestimento(exchange);
-            }
-            else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/investimentos/\\d+/aportes/\\d+")) {
-                removerAporte(exchange);
-            }
-            else {
-                enviarResposta(exchange, "{\"erro\":\"Rota não encontrada\"}", 404);
-            }
-        } catch (Exception e) {
-            System.err.println("ERRO no CInvestimento: " + e.getMessage());
-            e.printStackTrace();
-            String msg = e.getMessage() != null ? e.getMessage().replace("\"", "'").replace("\n", " ") : "Erro desconhecido";
-            enviarResposta(exchange, "{\"erro\":\"" + msg + "\"}", 500);
         }
     }
 
     private String emailDoToken(HttpExchange exchange) {
+        String resultado = null;
         String auth = exchange.getRequestHeaders().getFirst("Authorization");
-        if (auth == null || !auth.startsWith("Bearer ")) return null;
-        return Token.validarToken(auth.substring(7));
+        if (auth != null && auth.startsWith("Bearer ")) {
+            resultado = Token.validarToken(auth.substring(7));
+        }
+        return resultado;
     }
 
     private boolean usuarioTemPermissao(HttpExchange exchange, String recursoNome) {
+        boolean permitido = false;
         String email = emailDoToken(exchange);
-        if (email == null) return false;
-        UsuarioDao uDao = new UsuarioDao();
-        Usuario u = uDao.buscarPorEmail(email);
-        if (u == null) return false;
-        if (u.getNivelAcesso() == 1) return true;
-        RecursoSistemaDao rDao = new RecursoSistemaDao();
-        List<RecursoSistema> permissoes = rDao.listarPorUsuario(u.getId());
-        for (RecursoSistema r : permissoes) {
-            if (r.getNome().equals(recursoNome)) return true;
+        if (email != null) {
+            UsuarioDao uDao = new UsuarioDao();
+            Usuario u = uDao.buscarPorEmail(email);
+            if (u != null) {
+                if (u.getNivelAcesso() == 1) {
+                    permitido = true;
+                } else {
+                    RecursoSistemaDao rDao = new RecursoSistemaDao();
+                    List<RecursoSistema> permissoes = rDao.listarPorUsuario(u.getId());
+                    for (RecursoSistema r : permissoes) {
+                        if (r.getNome().equals(recursoNome)) {
+                            permitido = true;
+                        }
+                    }
+                }
+            }
         }
-        return false;
+        return permitido;
     }
 
     private void registrarInvestimento(HttpExchange exchange) throws IOException {
-        if (!usuarioTemPermissao(exchange, "REGISTRAR_INVESTIMENTO")) {
-            enviarResposta(exchange, "{\"erro\":\"Acesso negado. Você não tem permissão para registrar investimentos.\"}", 403);
-            return;
-        }
-        byte[] bytes = exchange.getRequestBody().readAllBytes();
-        String json = new String(bytes, StandardCharsets.UTF_8);
-        Gson gson = new Gson();
-        JsonObject body = gson.fromJson(json, JsonObject.class);
+        if (usuarioTemPermissao(exchange, "REGISTRAR_INVESTIMENTO")) {
+            byte[] bytes = exchange.getRequestBody().readAllBytes();
+            String json = new String(bytes, StandardCharsets.UTF_8);
+            Gson gson = new Gson();
+            JsonObject body = gson.fromJson(json, JsonObject.class);
 
-        String nome = body.get("nome").getAsString();
-        BigDecimal meta = body.get("valorMeta").getAsBigDecimal();
-        String dataStr = body.get("dataAbertura").getAsString();
-        int colaboradorId = body.get("colaboradorId").getAsInt();
+            String nome = body.get("nome").getAsString();
+            BigDecimal meta = body.get("valorMeta").getAsBigDecimal();
+            String dataStr = body.get("dataAbertura").getAsString();
+            int colaboradorId = body.get("colaboradorId").getAsInt();
 
-        InvestimentoFacade facade = new InvestimentoFacade();
-        String erro = facade.validarDadosInvestimento(nome, meta, dataStr);
-        if (erro != null) {
-            enviarResposta(exchange, "{\"erro\":\"" + erro + "\"}", 400);
-            return;
-        }
+            InvestimentoFacade facade = new InvestimentoFacade();
+            String erro = facade.validarDadosInvestimento(nome, meta, dataStr);
+            if (erro != null) {
+                enviarResposta(exchange, "{\"erro\":\"" + erro + "\"}", 400);
+            } else {
+                InvestimentoFuturo inv = new InvestimentoFuturo();
+                inv.setNome(nome);
+                inv.setValorMeta(meta);
+                inv.setDataAbertura(Data.parseFlexivel(dataStr));
+                inv.setColaboradorId(colaboradorId);
 
-        InvestimentoFuturo inv = new InvestimentoFuturo();
-        inv.setNome(nome);
-        inv.setValorMeta(meta);
-        inv.setDataAbertura(Data.parseFlexivel(dataStr));
-        inv.setColaboradorId(colaboradorId);
+                InvestimentoFuturoDao dao = new InvestimentoFuturoDao();
+                int id = dao.inserir(inv);
 
-        InvestimentoFuturoDao dao = new InvestimentoFuturoDao();
-        int id = dao.inserir(inv);
-
-        if (id > 0) {
-            enviarResposta(exchange, "{\"mensagem\":\"Investimento registrado com sucesso\",\"id\":" + id + "}", 201);
+                if (id > 0) {
+                    enviarResposta(exchange, "{\"mensagem\":\"Investimento registrado com sucesso\",\"id\":" + id + "}", 201);
+                } else {
+                    enviarResposta(exchange, "{\"erro\":\"Erro ao registrar investimento\"}", 500);
+                }
+            }
         } else {
-            enviarResposta(exchange, "{\"erro\":\"Erro ao registrar investimento\"}", 500);
+            enviarResposta(exchange, "{\"erro\":\"Acesso negado. Voc\u00ea n\u00e3o tem permiss\u00e3o para registrar investimentos.\"}", 403);
         }
     }
 
@@ -176,27 +185,26 @@ public class CInvestimento implements HttpHandler {
     }
 
     private void buscarInvestimento(HttpExchange exchange) throws IOException {
-        if (emailDoToken(exchange) == null) {
-            enviarResposta(exchange, "{\"erro\":\"Acesso negado. Faça login.\"}", 401);
-            return;
-        }
-        int id = extrairId(exchange.getRequestURI().getPath());
-        InvestimentoFuturoDao dao = new InvestimentoFuturoDao();
-        InvestimentoFuturo inv = dao.buscarPorId(id);
+        if (emailDoToken(exchange) != null) {
+            int id = extrairId(exchange.getRequestURI().getPath());
+            InvestimentoFuturoDao dao = new InvestimentoFuturoDao();
+            InvestimentoFuturo inv = dao.buscarPorId(id);
 
-        if (inv == null) {
-            enviarResposta(exchange, "{\"erro\":\"Investimento não encontrado\"}", 404);
-            return;
+            if (inv == null) {
+                enviarResposta(exchange, "{\"erro\":\"Investimento n\u00e3o encontrado\"}", 404);
+            } else {
+                JsonObject resp = new JsonObject();
+                resp.addProperty("id", inv.getId());
+                resp.addProperty("nome", inv.getNome());
+                resp.addProperty("valorMeta", inv.getValorMeta());
+                resp.addProperty("dataAbertura", inv.getDataAbertura().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+                resp.addProperty("status", inv.getStatus());
+                resp.addProperty("saldoAtual", inv.getSaldoAtual());
+                enviarResposta(exchange, resp.toString(), 200);
+            }
+        } else {
+            enviarResposta(exchange, "{\"erro\":\"Acesso negado. Fa\u00e7a login.\"}", 401);
         }
-
-        JsonObject resp = new JsonObject();
-        resp.addProperty("id", inv.getId());
-        resp.addProperty("nome", inv.getNome());
-        resp.addProperty("valorMeta", inv.getValorMeta());
-        resp.addProperty("dataAbertura", inv.getDataAbertura().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
-        resp.addProperty("status", inv.getStatus());
-        resp.addProperty("saldoAtual", inv.getSaldoAtual());
-        enviarResposta(exchange, resp.toString(), 200);
     }
 
     private void atualizarInvestimento(HttpExchange exchange) throws IOException {
@@ -208,144 +216,156 @@ public class CInvestimento implements HttpHandler {
 
         boolean alterandoStatus = body.has("status");
         if (alterandoStatus && !usuarioPodeGerenciar(exchange)) {
-            enviarResposta(exchange, "{\"erro\":\"Acesso negado. Apenas administradores podem alterar o status do investimento.\"}", 403);
-            return;
-        }
-
-        InvestimentoFuturoDao dao = new InvestimentoFuturoDao();
-        InvestimentoFuturo inv = dao.buscarPorId(id);
-        if (inv == null) {
-            enviarResposta(exchange, "{\"erro\":\"Investimento não encontrado\"}", 404);
-            return;
-        }
-
-        if (body.has("nome")) inv.setNome(body.get("nome").getAsString());
-        if (body.has("valorMeta")) inv.setValorMeta(body.get("valorMeta").getAsBigDecimal());
-        if (body.has("status")) inv.setStatus(body.get("status").getAsString());
-
-        if (dao.atualizar(inv)) {
-            enviarResposta(exchange, "{\"mensagem\":\"Investimento atualizado\"}", 200);
+            enviarResposta(exchange, "{\"erro\":\"Acesso negado por falta de permiss\u00e3o.\"}", 403);
         } else {
-            enviarResposta(exchange, "{\"erro\":\"Erro ao atualizar\"}", 500);
+            InvestimentoFuturoDao dao = new InvestimentoFuturoDao();
+            InvestimentoFuturo inv = dao.buscarPorId(id);
+
+            if (inv == null) {
+                enviarResposta(exchange, "{\"erro\":\"Investimento n\u00e3o encontrado\"}", 404);
+            } else {
+                if (body.has("nome")) inv.setNome(body.get("nome").getAsString());
+                if (body.has("valorMeta")) inv.setValorMeta(body.get("valorMeta").getAsBigDecimal());
+                if (body.has("status")) inv.setStatus(body.get("status").getAsString());
+
+                if (dao.atualizar(inv)) {
+                    enviarResposta(exchange, "{\"mensagem\":\"Investimento atualizado\"}", 200);
+                } else {
+                    enviarResposta(exchange, "{\"erro\":\"Erro ao atualizar\"}", 500);
+                }
+            }
         }
     }
 
     private void lancarAporte(HttpExchange exchange) throws IOException {
-        if (!usuarioTemPermissao(exchange, "LANCAR_APORTE")) {
-            enviarResposta(exchange, "{\"erro\":\"Acesso negado. Você não tem permissão para lançar aportes.\"}", 403);
-            return;
-        }
-        int investimentoId = extrairId(exchange.getRequestURI().getPath());
-        byte[] bytes = exchange.getRequestBody().readAllBytes();
-        String json = new String(bytes, StandardCharsets.UTF_8);
-        Gson gson = new Gson();
-        JsonObject body = gson.fromJson(json, JsonObject.class);
+        if (usuarioTemPermissao(exchange, "LANCAR_APORTE")) {
+            int investimentoId = extrairId(exchange.getRequestURI().getPath());
+            byte[] bytes = exchange.getRequestBody().readAllBytes();
+            String json = new String(bytes, StandardCharsets.UTF_8);
+            Gson gson = new Gson();
+            JsonObject body = gson.fromJson(json, JsonObject.class);
 
-        BigDecimal valor = body.get("valorAporte").getAsBigDecimal();
-        String dataStr = body.get("dataAporte").getAsString();
-        int colaboradorId = body.get("colaboradorId").getAsInt();
+            BigDecimal valor = body.get("valorAporte").getAsBigDecimal();
+            String dataStr = body.get("dataAporte").getAsString();
+            int colaboradorId = body.get("colaboradorId").getAsInt();
 
-        InvestimentoFacade facade = new InvestimentoFacade();
-        String erro = facade.validarDadosAporte(valor, dataStr);
-        if (erro != null) {
-            enviarResposta(exchange, "{\"erro\":\"" + erro + "\"}", 400);
-            return;
-        }
+            InvestimentoFacade facade = new InvestimentoFacade();
+            String erro = facade.validarDadosAporte(valor, dataStr);
+            if (erro != null) {
+                enviarResposta(exchange, "{\"erro\":\"" + erro + "\"}", 400);
+            } else {
+                InvestimentoFuturoDao invDao = new InvestimentoFuturoDao();
+                if (invDao.buscarPorId(investimentoId) == null) {
+                    enviarResposta(exchange, "{\"erro\":\"Investimento n\u00e3o encontrado\"}", 404);
+                } else {
+                    AporteInvestimento aporte = new AporteInvestimento();
+                    aporte.setInvestimentoFuturoId(investimentoId);
+                    aporte.setValorAporte(valor);
+                    aporte.setDataAporte(Data.parseFlexivel(dataStr));
+                    aporte.setColaboradorId(colaboradorId);
 
-        InvestimentoFuturoDao invDao = new InvestimentoFuturoDao();
-        if (invDao.buscarPorId(investimentoId) == null) {
-            enviarResposta(exchange, "{\"erro\":\"Investimento não encontrado\"}", 404);
-            return;
-        }
+                    AporteInvestimentoDao apDao = new AporteInvestimentoDao();
+                    int id = apDao.inserir(aporte);
 
-        AporteInvestimento aporte = new AporteInvestimento();
-        aporte.setInvestimentoFuturoId(investimentoId);
-        aporte.setValorAporte(valor);
-        aporte.setDataAporte(Data.parseFlexivel(dataStr));
-        aporte.setColaboradorId(colaboradorId);
-
-        AporteInvestimentoDao apDao = new AporteInvestimentoDao();
-        int id = apDao.inserir(aporte);
-
-        if (id > 0) {
-            BigDecimal saldo = invDao.calcularSaldo(investimentoId);
-            enviarResposta(exchange, "{\"mensagem\":\"Aporte registrado com sucesso\",\"id\":" + id + ",\"saldoAtual\":" + saldo + "}", 201);
+                    if (id > 0) {
+                        BigDecimal saldo = invDao.calcularSaldo(investimentoId);
+                        enviarResposta(exchange, "{\"mensagem\":\"Aporte registrado com sucesso\",\"id\":" + id + ",\"saldoAtual\":" + saldo + "}", 201);
+                    } else {
+                        enviarResposta(exchange, "{\"erro\":\"Erro ao registrar aporte\"}", 500);
+                    }
+                }
+            }
         } else {
-            enviarResposta(exchange, "{\"erro\":\"Erro ao registrar aporte\"}", 500);
+            enviarResposta(exchange, "{\"erro\":\"Acesso negado. Voc\u00ea n\u00e3o tem permiss\u00e3o para lan\u00e7ar aportes.\"}", 403);
         }
     }
 
     private void listarAportes(HttpExchange exchange) throws IOException {
-        if (emailDoToken(exchange) == null) {
-            enviarResposta(exchange, "{\"erro\":\"Acesso negado. Faça login.\"}", 401);
-            return;
-        }
-        int investimentoId = extrairId(exchange.getRequestURI().getPath());
-        AporteInvestimentoDao dao = new AporteInvestimentoDao();
-        List<AporteInvestimento> lista = dao.listarPorInvestimento(investimentoId);
+        if (emailDoToken(exchange) != null) {
+            int investimentoId = extrairId(exchange.getRequestURI().getPath());
+            AporteInvestimentoDao dao = new AporteInvestimentoDao();
+            List<AporteInvestimento> lista = dao.listarPorInvestimento(investimentoId);
 
-        StringBuilder json = new StringBuilder("[");
-        for (int i = 0; i < lista.size(); i++) {
-            AporteInvestimento a = lista.get(i);
-            json.append("{");
-            json.append("\"id\":").append(a.getId()).append(",");
-            json.append("\"valorAporte\":").append(a.getValorAporte()).append(",");
-            json.append("\"dataAporte\":\"").append(a.getDataAporte().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))).append("\"");
-            json.append("}");
-            if (i < lista.size() - 1) json.append(",");
+            StringBuilder json = new StringBuilder("[");
+            for (int i = 0; i < lista.size(); i++) {
+                AporteInvestimento a = lista.get(i);
+                json.append("{");
+                json.append("\"id\":").append(a.getId()).append(",");
+                json.append("\"valorAporte\":").append(a.getValorAporte()).append(",");
+                json.append("\"dataAporte\":\"").append(a.getDataAporte().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))).append("\"");
+                json.append("}");
+                if (i < lista.size() - 1) json.append(",");
+            }
+            json.append("]");
+            enviarResposta(exchange, json.toString(), 200);
+        } else {
+            enviarResposta(exchange, "{\"erro\":\"Acesso negado. Fa\u00e7a login.\"}", 401);
         }
-        json.append("]");
-        enviarResposta(exchange, json.toString(), 200);
     }
 
     private boolean usuarioPodeGerenciar(HttpExchange exchange) {
+        boolean resultado = false;
         String email = emailDoToken(exchange);
-        if (email == null) return false;
-        UsuarioDao uDao = new UsuarioDao();
-        Usuario u = uDao.buscarPorEmail(email);
-        return u != null && u.getNivelAcesso() == 1;
+        if (email != null) {
+            UsuarioDao uDao = new UsuarioDao();
+            Usuario u = uDao.buscarPorEmail(email);
+            if (u != null) {
+                if (u.getNivelAcesso() == 1) {
+                    resultado = true;
+                } else if (usuarioTemPermissao(exchange, "REGISTRAR_INVESTIMENTO")) {
+                    resultado = true;
+                }
+            }
+        }
+        return resultado;
     }
 
     private void removerInvestimento(HttpExchange exchange) throws IOException {
-        if (!usuarioPodeGerenciar(exchange)) {
-            enviarResposta(exchange, "{\"erro\":\"Acesso negado. Apenas administradores podem remover investimentos.\"}", 403);
-            return;
-        }
-        int id = extrairId(exchange.getRequestURI().getPath());
-        InvestimentoFuturoDao dao = new InvestimentoFuturoDao();
-        if (dao.deletar(id)) {
-            enviarResposta(exchange, "{\"mensagem\":\"Investimento removido\"}", 200);
+        if (usuarioPodeGerenciar(exchange)) {
+            int id = extrairId(exchange.getRequestURI().getPath());
+            InvestimentoFuturoDao dao = new InvestimentoFuturoDao();
+            if (dao.deletar(id)) {
+                enviarResposta(exchange, "{\"mensagem\":\"Investimento removido\"}", 200);
+            } else {
+                enviarResposta(exchange, "{\"erro\":\"Erro ao remover investimento\"}", 500);
+            }
         } else {
-            enviarResposta(exchange, "{\"erro\":\"Erro ao remover investimento\"}", 500);
+            enviarResposta(exchange, "{\"erro\":\"Acesso negado.\"}", 403);
         }
     }
 
     private void removerAporte(HttpExchange exchange) throws IOException {
-        if (!usuarioPodeGerenciar(exchange)) {
-            enviarResposta(exchange, "{\"erro\":\"Acesso negado. Apenas administradores podem remover aportes.\"}", 403);
-            return;
-        }
-        String[] partes = exchange.getRequestURI().getPath().split("/");
-        int aporteId = Integer.parseInt(partes[partes.length - 1]);
-        AporteInvestimentoDao dao = new AporteInvestimentoDao();
-        if (dao.deletar(aporteId)) {
-            enviarResposta(exchange, "{\"mensagem\":\"Aporte removido\"}", 200);
+        if (usuarioPodeGerenciar(exchange)) {
+            String[] partes = exchange.getRequestURI().getPath().split("/");
+            int aporteId = Integer.parseInt(partes[partes.length - 1]);
+            AporteInvestimentoDao dao = new AporteInvestimentoDao();
+            if (dao.deletar(aporteId)) {
+                enviarResposta(exchange, "{\"mensagem\":\"Aporte removido\"}", 200);
+            } else {
+                enviarResposta(exchange, "{\"erro\":\"Erro ao remover aporte\"}", 500);
+            }
         } else {
-            enviarResposta(exchange, "{\"erro\":\"Erro ao remover aporte\"}", 500);
+            enviarResposta(exchange, "{\"erro\":\"Acesso negado.\"}", 403);
         }
     }
 
     private int extrairId(String path) {
+        int resultado = -1;
         String[] partes = path.split("/");
-        for (int i = 0; i < partes.length; i++) {
-            if (partes[i].matches("\\d+")) return Integer.parseInt(partes[i]);
+        for (int i = 0; i < partes.length && resultado == -1; i++) {
+            if (partes[i].matches("\\d+")) {
+                resultado = Integer.parseInt(partes[i]);
+            }
         }
-        return -1;
+        return resultado;
     }
 
     private String escaparJson(String s) {
-        if (s == null) return "";
-        return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
+        String resultado = "";
+        if (s != null) {
+            resultado = s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
+        }
+        return resultado;
     }
 
     private void enviarResposta(HttpExchange exchange, String json, int status) throws IOException {

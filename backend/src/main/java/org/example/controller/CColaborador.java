@@ -31,13 +31,11 @@ public class CColaborador implements HttpHandler {
 
         if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
             exchange.sendResponseHeaders(204, -1);
-            return;
-        }
+        } else {
+            String path = exchange.getRequestURI().getPath();
+            String metodo = exchange.getRequestMethod();
 
-        String path = exchange.getRequestURI().getPath();
-        String metodo = exchange.getRequestMethod();
-
-        if ("GET".equalsIgnoreCase(metodo) && "/api/colaboradores".equals(path)) {
+            if ("GET".equalsIgnoreCase(metodo) && "/api/colaboradores".equals(path)) {
             listar(exchange);
         }
         else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/colaboradores/\\d+")) {
@@ -49,6 +47,7 @@ public class CColaborador implements HttpHandler {
         else {
             enviarResposta(exchange, "{\"erro\":\"Rota não encontrada\"}", 404);
         }
+            }
     }
 
     private void listar(HttpExchange exchange) throws IOException {
@@ -136,11 +135,14 @@ public class CColaborador implements HttpHandler {
     }
 
     private int extrairId(String path) {
+        int resultado = -1;
         String[] partes = path.split("/");
-        for (int i = 0; i < partes.length; i++) {
-            if (partes[i].matches("\\d+")) return Integer.parseInt(partes[i]);
+        for (int i = 0; i < partes.length && resultado == -1; i++) {
+            if (partes[i].matches("\\d+")) {
+                resultado = Integer.parseInt(partes[i]);
+            }
         }
-        return -1;
+        return resultado;
     }
 
     private String escaparJson(String s) {
