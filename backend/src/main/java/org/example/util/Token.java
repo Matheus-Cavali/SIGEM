@@ -2,6 +2,7 @@ package org.example.util;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import java.io.InputStream;
 import java.util.Date;
 import java.util.Properties;
@@ -32,10 +33,12 @@ public class Token {
         }
     }
 
-    public static String gerarToken(String email) {
+    public static String gerarToken(String email, int nivelAcesso, String tipoUsuario) {
         return JWT.create()
                 .withSubject(email)
-                .withExpiresAt(new Date(System.currentTimeMillis() + 3600000)) // Expira em 1 hora
+                .withClaim("nivelAcesso", nivelAcesso)
+                .withClaim("tipoUsuario", tipoUsuario)
+                .withExpiresAt(new Date(System.currentTimeMillis() + 3600000))
                 .sign(Algorithm.HMAC256(SECRET_KEY));
     }
 
@@ -45,6 +48,24 @@ public class Token {
                     .build()
                     .verify(token)
                     .getSubject();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static int extrairNivelAcesso(String token) {
+        try {
+            DecodedJWT jwt = JWT.require(Algorithm.HMAC256(SECRET_KEY)).build().verify(token);
+            return jwt.getClaim("nivelAcesso").asInt();
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    public static String extrairTipoUsuario(String token) {
+        try {
+            DecodedJWT jwt = JWT.require(Algorithm.HMAC256(SECRET_KEY)).build().verify(token);
+            return jwt.getClaim("tipoUsuario").asString();
         } catch (Exception e) {
             return null;
         }

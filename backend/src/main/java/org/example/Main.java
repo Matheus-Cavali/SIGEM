@@ -2,6 +2,10 @@ package org.example;
 
 import com.sun.net.httpserver.HttpServer;
 import org.example.controller.CUsuario;
+import org.example.controller.CInvestimento;
+import org.example.controller.CColaborador;
+import org.example.controller.CVoluntario;
+import org.example.dao.InvestimentoFuturoDao;
 import org.example.dao.UsuarioDao;
 
 import java.net.InetSocketAddress;
@@ -13,11 +17,19 @@ public class Main {
         try {
             UsuarioDao dao = new UsuarioDao();
             dao.criarAdmin();
+            InvestimentoFuturoDao invDao = new InvestimentoFuturoDao();
+            invDao.migrarStatus();
             HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
 
             server.createContext("/api/login", CUsuario.getInstancia());
             server.createContext("/api/cadastrar", CUsuario.getInstancia());
             server.createContext("/api/alterar-Primeira-Senha", CUsuario.getInstancia());
+            server.createContext("/api/cadastrar-interno", CUsuario.getInstancia());
+            server.createContext("/api/usuarios", CUsuario.getInstancia());
+            server.createContext("/api/investimentos", CInvestimento.getInstancia());
+            server.createContext("/api/colaboradores", CColaborador.getInstancia());
+            server.createContext("/api/voluntarios", CVoluntario.getInstancia());
+            server.createContext("/api/recurso", CUsuario.getInstancia());
 
             server.setExecutor(null);
             server.start();
