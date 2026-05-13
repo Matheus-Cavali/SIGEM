@@ -44,38 +44,33 @@ public class CUsuario implements HttpHandler {
             String metodo = exchange.getRequestMethod();
 
             if ("POST".equalsIgnoreCase(metodo)) {
-            if ("/api/login".equals(path)) {
-                processarLogin(exchange);
+                if ("/api/login".equals(path)) {
+                    processarLogin(exchange);
+                } else if ("/api/cadastrar".equals(path)) {
+                    processarCadastro(exchange);
+                } else if ("/api/alterar-Primeira-Senha".equals(path)) {
+                    processarAlteracaoSenha(exchange);
+                } else if ("/api/cadastrar-interno".equals(path)) {
+                    processarCadastroInterno(exchange);
+                }
+            } else if ("GET".equalsIgnoreCase(metodo) && "/api/usuarios".equals(path)) {
+                listarUsuarios(exchange);
+            } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+")) {
+                buscarUsuario(exchange);
+            } else if ("PATCH".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+/status")) {
+                alterarStatusUsuario(exchange);
+            } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+")) {
+                atualizarUsuario(exchange);
+            } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/recurso/\\d+/permissoes")) {
+                listarPermissoes(exchange);
+            } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/recurso/\\d+/permissoes")) {
+                atualizarPermissoes(exchange);
+            } else if ("GET".equalsIgnoreCase(metodo) && "/api/recurso".equals(path)) {
+                listarTodosRecursos(exchange);
+            } else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+")) {
+                removerUsuario(exchange);
             }
-            else if ("/api/cadastrar".equals(path)) {
-                processarCadastro(exchange);
-            }
-            else if ("/api/alterar-Primeira-Senha".equals(path)) {
-                processarAlteracaoSenha(exchange);
-            }
-            else if ("/api/cadastrar-interno".equals(path)) {
-                processarCadastroInterno(exchange);
-            }
         }
-        else if ("GET".equalsIgnoreCase(metodo) && "/api/usuarios".equals(path)) {
-            listarUsuarios(exchange);
-        }
-        else if ("PATCH".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+/status")) {
-            alterarStatusUsuario(exchange);
-        }
-        else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/recurso/\\d+/permissoes")) {
-            listarPermissoes(exchange);
-        }
-        else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/recurso/\\d+/permissoes")) {
-            atualizarPermissoes(exchange);
-        }
-        else if ("GET".equalsIgnoreCase(metodo) && "/api/recurso".equals(path)) {
-            listarTodosRecursos(exchange);
-        }
-        else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+")) {
-            removerUsuario(exchange);
-        }
-            }
     }
 
     private void processarLogin(HttpExchange exchange) throws IOException {
@@ -84,70 +79,69 @@ public class CUsuario implements HttpHandler {
             String jsonRecebido = new String(bytes, StandardCharsets.UTF_8);
 
             if (jsonRecebido == null || jsonRecebido.trim().isEmpty()) {
-                enviarResposta(exchange, "{\"erro\":\"Corpo da requisição vazio\"}", 400);
-                return;
-            }
-
-            Gson gson = new Gson();
-            Usuario usuarioLogin = gson.fromJson(jsonRecebido, Usuario.class);
-
-            if (usuarioLogin == null || usuarioLogin.getEmail() == null || usuarioLogin.getEmail().trim().isEmpty()) {
-                enviarResposta(exchange, "{\"erro\":\"Email ou CPF \u00e9 obrigat\u00f3rio\"}", 400);
+                enviarResposta(exchange, "{\"erro\":\"Corpo da requisi\u00e7\u00e3o vazio\"}", 400);
             } else {
-                UsuarioDao dao = new UsuarioDao();
-                Usuario usuarioDoBanco;
-                String loginInput = usuarioLogin.getEmail().trim();
+                Gson gson = new Gson();
+                Usuario usuarioLogin = gson.fromJson(jsonRecebido, Usuario.class);
 
-                if (loginInput.contains("@")) {
-                    usuarioDoBanco = dao.buscarPorEmail(loginInput);
+                if (usuarioLogin == null || usuarioLogin.getEmail() == null || usuarioLogin.getEmail().trim().isEmpty()) {
+                    enviarResposta(exchange, "{\"erro\":\"Email ou CPF \u00e9 obrigat\u00f3rio\"}", 400);
                 } else {
-                    String cpfLimpo = loginInput.replaceAll("[^0-9]", "");
-                    if (cpfLimpo.length() == 11) {
-                        usuarioDoBanco = dao.buscarPorCPF(cpfLimpo);
+                    UsuarioDao dao = new UsuarioDao();
+                    Usuario usuarioDoBanco;
+                    String loginInput = usuarioLogin.getEmail().trim();
+
+                    if (loginInput.contains("@")) {
+                        usuarioDoBanco = dao.buscarPorEmail(loginInput);
                     } else {
-                        usuarioDoBanco = null;
+                        String cpfLimpo = loginInput.replaceAll("[^0-9]", "");
+                        if (cpfLimpo.length() == 11) {
+                            usuarioDoBanco = dao.buscarPorCPF(cpfLimpo);
+                        } else {
+                            usuarioDoBanco = null;
+                        }
                     }
-                }
 
-                if (usuarioDoBanco == null || !Criptografia.verificarSenha(usuarioLogin.getSenha(), usuarioDoBanco.getSenha())) {
-                    String campo = loginInput.contains("@") ? "E-mail" : "CPF";
-                    enviarResposta(exchange, "{\"erro\":\"" + campo + " ou senha incorretos\"}", 401);
-                } else if (!usuarioDoBanco.isStatusAtivo()) {
-                    enviarResposta(exchange, "{\"erro\":\"Usu\u00e1rio desativado. Contate um administrador.\"}", 403);
-                } else if ("voluntario".equalsIgnoreCase(usuarioDoBanco.getTipoUsuario())) {
-                    enviarResposta(exchange, "{\"erro\":\"Volunt\u00e1rios n\u00e3o podem acessar o sistema. Apenas colaboradores.\"}", 403);
-                } else if (usuarioDoBanco.isPrimeiroAcesso()) {
-                    JsonObject resp = new JsonObject();
-                    resp.addProperty("status", "TROCA_OBRIGATORIA");
-                    resp.addProperty("mensagem", "Primeiro acesso detectado. Altere a sua senha.");
-                    resp.addProperty("cpf", usuarioDoBanco.getCpf());
-                    enviarResposta(exchange, resp.toString(), 200);
-                } else {
-                    RecursoSistemaDao recDao = new RecursoSistemaDao();
-                    List<RecursoSistema> permissoes;
-            if (usuarioDoBanco.getNivelAcesso() == 1) {
-                permissoes = recDao.listarTodos();
-            } else {
-                permissoes = recDao.listarPorUsuario(usuarioDoBanco.getId());
-            }
+                    if (usuarioDoBanco == null || !Criptografia.verificarSenha(usuarioLogin.getSenha(), usuarioDoBanco.getSenha())) {
+                        String campo = loginInput.contains("@") ? "E-mail" : "CPF";
+                        enviarResposta(exchange, "{\"erro\":\"" + campo + " ou senha incorretos\"}", 401);
+                    } else if (!usuarioDoBanco.isStatusAtivo()) {
+                        enviarResposta(exchange, "{\"erro\":\"Usu\u00e1rio desativado. Contate um administrador.\"}", 403);
+                    } else if ("voluntario".equalsIgnoreCase(usuarioDoBanco.getTipoUsuario())) {
+                        enviarResposta(exchange, "{\"erro\":\"Volunt\u00e1rios n\u00e3o podem acessar o sistema. Apenas colaboradores.\"}", 403);
+                    } else if (usuarioDoBanco.isPrimeiroAcesso()) {
+                        JsonObject resp = new JsonObject();
+                        resp.addProperty("status", "TROCA_OBRIGATORIA");
+                        resp.addProperty("mensagem", "Primeiro acesso detectado. Altere a sua senha.");
+                        resp.addProperty("cpf", usuarioDoBanco.getCpf());
+                        enviarResposta(exchange, resp.toString(), 200);
+                    } else {
+                        RecursoSistemaDao recDao = new RecursoSistemaDao();
+                        List<RecursoSistema> permissoes;
+                        if (usuarioDoBanco.getNivelAcesso() == 1) {
+                            permissoes = recDao.listarTodos();
+                        } else {
+                            permissoes = recDao.listarPorUsuario(usuarioDoBanco.getId());
+                        }
 
-            JsonArray permArray = new JsonArray();
-            for (RecursoSistema r : permissoes) {
-                permArray.add(r.getNome());
-            }
+                        JsonArray permArray = new JsonArray();
+                        for (RecursoSistema r : permissoes) {
+                            permArray.add(r.getNome());
+                        }
 
-            String token = Token.gerarToken(usuarioDoBanco.getEmail(), usuarioDoBanco.getNivelAcesso(), usuarioDoBanco.getTipoUsuario());
-            JsonObject resp = new JsonObject();
-            resp.addProperty("token", token);
-            resp.addProperty("mensagem", "Login realizado!");
-            resp.addProperty("nivelAcesso", usuarioDoBanco.getNivelAcesso());
-            resp.addProperty("statusAtivo", usuarioDoBanco.isStatusAtivo());
-            resp.addProperty("tipoUsuario", usuarioDoBanco.getTipoUsuario());
-            resp.addProperty("nome", usuarioDoBanco.getNome());
-            resp.addProperty("email", usuarioDoBanco.getEmail());
-            resp.addProperty("id", usuarioDoBanco.getId());
-            resp.add("permissoes", permArray);
-            enviarResposta(exchange, resp.toString(), 200);
+                        String token = Token.gerarToken(usuarioDoBanco.getEmail(), usuarioDoBanco.getNivelAcesso(), usuarioDoBanco.getTipoUsuario());
+                        JsonObject resp = new JsonObject();
+                        resp.addProperty("token", token);
+                        resp.addProperty("mensagem", "Login realizado!");
+                        resp.addProperty("nivelAcesso", usuarioDoBanco.getNivelAcesso());
+                        resp.addProperty("statusAtivo", usuarioDoBanco.isStatusAtivo());
+                        resp.addProperty("tipoUsuario", usuarioDoBanco.getTipoUsuario());
+                        resp.addProperty("nome", usuarioDoBanco.getNome());
+                        resp.addProperty("email", usuarioDoBanco.getEmail());
+                        resp.addProperty("id", usuarioDoBanco.getId());
+                        resp.add("permissoes", permArray);
+                        enviarResposta(exchange, resp.toString(), 200);
+                    }
                 }
             }
         } catch (Exception e) {
@@ -172,24 +166,26 @@ public class CUsuario implements HttpHandler {
                 enviarResposta(exchange, "{\"erro\":\"Senha deve ter no m\u00ednimo 4 caracteres\"}", 400);
             } else {
                 String senhaBanco = Criptografia.hashSenha(usuarioLogin.getSenha());
-        String cpfLimpo = usuarioLogin.getCpf() != null ? usuarioLogin.getCpf().replaceAll("[^0-9]", "") : "";
-        usuarioLogin.setCpf(cpfLimpo);
+                String cpfLimpo = usuarioLogin.getCpf() != null ? usuarioLogin.getCpf().replaceAll("[^0-9]", "") : "";
+                usuarioLogin.setCpf(cpfLimpo);
 
-        UsuarioDao dao = new UsuarioDao();
-        int resultado = dao.cadastrarUsuario(
-            usuarioLogin.getNome(), usuarioLogin.getEmail(), senhaBanco,
-            usuarioLogin.getCpf(), usuarioLogin.getNivelAcesso(),
-            usuarioLogin.getTipoUsuario(), usuarioLogin.getData()
-        );
+                UsuarioDao dao = new UsuarioDao();
+                int resultado = dao.cadastrarUsuario(
+                    usuarioLogin.getNome(), usuarioLogin.getEmail(), senhaBanco,
+                    usuarioLogin.getCpf(), usuarioLogin.getNivelAcesso(),
+                    usuarioLogin.getTipoUsuario(), usuarioLogin.getData()
+                );
 
-        if (resultado == 0) {
-            enviarResposta(exchange, "{\"mensagem\":\"Cadastro realizado!\"}", 201);
-        } else if (resultado == 1) {
-            enviarResposta(exchange, "{\"erro\":\"Email já cadastrado no sistema\"}", 409);
-        } else if (resultado == 2) {
-            enviarResposta(exchange, "{\"erro\":\"CPF já cadastrado no sistema\"}", 409);
-        } else {
-            enviarResposta(exchange, "{\"erro\":\"Erro interno ao cadastrar\"}", 500);
+                if (resultado == 0) {
+                    enviarResposta(exchange, "{\"mensagem\":\"Cadastro realizado!\"}", 201);
+                } else if (resultado == 1) {
+                    enviarResposta(exchange, "{\"erro\":\"Email j\u00e1 cadastrado no sistema\"}", 409);
+                } else if (resultado == 2) {
+                    enviarResposta(exchange, "{\"erro\":\"CPF j\u00e1 cadastrado no sistema\"}", 409);
+                } else {
+                    enviarResposta(exchange, "{\"erro\":\"Erro interno ao cadastrar\"}", 500);
+                }
+            }
         }
     }
 
@@ -255,23 +251,23 @@ public class CUsuario implements HttpHandler {
                         enviarResposta(exchange, "{\"erro\":\"Acesso negado. Voc\u00ea n\u00e3o pode cadastrar volunt\u00e1rios.\"}", 403);
                     } else {
                         String senhaBanco = Criptografia.hashSenha(dados.getSenha());
-        String cpfLimpo = dados.getCpf() != null ? dados.getCpf().replaceAll("[^0-9]", "") : "";
+                        String cpfLimpo = dados.getCpf() != null ? dados.getCpf().replaceAll("[^0-9]", "") : "";
 
-        int resultado = uDao.cadastrarUsuario(
-            dados.getNome(), dados.getEmail(), senhaBanco,
-            cpfLimpo, dados.getNivelAcesso(),
-            tipo, dados.getData()
-        );
+                        int resultado = uDao.cadastrarUsuario(
+                            dados.getNome(), dados.getEmail(), senhaBanco,
+                            cpfLimpo, dados.getNivelAcesso(),
+                            tipo, dados.getData()
+                        );
 
-        if (resultado == 0) {
-            enviarResposta(exchange, "{\"mensagem\":\"Cadastro realizado!\"}", 201);
-        } else if (resultado == 1) {
-            enviarResposta(exchange, "{\"erro\":\"Email j\u00e1 cadastrado no sistema\"}", 409);
-        } else if (resultado == 2) {
-            enviarResposta(exchange, "{\"erro\":\"CPF j\u00e1 cadastrado no sistema\"}", 409);
-        } else {
-            enviarResposta(exchange, "{\"erro\":\"Erro interno ao cadastrar\"}", 500);
-        }
+                        if (resultado == 0) {
+                            enviarResposta(exchange, "{\"mensagem\":\"Cadastro realizado!\"}", 201);
+                        } else if (resultado == 1) {
+                            enviarResposta(exchange, "{\"erro\":\"Email j\u00e1 cadastrado no sistema\"}", 409);
+                        } else if (resultado == 2) {
+                            enviarResposta(exchange, "{\"erro\":\"CPF j\u00e1 cadastrado no sistema\"}", 409);
+                        } else {
+                            enviarResposta(exchange, "{\"erro\":\"Erro interno ao cadastrar\"}", 500);
+                        }
                     }
                 }
             }
@@ -329,7 +325,6 @@ public class CUsuario implements HttpHandler {
         UsuarioDao dao = new UsuarioDao();
         List<Usuario> usuarios = dao.listarTodos(nome, email, tipo);
 
-        Gson gson = new Gson();
         StringBuilder json = new StringBuilder("[");
         for (int i = 0; i < usuarios.size(); i++) {
             Usuario u = usuarios.get(i);
@@ -338,6 +333,13 @@ public class CUsuario implements HttpHandler {
             json.append("\"nome\":\"").append(escaparJson(u.getNome())).append("\",");
             json.append("\"email\":\"").append(escaparJson(u.getEmail())).append("\",");
             json.append("\"cpf\":\"").append(escaparJson(u.getCpf())).append("\",");
+            json.append("\"rg\":\"").append(escaparJson(u.getRg())).append("\",");
+            json.append("\"celular\":\"").append(escaparJson(u.getCelular())).append("\",");
+            json.append("\"rua\":\"").append(escaparJson(u.getRua())).append("\",");
+            json.append("\"bairro\":\"").append(escaparJson(u.getBairro())).append("\",");
+            json.append("\"cep\":\"").append(escaparJson(u.getCep())).append("\",");
+            json.append("\"cidade\":\"").append(escaparJson(u.getCidade())).append("\",");
+            json.append("\"estado\":\"").append(escaparJson(u.getEstado())).append("\",");
             json.append("\"nivelAcesso\":").append(u.getNivelAcesso()).append(",");
             json.append("\"statusAtivo\":").append(u.isStatusAtivo()).append(",");
             json.append("\"tipoUsuario\":\"").append(escaparJson(u.getTipoUsuario())).append("\",");
@@ -347,6 +349,74 @@ public class CUsuario implements HttpHandler {
         }
         json.append("]");
         enviarResposta(exchange, json.toString(), 200);
+    }
+
+    private void buscarUsuario(HttpExchange exchange) throws IOException {
+        String[] partes = exchange.getRequestURI().getPath().split("/");
+        int id = Integer.parseInt(partes[3]);
+        UsuarioDao dao = new UsuarioDao();
+        Usuario u = dao.buscarPorId(id);
+        if (u != null) {
+            StringBuilder json = new StringBuilder("{");
+            json.append("\"id\":").append(u.getId()).append(",");
+            json.append("\"nome\":\"").append(escaparJson(u.getNome())).append("\",");
+            json.append("\"email\":\"").append(escaparJson(u.getEmail())).append("\",");
+            json.append("\"cpf\":\"").append(escaparJson(u.getCpf())).append("\",");
+            json.append("\"rg\":\"").append(escaparJson(u.getRg())).append("\",");
+            json.append("\"celular\":\"").append(escaparJson(u.getCelular())).append("\",");
+            json.append("\"rua\":\"").append(escaparJson(u.getRua())).append("\",");
+            json.append("\"bairro\":\"").append(escaparJson(u.getBairro())).append("\",");
+            json.append("\"cep\":\"").append(escaparJson(u.getCep())).append("\",");
+            json.append("\"cidade\":\"").append(escaparJson(u.getCidade())).append("\",");
+            json.append("\"estado\":\"").append(escaparJson(u.getEstado())).append("\",");
+            json.append("\"nivelAcesso\":").append(u.getNivelAcesso()).append(",");
+            json.append("\"statusAtivo\":").append(u.isStatusAtivo()).append(",");
+            json.append("\"tipoUsuario\":\"").append(escaparJson(u.getTipoUsuario())).append("\",");
+            json.append("\"primeiroAcesso\":").append(u.isPrimeiroAcesso());
+            json.append("}");
+            enviarResposta(exchange, json.toString(), 200);
+        } else {
+            enviarResposta(exchange, "{\"erro\":\"Usu\u00e1rio n\u00e3o encontrado\"}", 404);
+        }
+    }
+
+    private void atualizarUsuario(HttpExchange exchange) throws IOException {
+        if (usuarioPodeGerenciar(exchange)) {
+            String[] partes = exchange.getRequestURI().getPath().split("/");
+            int id = Integer.parseInt(partes[3]);
+
+            byte[] bytes = exchange.getRequestBody().readAllBytes();
+            String json = new String(bytes, StandardCharsets.UTF_8);
+            Gson gson = new Gson();
+            JsonObject body = gson.fromJson(json, JsonObject.class);
+
+            UsuarioDao dao = new UsuarioDao();
+            Usuario u = dao.buscarPorId(id);
+            if (u != null) {
+                if (body.has("nome")) u.setNome(body.get("nome").getAsString());
+                if (body.has("email")) u.setEmail(body.get("email").getAsString());
+                if (body.has("cpf")) u.setCpf(body.get("cpf").getAsString().replaceAll("[^0-9]", ""));
+                if (body.has("rg")) u.setRg(body.get("rg").isJsonNull() ? null : body.get("rg").getAsString());
+                if (body.has("celular")) u.setCelular(body.get("celular").isJsonNull() ? null : body.get("celular").getAsString());
+                if (body.has("rua")) u.setRua(body.get("rua").isJsonNull() ? null : body.get("rua").getAsString());
+                if (body.has("bairro")) u.setBairro(body.get("bairro").isJsonNull() ? null : body.get("bairro").getAsString());
+                if (body.has("cep")) u.setCep(body.get("cep").isJsonNull() ? null : body.get("cep").getAsString());
+                if (body.has("cidade")) u.setCidade(body.get("cidade").isJsonNull() ? null : body.get("cidade").getAsString());
+                if (body.has("estado")) u.setEstado(body.get("estado").isJsonNull() ? null : body.get("estado").getAsString());
+                if (body.has("nivelAcesso")) u.setNivelAcesso(body.get("nivelAcesso").getAsInt());
+                if (body.has("tipoUsuario")) u.setTipoUsuario(body.get("tipoUsuario").getAsString());
+
+                if (dao.atualizar(u)) {
+                    enviarResposta(exchange, "{\"mensagem\":\"Usu\u00e1rio atualizado com sucesso\"}", 200);
+                } else {
+                    enviarResposta(exchange, "{\"erro\":\"Erro ao atualizar usu\u00e1rio\"}", 500);
+                }
+            } else {
+                enviarResposta(exchange, "{\"erro\":\"Usu\u00e1rio n\u00e3o encontrado\"}", 404);
+            }
+        } else {
+            enviarResposta(exchange, "{\"erro\":\"Acesso negado.\"}", 403);
+        }
     }
 
     private boolean usuarioPodeGerenciar(HttpExchange exchange) {
@@ -362,58 +432,81 @@ public class CUsuario implements HttpHandler {
 
     private void alterarStatusUsuario(HttpExchange exchange) throws IOException {
         if (usuarioPodeGerenciar(exchange)) {
+            String path = exchange.getRequestURI().getPath();
+            String[] partes = path.split("/");
+            int id = Integer.parseInt(partes[3]);
 
-        String path = exchange.getRequestURI().getPath();
-        String[] partes = path.split("/");
-        int id = Integer.parseInt(partes[3]);
+            byte[] bytes = exchange.getRequestBody().readAllBytes();
+            String jsonRecebido = new String(bytes, StandardCharsets.UTF_8);
 
-        byte[] bytes = exchange.getRequestBody().readAllBytes();
-        String jsonRecebido = new String(bytes, StandardCharsets.UTF_8);
+            Gson gson = new Gson();
+            JsonObject body = gson.fromJson(jsonRecebido, JsonObject.class);
+            boolean ativo = body.get("status_ativo").getAsBoolean();
 
-        Gson gson = new Gson();
-        JsonObject body = gson.fromJson(jsonRecebido, JsonObject.class);
-        boolean ativo = body.get("status_ativo").getAsBoolean();
+            UsuarioDao dao = new UsuarioDao();
+            Usuario usuario = dao.buscarPorId(id);
 
-        UsuarioDao dao = new UsuarioDao();
-        Usuario usuario = dao.buscarPorId(id);
-
-        if (usuario == null) {
-            enviarResposta(exchange, "{\"erro\":\"Usu\u00e1rio n\u00e3o encontrado\"}", 404);
-        } else if (!ativo && "colaborador".equalsIgnoreCase(usuario.getTipoUsuario()) && usuario.getNivelAcesso() == 1) {
-            int totalAtivos = dao.contarColaboradorAcessoTotalAtivo();
-            if (totalAtivos <= 1) {
-                enviarResposta(exchange, "{\"erro\":\"N\u00e3o \u00e9 poss\u00edvel desativar o \u00fanico colaborador com acesso total\"}", 400);
-            } else if (dao.alterarStatus(id, ativo)) {
-            // Atualiza data de desligamento / limpa ao reativar
-            String tipo = usuario.getTipoUsuario();
-            String dataStr = body.has("data_desligamento") && !body.get("data_desligamento").isJsonNull()
-                ? body.get("data_desligamento").getAsString() : null;
-
-            LocalDate dataDesligamento = null;
-            if (!ativo && dataStr != null) {
-                if ("SYSDATE".equalsIgnoreCase(dataStr)) {
-                    dataDesligamento = LocalDate.now();
+            if (usuario == null) {
+                enviarResposta(exchange, "{\"erro\":\"Usu\u00e1rio n\u00e3o encontrado\"}", 404);
+            } else if (!ativo && "colaborador".equalsIgnoreCase(usuario.getTipoUsuario()) && usuario.getNivelAcesso() == 1) {
+                int totalAtivos = dao.contarColaboradorAcessoTotalAtivo();
+                if (totalAtivos <= 1) {
+                    enviarResposta(exchange, "{\"erro\":\"N\u00e3o \u00e9 poss\u00edvel desativar o \u00fanico colaborador com acesso total\"}", 400);
                 } else {
-                    dataDesligamento = Data.parseFlexivel(dataStr);
+                    if (dao.alterarStatus(id, ativo)) {
+                        String tipo = usuario.getTipoUsuario();
+                        String dataStr = body.has("data_desligamento") && !body.get("data_desligamento").isJsonNull()
+                            ? body.get("data_desligamento").getAsString() : null;
+
+                        LocalDate dataDesligamento = null;
+                        if (!ativo && dataStr != null) {
+                            if ("SYSDATE".equalsIgnoreCase(dataStr)) {
+                                dataDesligamento = LocalDate.now();
+                            } else {
+                                dataDesligamento = Data.parseFlexivel(dataStr);
+                            }
+                        }
+
+                        if ("colaborador".equalsIgnoreCase(tipo)) {
+                            ColaboradorDao cDao = new ColaboradorDao();
+                            cDao.atualizarDataDemissao(id, !ativo ? dataDesligamento : null);
+                        } else if ("voluntario".equalsIgnoreCase(tipo)) {
+                            VoluntarioDao vDao = new VoluntarioDao();
+                            vDao.atualizarDataDesligamento(id, !ativo ? dataDesligamento : null);
+                        }
+
+                        enviarResposta(exchange, "{\"mensagem\":\"Status atualizado com sucesso\"}", 200);
+                    } else {
+                        enviarResposta(exchange, "{\"erro\":\"Erro ao atualizar status\"}", 500);
+                    }
                 }
-            }
+            } else {
+                if (dao.alterarStatus(id, ativo)) {
+                    String tipo = usuario.getTipoUsuario();
+                    String dataStr = body.has("data_desligamento") && !body.get("data_desligamento").isJsonNull()
+                        ? body.get("data_desligamento").getAsString() : null;
 
-            if ("colaborador".equalsIgnoreCase(tipo)) {
-                ColaboradorDao cDao = new ColaboradorDao();
-                cDao.atualizarDataDemissao(id, !ativo ? dataDesligamento : null);
-            } else if ("voluntario".equalsIgnoreCase(tipo)) {
-                VoluntarioDao vDao = new VoluntarioDao();
-                vDao.atualizarDataDesligamento(id, !ativo ? dataDesligamento : null);
-            }
+                    LocalDate dataDesligamento = null;
+                    if (!ativo && dataStr != null) {
+                        if ("SYSDATE".equalsIgnoreCase(dataStr)) {
+                            dataDesligamento = LocalDate.now();
+                        } else {
+                            dataDesligamento = Data.parseFlexivel(dataStr);
+                        }
+                    }
 
-            enviarResposta(exchange, "{\"mensagem\":\"Status atualizado com sucesso\"}", 200);
+                    if ("colaborador".equalsIgnoreCase(tipo)) {
+                        ColaboradorDao cDao = new ColaboradorDao();
+                        cDao.atualizarDataDemissao(id, !ativo ? dataDesligamento : null);
+                    } else if ("voluntario".equalsIgnoreCase(tipo)) {
+                        VoluntarioDao vDao = new VoluntarioDao();
+                        vDao.atualizarDataDesligamento(id, !ativo ? dataDesligamento : null);
+                    }
+
+                    enviarResposta(exchange, "{\"mensagem\":\"Status atualizado com sucesso\"}", 200);
                 } else {
                     enviarResposta(exchange, "{\"erro\":\"Erro ao atualizar status\"}", 500);
                 }
-            } else if (dao.alterarStatus(id, ativo)) {
-                enviarResposta(exchange, "{\"mensagem\":\"Status atualizado com sucesso\"}", 200);
-            } else {
-                enviarResposta(exchange, "{\"erro\":\"Erro ao atualizar status\"}", 500);
             }
         } else {
             enviarResposta(exchange, "{\"erro\":\"Acesso negado.\"}", 403);
@@ -422,30 +515,31 @@ public class CUsuario implements HttpHandler {
 
     private void removerUsuario(HttpExchange exchange) throws IOException {
         if (usuarioPodeGerenciar(exchange)) {
-        String path = exchange.getRequestURI().getPath();
-        String[] partes = path.split("/");
-        int id = Integer.parseInt(partes[3]);
+            String path = exchange.getRequestURI().getPath();
+            String[] partes = path.split("/");
+            int id = Integer.parseInt(partes[3]);
 
-        UsuarioDao dao = new UsuarioDao();
-        Usuario usuario = dao.buscarPorId(id);
+            UsuarioDao dao = new UsuarioDao();
+            Usuario usuario = dao.buscarPorId(id);
 
-        if (usuario == null) {
-            enviarResposta(exchange, "{\"erro\":\"Usuário não encontrado\"}", 404);
-            return;
-        }
-
-        if ("colaborador".equalsIgnoreCase(usuario.getTipoUsuario()) && usuario.getNivelAcesso() == 1) {
-            int totalAtivos = dao.contarColaboradorAcessoTotalAtivo();
-            if (totalAtivos <= 1) {
-                enviarResposta(exchange, "{\"erro\":\"Não é possível remover o único colaborador com acesso total\"}", 400);
-                return;
+            if (usuario == null) {
+                enviarResposta(exchange, "{\"erro\":\"Usu\u00e1rio n\u00e3o encontrado\"}", 404);
+            } else if ("colaborador".equalsIgnoreCase(usuario.getTipoUsuario()) && usuario.getNivelAcesso() == 1) {
+                int totalAtivos = dao.contarColaboradorAcessoTotalAtivo();
+                if (totalAtivos <= 1) {
+                    enviarResposta(exchange, "{\"erro\":\"N\u00e3o \u00e9 poss\u00edvel remover o \u00fanico colaborador com acesso total\"}", 400);
+                } else if (dao.deletar(id)) {
+                    enviarResposta(exchange, "{\"mensagem\":\"Usu\u00e1rio removido com sucesso\"}", 200);
+                } else {
+                    enviarResposta(exchange, "{\"erro\":\"Erro ao remover usu\u00e1rio\"}", 500);
+                }
+            } else if (dao.deletar(id)) {
+                enviarResposta(exchange, "{\"mensagem\":\"Usu\u00e1rio removido com sucesso\"}", 200);
+            } else {
+                enviarResposta(exchange, "{\"erro\":\"Erro ao remover usu\u00e1rio\"}", 500);
             }
-        }
-
-        if (dao.deletar(id)) {
-            enviarResposta(exchange, "{\"mensagem\":\"Usuário removido com sucesso\"}", 200);
         } else {
-            enviarResposta(exchange, "{\"erro\":\"Erro ao remover usuário\"}", 500);
+            enviarResposta(exchange, "{\"erro\":\"Acesso negado.\"}", 403);
         }
     }
 
@@ -500,9 +594,9 @@ public class CUsuario implements HttpHandler {
 
         RecursoSistemaDao dao = new RecursoSistemaDao();
         if (dao.atualizarPermissoes(usuarioId, ids)) {
-            enviarResposta(exchange, "{\"mensagem\":\"Permissões atualizadas\"}", 200);
+            enviarResposta(exchange, "{\"mensagem\":\"Permiss\u00f5es atualizadas\"}", 200);
         } else {
-            enviarResposta(exchange, "{\"erro\":\"Erro ao atualizar permissões\"}", 500);
+            enviarResposta(exchange, "{\"erro\":\"Erro ao atualizar permiss\u00f5es\"}", 500);
         }
     }
 
