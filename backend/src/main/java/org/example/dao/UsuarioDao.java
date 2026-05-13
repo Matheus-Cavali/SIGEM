@@ -246,6 +246,30 @@ public class UsuarioDao {
         }
     }
 
+    public boolean atualizar(Usuario u) {
+        String sql = "UPDATE usuario SET nome=?, email=?, cpf=?, rg=?, celular=?, rua=?, bairro=?, cep=?, cidade=?, estado=?, nivel_acesso=?, tipo_usuario=? WHERE id=?";
+        try (Connection conn = Conexao.getConexao();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, u.getNome());
+            stmt.setString(2, u.getEmail());
+            stmt.setString(3, u.getCpf());
+            stmt.setString(4, u.getRg());
+            stmt.setString(5, u.getCelular());
+            stmt.setString(6, u.getRua());
+            stmt.setString(7, u.getBairro());
+            stmt.setString(8, u.getCep());
+            stmt.setString(9, u.getCidade());
+            stmt.setString(10, u.getEstado());
+            stmt.setInt(11, u.getNivelAcesso());
+            stmt.setString(12, u.getTipoUsuario());
+            stmt.setInt(13, u.getId());
+            return stmt.executeUpdate() == 1;
+        } catch (SQLException e) {
+            System.err.println("Erro ao atualizar usu\u00e1rio: " + e.getMessage());
+            return false;
+        }
+    }
+
     public int contarColaboradorAcessoTotalAtivo() {
         String sql = "SELECT COUNT(*) FROM usuario WHERE tipo_usuario = 'colaborador' AND nivel_acesso = 1 AND status_ativo = true";
         try (Connection conn = Conexao.getConexao();
