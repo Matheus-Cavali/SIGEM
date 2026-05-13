@@ -71,7 +71,7 @@ public class CInvestimento implements HttpHandler {
                     removerAporte(exchange);
                 }
                 else {
-                    enviarResposta(exchange, "{\"erro\":\"Rota n\u00e3o encontrada\"}", 404);
+                    enviarResposta(exchange, "{\"erro\":\"Rota não encontrada\"}", 404);
                 }
             } catch (Exception e) {
                 System.err.println("ERRO no CInvestimento: " + e.getMessage());
@@ -147,7 +147,7 @@ public class CInvestimento implements HttpHandler {
                 }
             }
         } else {
-            enviarResposta(exchange, "{\"erro\":\"Acesso negado. Voc\u00ea n\u00e3o tem permiss\u00e3o para registrar investimentos.\"}", 403);
+            enviarResposta(exchange, "{\"erro\":\"Acesso negado. Você não tem permissão para registrar investimentos.\"}", 403);
         }
     }
 
@@ -191,7 +191,7 @@ public class CInvestimento implements HttpHandler {
             InvestimentoFuturo inv = dao.buscarPorId(id);
 
             if (inv == null) {
-                enviarResposta(exchange, "{\"erro\":\"Investimento n\u00e3o encontrado\"}", 404);
+                enviarResposta(exchange, "{\"erro\":\"Investimento não encontrado\"}", 404);
             } else {
                 JsonObject resp = new JsonObject();
                 resp.addProperty("id", inv.getId());
@@ -203,7 +203,7 @@ public class CInvestimento implements HttpHandler {
                 enviarResposta(exchange, resp.toString(), 200);
             }
         } else {
-            enviarResposta(exchange, "{\"erro\":\"Acesso negado. Fa\u00e7a login.\"}", 401);
+            enviarResposta(exchange, "{\"erro\":\"Acesso negado. Faça login.\"}", 401);
         }
     }
 
@@ -216,13 +216,13 @@ public class CInvestimento implements HttpHandler {
 
         boolean alterandoStatus = body.has("status");
         if (alterandoStatus && !usuarioPodeGerenciar(exchange)) {
-            enviarResposta(exchange, "{\"erro\":\"Acesso negado por falta de permiss\u00e3o.\"}", 403);
+            enviarResposta(exchange, "{\"erro\":\"Acesso negado por falta de permissão.\"}", 403);
         } else {
             InvestimentoFuturoDao dao = new InvestimentoFuturoDao();
             InvestimentoFuturo inv = dao.buscarPorId(id);
 
             if (inv == null) {
-                enviarResposta(exchange, "{\"erro\":\"Investimento n\u00e3o encontrado\"}", 404);
+                enviarResposta(exchange, "{\"erro\":\"Investimento não encontrado\"}", 404);
             } else {
                 if (body.has("nome")) inv.setNome(body.get("nome").getAsString());
                 if (body.has("valorMeta")) inv.setValorMeta(body.get("valorMeta").getAsBigDecimal());
@@ -256,7 +256,7 @@ public class CInvestimento implements HttpHandler {
             } else {
                 InvestimentoFuturoDao invDao = new InvestimentoFuturoDao();
                 if (invDao.buscarPorId(investimentoId) == null) {
-                    enviarResposta(exchange, "{\"erro\":\"Investimento n\u00e3o encontrado\"}", 404);
+                    enviarResposta(exchange, "{\"erro\":\"Investimento não encontrado\"}", 404);
                 } else {
                     AporteInvestimento aporte = new AporteInvestimento();
                     aporte.setInvestimentoFuturoId(investimentoId);
@@ -276,7 +276,7 @@ public class CInvestimento implements HttpHandler {
                 }
             }
         } else {
-            enviarResposta(exchange, "{\"erro\":\"Acesso negado. Voc\u00ea n\u00e3o tem permiss\u00e3o para lan\u00e7ar aportes.\"}", 403);
+            enviarResposta(exchange, "{\"erro\":\"Acesso negado. Você não tem permissão para lançar aportes.\"}", 403);
         }
     }
 
@@ -299,7 +299,7 @@ public class CInvestimento implements HttpHandler {
             json.append("]");
             enviarResposta(exchange, json.toString(), 200);
         } else {
-            enviarResposta(exchange, "{\"erro\":\"Acesso negado. Fa\u00e7a login.\"}", 401);
+            enviarResposta(exchange, "{\"erro\":\"Acesso negado. Faça login.\"}", 401);
         }
     }
 
