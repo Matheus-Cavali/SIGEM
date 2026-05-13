@@ -5,6 +5,7 @@ import org.example.controller.CUsuario;
 import org.example.controller.CInvestimento;
 import org.example.controller.CColaborador;
 import org.example.controller.CVoluntario;
+import org.example.controller.CMaterial;
 import org.example.dao.InvestimentoFuturoDao;
 import org.example.dao.UsuarioDao;
 
@@ -29,6 +30,7 @@ public class Main {
             server.createContext("/api/investimentos", CInvestimento.getInstancia());
             server.createContext("/api/colaboradores", CColaborador.getInstancia());
             server.createContext("/api/voluntarios", CVoluntario.getInstancia());
+            server.createContext("/api/materiais", CMaterial.getInstancia());
             server.createContext("/api/recurso", CUsuario.getInstancia());
 
             server.setExecutor(null);
