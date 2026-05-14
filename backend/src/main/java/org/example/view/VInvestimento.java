@@ -28,14 +28,12 @@ public class VInvestimento implements HttpHandler {
 
         if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
             exchange.sendResponseHeaders(204, -1);
-            return;
-        }
+        } else {
+            String path = exchange.getRequestURI().getPath();
+            String metodo = exchange.getRequestMethod();
+            String auth = exchange.getRequestHeaders().getFirst("Authorization");
 
-        String path = exchange.getRequestURI().getPath();
-        String metodo = exchange.getRequestMethod();
-        String auth = exchange.getRequestHeaders().getFirst("Authorization");
-
-        try {
+            try {
             if ("POST".equalsIgnoreCase(metodo) && "/api/investimentos".equals(path)) {
                 String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
                 Resposta r = controller.registrarInvestimento(auth, json);
@@ -83,6 +81,7 @@ public class VInvestimento implements HttpHandler {
             System.err.println("ERRO: " + e.getMessage());
             e.printStackTrace();
             enviarResposta(exchange, "{\"erro\":\"Erro interno\"}", 500);
+        }
         }
     }
 

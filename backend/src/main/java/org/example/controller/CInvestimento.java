@@ -11,7 +11,6 @@ import org.example.model.InvestimentoFuturo;
 import org.example.model.RecursoSistema;
 import org.example.model.Resposta;
 import org.example.model.Usuario;
-import org.example.facade.InvestimentoFacade;
 import org.example.util.Data;
 
 import java.math.BigDecimal;
@@ -70,14 +69,14 @@ public class CInvestimento {
         String dataStr = body.get("dataAbertura").getAsString();
         int colaboradorId = body.get("colaboradorId").getAsInt();
 
-        String erro = new InvestimentoFacade().validarDadosInvestimento(nome, meta, dataStr);
-        if (erro != null) return new Resposta(400, "{\"erro\":\"" + erro + "\"}");
-
         InvestimentoFuturo inv = new InvestimentoFuturo();
         inv.setNome(nome); inv.setValorMeta(meta);
         inv.setDataAbertura(Data.parseFlexivel(dataStr)); inv.setColaboradorId(colaboradorId);
 
-        int id = new InvestimentoFuturoDao().inserir(inv);
+        String erro = inv.validar(dataStr);
+        if (erro != null) return new Resposta(400, "{\"erro\":\"" + erro + "\"}");
+
+        int id = inv.salvar();
         if (id > 0) return new Resposta(201, "{\"mensagem\":\"Investimento registrado com sucesso\",\"id\":" + id + "}");
         return new Resposta(500, "{\"erro\":\"Erro ao registrar investimento\"}");
     }
@@ -148,15 +147,15 @@ public class CInvestimento {
         String dataStr = body.get("dataAporte").getAsString();
         int colaboradorId = body.get("colaboradorId").getAsInt();
 
-        String erro = new InvestimentoFacade().validarDadosAporte(valor, dataStr);
+        AporteInvestimento aporte = new AporteInvestimento();
+        aporte.setInvestimentoFuturoId(investimentoId); aporte.setValorAporte(valor);
+        aporte.setDataAporte(Data.parseFlexivel(dataStr)); aporte.setColaboradorId(colaboradorId);
+
+        String erro = aporte.validar(dataStr);
         if (erro != null) return new Resposta(400, "{\"erro\":\"" + erro + "\"}");
 
         InvestimentoFuturoDao invDao = new InvestimentoFuturoDao();
         if (invDao.buscarPorId(investimentoId) == null) return new Resposta(404, "{\"erro\":\"Investimento n\u00e3o encontrado\"}");
-
-        AporteInvestimento aporte = new AporteInvestimento();
-        aporte.setInvestimentoFuturoId(investimentoId); aporte.setValorAporte(valor);
-        aporte.setDataAporte(Data.parseFlexivel(dataStr)); aporte.setColaboradorId(colaboradorId);
 
         int id = new AporteInvestimentoDao().inserir(aporte);
         if (id > 0) {

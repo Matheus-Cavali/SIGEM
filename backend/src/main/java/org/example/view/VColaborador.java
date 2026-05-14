@@ -29,13 +29,11 @@ public class VColaborador implements HttpHandler {
 
         if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
             exchange.sendResponseHeaders(204, -1);
-            return;
-        }
+        } else {
+            String path = exchange.getRequestURI().getPath();
+            String metodo = exchange.getRequestMethod();
 
-        String path = exchange.getRequestURI().getPath();
-        String metodo = exchange.getRequestMethod();
-
-        try {
+            try {
             if ("GET".equalsIgnoreCase(metodo) && "/api/colaboradores".equals(path)) {
                 Resposta r = controller.listar(exchange.getRequestURI().getQuery());
                 enviarResposta(exchange, r.body, r.status);
@@ -53,6 +51,7 @@ public class VColaborador implements HttpHandler {
             }
         } catch (Exception e) {
             enviarResposta(exchange, "{\"erro\":\"Erro interno\"}", 500);
+        }
         }
     }
 

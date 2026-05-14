@@ -30,44 +30,43 @@ public class VUsuario implements HttpHandler {
 
         if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
             exchange.sendResponseHeaders(204, -1);
-            return;
-        }
+        } else {
+            String path = exchange.getRequestURI().getPath();
+            String metodo = exchange.getRequestMethod();
 
-        String path = exchange.getRequestURI().getPath();
-        String metodo = exchange.getRequestMethod();
-
-        try {
-            if ("POST".equalsIgnoreCase(metodo)) {
-                if ("/api/login".equals(path)) {
-                    processarLogin(exchange);
-                } else if ("/api/cadastrar".equals(path)) {
-                    processarCadastro(exchange);
-                } else if ("/api/alterar-Primeira-Senha".equals(path)) {
-                    processarAlteracaoSenha(exchange);
-                } else if ("/api/cadastrar-interno".equals(path)) {
-                    processarCadastroInterno(exchange);
+            try {
+                if ("POST".equalsIgnoreCase(metodo)) {
+                    if ("/api/login".equals(path)) {
+                        processarLogin(exchange);
+                    } else if ("/api/cadastrar".equals(path)) {
+                        processarCadastro(exchange);
+                    } else if ("/api/alterar-Primeira-Senha".equals(path)) {
+                        processarAlteracaoSenha(exchange);
+                    } else if ("/api/cadastrar-interno".equals(path)) {
+                        processarCadastroInterno(exchange);
+                    }
+                } else if ("GET".equalsIgnoreCase(metodo) && "/api/usuarios".equals(path)) {
+                    listarUsuarios(exchange);
+                } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+")) {
+                    buscarUsuario(exchange);
+                } else if ("PATCH".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+/status")) {
+                    alterarStatusUsuario(exchange);
+                } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+")) {
+                    atualizarUsuario(exchange);
+                } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/recurso/\\d+/permissoes")) {
+                    listarPermissoes(exchange);
+                } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/recurso/\\d+/permissoes")) {
+                    atualizarPermissoes(exchange);
+                } else if ("GET".equalsIgnoreCase(metodo) && "/api/recurso".equals(path)) {
+                    listarTodosRecursos(exchange);
+                } else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+")) {
+                    removerUsuario(exchange);
                 }
-            } else if ("GET".equalsIgnoreCase(metodo) && "/api/usuarios".equals(path)) {
-                listarUsuarios(exchange);
-            } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+")) {
-                buscarUsuario(exchange);
-            } else if ("PATCH".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+/status")) {
-                alterarStatusUsuario(exchange);
-            } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+")) {
-                atualizarUsuario(exchange);
-            } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/recurso/\\d+/permissoes")) {
-                listarPermissoes(exchange);
-            } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/recurso/\\d+/permissoes")) {
-                atualizarPermissoes(exchange);
-            } else if ("GET".equalsIgnoreCase(metodo) && "/api/recurso".equals(path)) {
-                listarTodosRecursos(exchange);
-            } else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+")) {
-                removerUsuario(exchange);
+            } catch (Exception e) {
+                System.err.println("ERRO: " + e.getMessage());
+                e.printStackTrace();
+                enviarResposta(exchange, "{\"erro\":\"Erro interno\"}", 500);
             }
-        } catch (Exception e) {
-            System.err.println("ERRO: " + e.getMessage());
-            e.printStackTrace();
-            enviarResposta(exchange, "{\"erro\":\"Erro interno\"}", 500);
         }
     }
 

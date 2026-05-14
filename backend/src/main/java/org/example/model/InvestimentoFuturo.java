@@ -3,6 +3,9 @@ package org.example.model;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import org.example.dao.InvestimentoFuturoDao;
+import org.example.util.Data;
+
 public class InvestimentoFuturo {
     private int id;
     private String nome;
@@ -34,4 +37,29 @@ public class InvestimentoFuturo {
 
     public BigDecimal getSaldoAtual() { return saldoAtual; }
     public void setSaldoAtual(BigDecimal saldoAtual) { this.saldoAtual = saldoAtual; }
+
+    public String validar(String dataStr) {
+        if (nome == null || nome.trim().isEmpty()) {
+            return "Nome do investimento \u00e9 obrigat\u00f3rio";
+        }
+        if (valorMeta == null || valorMeta.compareTo(BigDecimal.ZERO) <= 0) {
+            return "Valor meta deve ser maior que zero";
+        }
+        if (dataStr == null || dataStr.trim().isEmpty()) {
+            return "Data de abertura \u00e9 obrigat\u00f3ria";
+        }
+        if (Data.parseFlexivel(dataStr) == null) {
+            return "Data inv\u00e1lida. Use o formato dd/mm/aaaa ou ddmmaaaa";
+        }
+        InvestimentoFuturoDao dao = new InvestimentoFuturoDao();
+        InvestimentoFuturo existente = dao.buscarPorNome(nome.trim());
+        if (existente != null) {
+            return "J\u00e1 existe um investimento com este nome";
+        }
+        return null;
+    }
+
+    public int salvar() {
+        return new InvestimentoFuturoDao().inserir(this);
+    }
 }
