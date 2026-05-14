@@ -1,12 +1,12 @@
 package org.example;
 
 import com.sun.net.httpserver.HttpServer;
-import org.example.controller.CUsuario;
-import org.example.controller.CInvestimento;
-import org.example.controller.CColaborador;
-import org.example.controller.CVoluntario;
 import org.example.dao.InvestimentoFuturoDao;
 import org.example.dao.UsuarioDao;
+import org.example.view.VColaborador;
+import org.example.view.VInvestimento;
+import org.example.view.VUsuario;
+import org.example.view.VVoluntario;
 
 import java.net.InetSocketAddress;
 import java.io.IOException;
@@ -21,15 +21,15 @@ public class Main {
             invDao.migrarStatus();
             HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
 
-            server.createContext("/api/login", CUsuario.getInstancia());
-            server.createContext("/api/cadastrar", CUsuario.getInstancia());
-            server.createContext("/api/alterar-Primeira-Senha", CUsuario.getInstancia());
-            server.createContext("/api/cadastrar-interno", CUsuario.getInstancia());
-            server.createContext("/api/usuarios", CUsuario.getInstancia());
-            server.createContext("/api/investimentos", CInvestimento.getInstancia());
-            server.createContext("/api/colaboradores", CColaborador.getInstancia());
-            server.createContext("/api/voluntarios", CVoluntario.getInstancia());
-            server.createContext("/api/recurso", CUsuario.getInstancia());
+            server.createContext("/api/login", VUsuario.getInstancia());
+            server.createContext("/api/cadastrar", VUsuario.getInstancia());
+            server.createContext("/api/alterar-Primeira-Senha", VUsuario.getInstancia());
+            server.createContext("/api/cadastrar-interno", VUsuario.getInstancia());
+            server.createContext("/api/usuarios", VUsuario.getInstancia());
+            server.createContext("/api/investimentos", VInvestimento.getInstancia());
+            server.createContext("/api/colaboradores", VColaborador.getInstancia());
+            server.createContext("/api/voluntarios", VVoluntario.getInstancia());
+            server.createContext("/api/recurso", VUsuario.getInstancia());
 
             server.setExecutor(null);
             server.start();
