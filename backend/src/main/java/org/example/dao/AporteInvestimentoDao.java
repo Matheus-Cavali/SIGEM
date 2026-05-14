@@ -32,6 +32,20 @@ public class AporteInvestimentoDao {
         return -1;
     }
 
+    public boolean atualizar(int id, AporteInvestimento aporte) {
+        String sql = "UPDATE aporte_investimento SET valor_aporte = ?, data_aporte = ? WHERE id = ?";
+        try (Connection conn = Conexao.getConexao();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setBigDecimal(1, aporte.getValorAporte());
+            stmt.setObject(2, aporte.getDataAporte());
+            stmt.setInt(3, id);
+            return stmt.executeUpdate() == 1;
+        } catch (SQLException e) {
+            System.err.println("Erro ao atualizar aporte: " + e.getMessage());
+            return false;
+        }
+    }
+
     public boolean deletar(int id) {
         String sql = "DELETE FROM aporte_investimento WHERE id = ?";
         try (Connection conn = Conexao.getConexao();
