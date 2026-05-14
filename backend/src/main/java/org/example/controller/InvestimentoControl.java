@@ -18,12 +18,12 @@ import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-public class CInvestimento {
+public class InvestimentoControl {
 
-    private static CInvestimento instancia;
-    private CInvestimento() {}
-    public static CInvestimento getInstancia() {
-        if (instancia == null) instancia = new CInvestimento();
+    private static InvestimentoControl instancia;
+    private InvestimentoControl() {}
+    public static InvestimentoControl getInstancia() {
+        if (instancia == null) instancia = new InvestimentoControl();
         return instancia;
     }
 

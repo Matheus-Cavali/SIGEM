@@ -1,26 +1,26 @@
-package org.example.view;
+package org.example.router;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
-import org.example.controller.CUsuario;
+import org.example.controller.UsuarioControl;
 import org.example.model.Resposta;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
-public class VUsuario implements HttpHandler {
+public class UsuarioRouter implements HttpHandler {
 
-    private static VUsuario instancia;
-    private VUsuario() {}
-    public static VUsuario getInstancia() {
-        if (instancia == null) instancia = new VUsuario();
+    private static UsuarioRouter instancia;
+    private UsuarioRouter() {}
+    public static UsuarioRouter getInstancia() {
+        if (instancia == null) instancia = new UsuarioRouter();
         return instancia;
     }
 
-    private CUsuario controller = CUsuario.getInstancia();
+    private UsuarioControl controller = UsuarioControl.getInstancia();
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
@@ -66,7 +66,6 @@ public class VUsuario implements HttpHandler {
             }
         } catch (Exception e) {
             System.err.println("ERRO: " + e.getMessage());
-            e.printStackTrace();
             enviarResposta(exchange, "{\"erro\":\"Erro interno\"}", 500);
         }
     }

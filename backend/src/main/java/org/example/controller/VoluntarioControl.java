@@ -9,12 +9,12 @@ import org.example.model.Voluntario;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-public class CVoluntario {
+public class VoluntarioControl {
 
-    private static CVoluntario instancia;
-    private CVoluntario() {}
-    public static CVoluntario getInstancia() {
-        if (instancia == null) instancia = new CVoluntario();
+    private static VoluntarioControl instancia;
+    private VoluntarioControl() {}
+    public static VoluntarioControl getInstancia() {
+        if (instancia == null) instancia = new VoluntarioControl();
         return instancia;
     }
 

@@ -18,12 +18,12 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CUsuario {
+public class UsuarioControl {
 
-    private static CUsuario instancia;
-    private CUsuario() {}
-    public static CUsuario getInstancia() {
-        if (instancia == null) instancia = new CUsuario();
+    private static UsuarioControl instancia;
+    private UsuarioControl() {}
+    public static UsuarioControl getInstancia() {
+        if (instancia == null) instancia = new UsuarioControl();
         return instancia;
     }
 
@@ -133,7 +133,7 @@ public class CUsuario {
             return new Resposta(200, resp.toString());
         } catch (Exception e) {
             System.err.println("ERRO no processarLogin: " + e.getMessage());
-            return new Resposta(500, "{\"erro\":\"Erro interno: " + e.getMessage().replace("\"", "'") + "\"}");
+            return new Resposta(500, "{\"erro\":\"Erro interno no servidor\"}");
         }
     }
 

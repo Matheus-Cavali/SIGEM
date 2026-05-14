@@ -3,10 +3,7 @@ package org.example;
 import com.sun.net.httpserver.HttpServer;
 import org.example.dao.InvestimentoFuturoDao;
 import org.example.dao.UsuarioDao;
-import org.example.view.VColaborador;
-import org.example.view.VInvestimento;
-import org.example.view.VUsuario;
-import org.example.view.VVoluntario;
+import org.example.router.*;
 
 import java.net.InetSocketAddress;
 import java.io.IOException;
@@ -21,15 +18,16 @@ public class Main {
             invDao.migrarStatus();
             HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
 
-            server.createContext("/api/login", VUsuario.getInstancia());
-            server.createContext("/api/cadastrar", VUsuario.getInstancia());
-            server.createContext("/api/alterar-Primeira-Senha", VUsuario.getInstancia());
-            server.createContext("/api/cadastrar-interno", VUsuario.getInstancia());
-            server.createContext("/api/usuarios", VUsuario.getInstancia());
-            server.createContext("/api/investimentos", VInvestimento.getInstancia());
-            server.createContext("/api/colaboradores", VColaborador.getInstancia());
-            server.createContext("/api/voluntarios", VVoluntario.getInstancia());
-            server.createContext("/api/recurso", VUsuario.getInstancia());
+            server.createContext("/api/login", UsuarioRouter.getInstancia());
+            server.createContext("/api/cadastrar", UsuarioRouter.getInstancia());
+            server.createContext("/api/alterar-Primeira-Senha", UsuarioRouter.getInstancia());
+            server.createContext("/api/cadastrar-interno", UsuarioRouter.getInstancia());
+            server.createContext("/api/usuarios", UsuarioRouter.getInstancia());
+            server.createContext("/api/investimentos", InvestimentoRouter.getInstancia());
+            server.createContext("/api/colaboradores", ColaboradorRouter.getInstancia());
+            server.createContext("/api/voluntarios", VoluntarioRouter.getInstancia());
+            server.createContext("/api/materiais", MaterialRouter.getInstancia());
+            server.createContext("/api/recurso", UsuarioRouter.getInstancia());
 
             server.setExecutor(null);
             server.start();

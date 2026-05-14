@@ -1,24 +1,24 @@
-package org.example.view;
+package org.example.router;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
-import org.example.controller.CInvestimento;
+import org.example.controller.InvestimentoControl;
 import org.example.model.Resposta;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
-public class VInvestimento implements HttpHandler {
+public class InvestimentoRouter implements HttpHandler {
 
-    private static VInvestimento instancia;
-    private VInvestimento() {}
-    public static VInvestimento getInstancia() {
-        if (instancia == null) instancia = new VInvestimento();
+    private static InvestimentoRouter instancia;
+    private InvestimentoRouter() {}
+    public static InvestimentoRouter getInstancia() {
+        if (instancia == null) instancia = new InvestimentoRouter();
         return instancia;
     }
 
-    private CInvestimento controller = CInvestimento.getInstancia();
+    private InvestimentoControl controller = InvestimentoControl.getInstancia();
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
@@ -77,11 +77,10 @@ public class VInvestimento implements HttpHandler {
                 Resposta r = controller.atualizarAporte(auth, aporteId, json);
                 enviarResposta(exchange, r.body, r.status);
             } else {
-                enviarResposta(exchange, "{\"erro\":\"Rota n\u00e3o encontrada\"}", 404);
+                enviarResposta(exchange, "{\"erro\":\"Rota não encontrada\"}", 404);
             }
         } catch (Exception e) {
             System.err.println("ERRO: " + e.getMessage());
-            e.printStackTrace();
             enviarResposta(exchange, "{\"erro\":\"Erro interno\"}", 500);
         }
     }

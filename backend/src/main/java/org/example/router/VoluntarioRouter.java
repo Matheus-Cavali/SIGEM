@@ -1,25 +1,24 @@
-package org.example.view;
+package org.example.router;
 
-import com.google.gson.JsonObject;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
-import org.example.controller.CColaborador;
+import org.example.controller.VoluntarioControl;
 import org.example.model.Resposta;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
-public class VColaborador implements HttpHandler {
+public class VoluntarioRouter implements HttpHandler {
 
-    private static VColaborador instancia;
-    private VColaborador() {}
-    public static VColaborador getInstancia() {
-        if (instancia == null) instancia = new VColaborador();
+    private static VoluntarioRouter instancia;
+    private VoluntarioRouter() {}
+    public static VoluntarioRouter getInstancia() {
+        if (instancia == null) instancia = new VoluntarioRouter();
         return instancia;
     }
 
-    private CColaborador controller = CColaborador.getInstancia();
+    private VoluntarioControl controller = VoluntarioControl.getInstancia();
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
@@ -36,20 +35,20 @@ public class VColaborador implements HttpHandler {
         String metodo = exchange.getRequestMethod();
 
         try {
-            if ("GET".equalsIgnoreCase(metodo) && "/api/colaboradores".equals(path)) {
+            if ("GET".equalsIgnoreCase(metodo) && "/api/voluntarios".equals(path)) {
                 Resposta r = controller.listar(exchange.getRequestURI().getQuery());
                 enviarResposta(exchange, r.body, r.status);
-            } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/colaboradores/\\d+")) {
+            } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/voluntarios/\\d+")) {
                 int id = Integer.parseInt(path.split("/")[3]);
                 Resposta r = controller.buscarPorId(id);
                 enviarResposta(exchange, r.body, r.status);
-            } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/colaboradores/\\d+")) {
+            } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/voluntarios/\\d+")) {
                 int id = Integer.parseInt(path.split("/")[3]);
                 String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
                 Resposta r = controller.atualizar(id, json);
                 enviarResposta(exchange, r.body, r.status);
             } else {
-                enviarResposta(exchange, "{\"erro\":\"Rota n\u00e3o encontrada\"}", 404);
+                enviarResposta(exchange, "{\"erro\":\"Rota não encontrada\"}", 404);
             }
         } catch (Exception e) {
             enviarResposta(exchange, "{\"erro\":\"Erro interno\"}", 500);
