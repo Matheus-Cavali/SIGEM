@@ -1,16 +1,14 @@
 package org.example.controller;
 
 import com.google.gson.Gson;
-import com.sun.net.httpserver.HttpExchange;
 import org.example.dao.RecursoSistemaDao;
 import org.example.dao.UsuarioDao;
 import org.example.facade.MaterialFacade;
 import org.example.model.Material;
 import org.example.model.RecursoSistema;
+import org.example.model.Resposta;
 import org.example.model.Usuario;
 
-import java.io.IOException;
-import java.io.OutputStream;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -26,21 +24,45 @@ public class MaterialControl {
         return instancia;
     }
 
-    public void cadastrar(HttpExchange exchange){
+    private String emailDoToken(String auth) {
+        if (auth != null && auth.startsWith("Bearer ")) {
+            return org.example.util.Token.validarToken(auth.substring(7));
+        }
+        return null;
+    }
+
+    private boolean usuarioTemPermissao(String auth, String recursoNome) {
+        String email = emailDoToken(auth);
+        if (email != null) {
+            UsuarioDao uDao = new UsuarioDao();
+            Usuario u = uDao.buscarPorEmail(email);
+            if (u != null) {
+                if (u.getNivelAcesso() == 1) return true;
+                RecursoSistemaDao rDao = new RecursoSistemaDao();
+                for (RecursoSistema r : rDao.listarPorUsuario(u.getId())) {
+                    if (r.getNome().equals(recursoNome)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public Resposta cadastrar(String auth, String json){
+        if (!usuarioTemPermissao(auth, "GESTAO_DOACOES")) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
         try{
-            String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
             Material m = gson.fromJson(json, Material.class);
             facade.cadastrar(m);
-            enviarResposta(exchange, "{\"mensagem\":\"Material cadastrado com sucesso\"}", 201);
+            return new Resposta(201, "{\"mensagem\":\"Material cadastrado com sucesso\"}");
         }
         catch (Exception e){
-            enviarResposta(exchange, "{\"erro\":\"Falha ao cadastrar material\"}", 400);
+            return new Resposta(400, "{\"erro\":\"Falha ao cadastrar material\"}");
         }
     }
 
-    public void listar(HttpExchange exchange){
+    public Resposta listar(String query){
         try{
-            String query = exchange.getRequestURI().getQuery();
             String nome = null;
             Integer categoriaId = null;
 
@@ -59,62 +81,38 @@ public class MaterialControl {
             }
 
             List<Material> lista = facade.filtrar(nome, categoriaId);
-            enviarResposta(exchange, gson.toJson(lista), 200);
+            return new Resposta(200, gson.toJson(lista));
         }
         catch (Exception e){
-            enviarResposta(exchange, "{\"erro\":\"Erro ao listar materiais\"}", 500);
+            return new Resposta(500, "{\"erro\":\"Erro ao listar materiais\"}");
         }
     }
 
-    public void atualizar(HttpExchange exchange){
+    public Resposta atualizar(String auth, int id, String json){
+        if (!usuarioTemPermissao(auth, "GESTAO_DOACOES")) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
         try{
-            int id = extrairId(exchange.getRequestURI().getPath());
-            String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-
             Material m = gson.fromJson(json, Material.class);
             m.setId(id);
-
             facade.alterar(m);
-            enviarResposta(exchange, "{\"mensagem\":\"Material atualizado com sucesso\"}", 200);
+            return new Resposta(200, "{\"mensagem\":\"Material atualizado com sucesso\"}");
         }
         catch (Exception e){
-            enviarResposta(exchange, "{\"erro\":\"Erro ao atualizar material\"}", 400);
+            return new Resposta(400, "{\"erro\":\"Erro ao atualizar material\"}");
         }
     }
 
-    public void excluir(HttpExchange exchange){
+    public Resposta excluir(String auth, int id){
+        if (!usuarioTemPermissao(auth, "GESTAO_DOACOES")) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
         try{
-            int id = extrairId(exchange.getRequestURI().getPath());
-
             facade.excluir(id);
-            enviarResposta(exchange, "{\"mensagem\":\"Material excluído com sucesso\"}", 200);
+            return new Resposta(200, "{\"mensagem\":\"Material excluído com sucesso\"}");
         }
         catch (Exception e){
-            enviarResposta(exchange, "{\"erro\":\"Erro ao excluir material\"}", 400);
-        }
-    }
-
-    private int extrairId(String path){
-        try{
-            return Integer.parseInt(path.substring(path.lastIndexOf("/") + 1));
-        }
-        catch (NumberFormatException e){
-            return -1;
-        }
-    }
-
-    private void enviarResposta(HttpExchange exchange, String json, int status){
-        try{
-            byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
-
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.sendResponseHeaders(status, bytes.length);
-            try(OutputStream os = exchange.getResponseBody()){
-                os.write(bytes);
-            }
-        }
-        catch (IOException e){
-            System.err.println("Erro crítico de I/O: " + e.getMessage());
+            return new Resposta(400, "{\"erro\":\"Erro ao excluir material\"}");
         }
     }
 }

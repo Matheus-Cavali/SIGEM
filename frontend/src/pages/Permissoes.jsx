@@ -5,12 +5,12 @@ import { useAuth } from '../state/AuthContext'
 import PageHeader from '../components/PageHeader'
 
 export default function Permissoes() {
-  const { user } = useAuth()
+  const { user, can } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (user?.nivelAcesso !== 1) navigate('/investimentos', { replace: true })
-  }, [user])
+    if (!can('GESTAO_PERMISSOES')) navigate('/investimentos', { replace: true })
+  }, [user, can])
   const [usuarios, setUsuarios] = useState([])
   const [recursos, setRecursos] = useState([])
   const [usuarioId, setUsuarioId] = useState('')

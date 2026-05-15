@@ -13,7 +13,7 @@ const initialForm = {
 
 export default function Usuarios() {
   const { user, can } = useAuth()
-  const podeGerenciar = can('GESTAO_USUARIOS') || user?.nivelAcesso === 1
+  const podeGerenciar = can('GESTAO_USUARIOS')
 
   const [items, setItems] = useState([])
   const [form, setForm] = useState(initialForm)
@@ -149,8 +149,8 @@ export default function Usuarios() {
   }
 
   const nivelLabel = (nivel) => {
-    if (nivel === 1) return 'Admin'
-    if (nivel === 2) return 'Usuario'
+    if (nivel === 1) return 'Total'
+    if (nivel === 2) return 'Restrito'
     return 'Nivel ' + nivel
   }
 
@@ -243,8 +243,8 @@ export default function Usuarios() {
             <label>
               <span>Nivel de Acesso</span>
               <select value={form.nivelAcesso} onChange={e => setForm(prev => ({ ...prev, nivelAcesso: e.target.value }))}>
-                <option value="2">Usuario</option>
-                <option value="1">Administrador</option>
+                <option value="2">Restrito</option>
+                <option value="1">Total</option>
               </select>
             </label>
             <div className="form-submit">

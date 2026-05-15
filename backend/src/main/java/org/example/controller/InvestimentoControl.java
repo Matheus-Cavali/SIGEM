@@ -2,8 +2,6 @@ package org.example.controller;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import org.example.dao.AporteInvestimentoDao;
-import org.example.dao.InvestimentoFuturoDao;
 import org.example.dao.RecursoSistemaDao;
 import org.example.dao.UsuarioDao;
 import org.example.model.AporteInvestimento;
@@ -26,6 +24,8 @@ public class InvestimentoControl {
         if (instancia == null) instancia = new InvestimentoControl();
         return instancia;
     }
+
+    private final InvestimentoFacade facade = new InvestimentoFacade();
 
     private String emailDoToken(String auth) {
         if (auth != null && auth.startsWith("Bearer ")) {
@@ -70,14 +70,14 @@ public class InvestimentoControl {
         String dataStr = body.get("dataAbertura").getAsString();
         int colaboradorId = body.get("colaboradorId").getAsInt();
 
-        String erro = new InvestimentoFacade().validarDadosInvestimento(nome, meta, dataStr);
+        String erro = facade.validarDadosInvestimento(nome, meta, dataStr);
         if (erro != null) return new Resposta(400, "{\"erro\":\"" + erro + "\"}");
 
         InvestimentoFuturo inv = new InvestimentoFuturo();
         inv.setNome(nome); inv.setValorMeta(meta);
         inv.setDataAbertura(Data.parseFlexivel(dataStr)); inv.setColaboradorId(colaboradorId);
 
-        int id = new InvestimentoFuturoDao().inserir(inv);
+        int id = facade.registrarInvestimento(inv);
         if (id > 0) return new Resposta(201, "{\"mensagem\":\"Investimento registrado com sucesso\",\"id\":" + id + "}");
         return new Resposta(500, "{\"erro\":\"Erro ao registrar investimento\"}");
     }
@@ -93,7 +93,7 @@ public class InvestimentoControl {
                 }
             }
         }
-        List<InvestimentoFuturo> lista = new InvestimentoFuturoDao().listar(nome, status);
+        List<InvestimentoFuturo> lista = facade.listarInvestimentos(nome, status);
         StringBuilder json = new StringBuilder("[");
         for (int i = 0; i < lista.size(); i++) {
             InvestimentoFuturo inv = lista.get(i);
@@ -102,7 +102,8 @@ public class InvestimentoControl {
             json.append("\"valorMeta\":").append(inv.getValorMeta()).append(",");
             json.append("\"dataAbertura\":\"").append(inv.getDataAbertura().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))).append("\",");
             json.append("\"status\":\"").append(inv.getStatus()).append("\",");
-            json.append("\"saldoAtual\":").append(inv.getSaldoAtual());
+            json.append("\"saldoAtual\":").append(inv.getSaldoAtual()).append(",");
+            json.append("\"colaboradorNome\":\"").append(escaparJson(inv.getColaboradorNome())).append("\"");
             json.append("}");
             if (i < lista.size() - 1) json.append(",");
         }
@@ -111,13 +112,14 @@ public class InvestimentoControl {
     }
 
     public Resposta buscarInvestimento(int id) {
-        InvestimentoFuturo inv = new InvestimentoFuturoDao().buscarPorId(id);
+        InvestimentoFuturo inv = facade.buscarInvestimentoPorId(id);
         if (inv == null) return new Resposta(404, "{\"erro\":\"Investimento n\u00e3o encontrado\"}");
         JsonObject resp = new JsonObject();
         resp.addProperty("id", inv.getId()); resp.addProperty("nome", inv.getNome());
         resp.addProperty("valorMeta", inv.getValorMeta());
         resp.addProperty("dataAbertura", inv.getDataAbertura().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
         resp.addProperty("status", inv.getStatus()); resp.addProperty("saldoAtual", inv.getSaldoAtual());
+        resp.addProperty("colaboradorNome", inv.getColaboradorNome());
         return new Resposta(200, resp.toString());
     }
 
@@ -128,13 +130,12 @@ public class InvestimentoControl {
         if (alterandoStatus && !usuarioPodeGerenciar(auth)) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
-        InvestimentoFuturoDao dao = new InvestimentoFuturoDao();
-        InvestimentoFuturo inv = dao.buscarPorId(id);
+        InvestimentoFuturo inv = facade.buscarInvestimentoPorId(id);
         if (inv == null) return new Resposta(404, "{\"erro\":\"Investimento n\u00e3o encontrado\"}");
         if (body.has("nome")) inv.setNome(body.get("nome").getAsString());
         if (body.has("valorMeta")) inv.setValorMeta(body.get("valorMeta").getAsBigDecimal());
         if (body.has("status")) inv.setStatus(body.get("status").getAsString());
-        if (dao.atualizar(inv)) return new Resposta(200, "{\"mensagem\":\"Investimento atualizado\"}");
+        if (facade.atualizarInvestimento(inv)) return new Resposta(200, "{\"mensagem\":\"Investimento atualizado\"}");
         return new Resposta(500, "{\"erro\":\"Erro ao atualizar\"}");
     }
 
@@ -148,32 +149,33 @@ public class InvestimentoControl {
         String dataStr = body.get("dataAporte").getAsString();
         int colaboradorId = body.get("colaboradorId").getAsInt();
 
-        String erro = new InvestimentoFacade().validarDadosAporte(valor, dataStr);
+        String erro = facade.validarDadosAporte(valor, dataStr);
         if (erro != null) return new Resposta(400, "{\"erro\":\"" + erro + "\"}");
 
-        InvestimentoFuturoDao invDao = new InvestimentoFuturoDao();
-        if (invDao.buscarPorId(investimentoId) == null) return new Resposta(404, "{\"erro\":\"Investimento n\u00e3o encontrado\"}");
+        if (facade.buscarInvestimentoPorId(investimentoId) == null) return new Resposta(404, "{\"erro\":\"Investimento n\u00e3o encontrado\"}");
 
         AporteInvestimento aporte = new AporteInvestimento();
         aporte.setInvestimentoFuturoId(investimentoId); aporte.setValorAporte(valor);
         aporte.setDataAporte(Data.parseFlexivel(dataStr)); aporte.setColaboradorId(colaboradorId);
 
-        int id = new AporteInvestimentoDao().inserir(aporte);
+        int id = facade.lancarAporte(aporte);
         if (id > 0) {
-            BigDecimal saldo = invDao.calcularSaldo(investimentoId);
+            BigDecimal saldo = facade.calcularSaldo(investimentoId);
             return new Resposta(201, "{\"mensagem\":\"Aporte registrado com sucesso\",\"id\":" + id + ",\"saldoAtual\":" + saldo + "}");
         }
         return new Resposta(500, "{\"erro\":\"Erro ao registrar aporte\"}");
     }
 
     public Resposta listarAportes(int investimentoId) {
-        List<AporteInvestimento> lista = new AporteInvestimentoDao().listarPorInvestimento(investimentoId);
+        List<AporteInvestimento> lista = facade.listarAportes(investimentoId);
         StringBuilder json = new StringBuilder("[");
         for (int i = 0; i < lista.size(); i++) {
             AporteInvestimento a = lista.get(i);
             json.append("{\"id\":").append(a.getId()).append(",");
             json.append("\"valorAporte\":").append(a.getValorAporte()).append(",");
-            json.append("\"dataAporte\":\"").append(a.getDataAporte().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))).append("\"}");
+            json.append("\"dataAporte\":\"").append(a.getDataAporte().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))).append("\",");
+            json.append("\"colaboradorNome\":\"").append(escaparJson(a.getColaboradorNome())).append("\"");
+            json.append("}");
             if (i < lista.size() - 1) json.append(",");
         }
         json.append("]");
@@ -182,13 +184,13 @@ public class InvestimentoControl {
 
     public Resposta removerInvestimento(String auth, int id) {
         if (!usuarioPodeGerenciar(auth)) return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
-        if (new InvestimentoFuturoDao().deletar(id)) return new Resposta(200, "{\"mensagem\":\"Investimento removido\"}");
+        if (facade.deletarInvestimento(id)) return new Resposta(200, "{\"mensagem\":\"Investimento removido\"}");
         return new Resposta(500, "{\"erro\":\"Erro ao remover investimento\"}");
     }
 
     public Resposta removerAporte(String auth, int aporteId) {
         if (!usuarioPodeGerenciar(auth)) return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
-        if (new AporteInvestimentoDao().deletar(aporteId)) return new Resposta(200, "{\"mensagem\":\"Aporte removido\"}");
+        if (facade.deletarAporte(aporteId)) return new Resposta(200, "{\"mensagem\":\"Aporte removido\"}");
         return new Resposta(500, "{\"erro\":\"Erro ao remover aporte\"}");
     }
 
@@ -199,7 +201,7 @@ public class InvestimentoControl {
         AporteInvestimento aporte = new AporteInvestimento();
         aporte.setValorAporte(body.get("valorAporte").getAsBigDecimal());
         aporte.setDataAporte(Data.parseFlexivel(body.get("dataAporte").getAsString()));
-        if (new AporteInvestimentoDao().atualizar(aporteId, aporte)) return new Resposta(200, "{\"mensagem\":\"Aporte atualizado\"}");
+        if (facade.atualizarAporte(aporteId, aporte)) return new Resposta(200, "{\"mensagem\":\"Aporte atualizado\"}");
         return new Resposta(500, "{\"erro\":\"Erro ao atualizar aporte\"}");
     }
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { del, get, post, put } from '../api/http'
+import { useAuth } from '../state/AuthContext'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
 
@@ -12,6 +13,8 @@ export default function CategoriasMateriais() {
   const [editing, setEditing] = useState(null)
   const [erro, setErro] = useState('')
   const [filtroNome, setFiltroNome] = useState('')
+  const { can } = useAuth()
+  const canManage = can('GESTAO_DOACOES')
 
   const load = async (nome) => {
     try {
@@ -88,7 +91,7 @@ export default function CategoriasMateriais() {
 
   return (
     <>
-      <PageHeader title="Categorias de Materiais" subtitle="Gerencie as categorias dos materiais da igreja" actionLabel="Adicionar Categoria" onAction={openNew} />
+      <PageHeader title="Categorias de Materiais" subtitle="Gerencie as categorias dos materiais da igreja" actionLabel={canManage ? 'Adicionar Categoria' : ''} onAction={canManage ? openNew : null} />
 
       <section className="filter-bar">
         <input
@@ -124,8 +127,8 @@ export default function CategoriasMateriais() {
               <h3>{item.nome}</h3>
             </div>
             <div className="card-actions">
-              <button className="icon-button" onClick={() => openEdit(item)} title="Editar"><Icon name="edit" size={16} /></button>
-              <button className="icon-button icon-button--danger" onClick={() => remove(item)} title="Excluir"><Icon name="trash" size={16} /></button>
+              {canManage && <button className="icon-button" onClick={() => openEdit(item)} title="Editar"><Icon name="edit" size={16} /></button>}
+              {canManage && <button className="icon-button icon-button--danger" onClick={() => remove(item)} title="Excluir"><Icon name="trash" size={16} /></button>}
             </div>
           </article>
         ))}

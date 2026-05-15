@@ -35,6 +35,7 @@ public class UsuarioRouter implements HttpHandler {
 
         String path = exchange.getRequestURI().getPath();
         String metodo = exchange.getRequestMethod();
+        String auth = exchange.getRequestHeaders().getFirst("Authorization");
 
         try {
             if ("POST".equalsIgnoreCase(metodo)) {
@@ -48,19 +49,19 @@ public class UsuarioRouter implements HttpHandler {
                     processarCadastroInterno(exchange);
                 }
             } else if ("GET".equalsIgnoreCase(metodo) && "/api/usuarios".equals(path)) {
-                listarUsuarios(exchange);
+                listarUsuarios(exchange, auth);
             } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+")) {
-                buscarUsuario(exchange);
+                buscarUsuario(exchange, auth);
             } else if ("PATCH".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+/status")) {
                 alterarStatusUsuario(exchange);
             } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+")) {
                 atualizarUsuario(exchange);
             } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/recurso/\\d+/permissoes")) {
-                listarPermissoes(exchange);
+                listarPermissoes(exchange, auth);
             } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/recurso/\\d+/permissoes")) {
-                atualizarPermissoes(exchange);
+                atualizarPermissoes(exchange, auth);
             } else if ("GET".equalsIgnoreCase(metodo) && "/api/recurso".equals(path)) {
-                listarTodosRecursos(exchange);
+                listarTodosRecursos(exchange, auth);
             } else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+")) {
                 removerUsuario(exchange);
             }
@@ -95,16 +96,16 @@ public class UsuarioRouter implements HttpHandler {
         enviarResposta(exchange, r.body, r.status);
     }
 
-    private void listarUsuarios(HttpExchange exchange) throws IOException {
+    private void listarUsuarios(HttpExchange exchange, String auth) throws IOException {
         String query = exchange.getRequestURI().getQuery();
-        Resposta r = controller.listarUsuarios(query);
+        Resposta r = controller.listarUsuarios(auth, query);
         enviarResposta(exchange, r.body, r.status);
     }
 
-    private void buscarUsuario(HttpExchange exchange) throws IOException {
+    private void buscarUsuario(HttpExchange exchange, String auth) throws IOException {
         String[] p = exchange.getRequestURI().getPath().split("/");
         int id = Integer.parseInt(p[3]);
-        Resposta r = controller.buscarUsuario(id);
+        Resposta r = controller.buscarUsuario(auth, id);
         enviarResposta(exchange, r.body, r.status);
     }
 
@@ -135,23 +136,23 @@ public class UsuarioRouter implements HttpHandler {
         enviarResposta(exchange, r.body, r.status);
     }
 
-    private void listarTodosRecursos(HttpExchange exchange) throws IOException {
-        Resposta r = controller.listarTodosRecursos();
+    private void listarTodosRecursos(HttpExchange exchange, String auth) throws IOException {
+        Resposta r = controller.listarTodosRecursos(auth);
         enviarResposta(exchange, r.body, r.status);
     }
 
-    private void listarPermissoes(HttpExchange exchange) throws IOException {
+    private void listarPermissoes(HttpExchange exchange, String auth) throws IOException {
         String[] p = exchange.getRequestURI().getPath().split("/");
         int usuarioId = Integer.parseInt(p[3]);
-        Resposta r = controller.listarPermissoes(usuarioId);
+        Resposta r = controller.listarPermissoes(auth, usuarioId);
         enviarResposta(exchange, r.body, r.status);
     }
 
-    private void atualizarPermissoes(HttpExchange exchange) throws IOException {
+    private void atualizarPermissoes(HttpExchange exchange, String auth) throws IOException {
         String[] p = exchange.getRequestURI().getPath().split("/");
         int usuarioId = Integer.parseInt(p[3]);
         String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-        Resposta r = controller.atualizarPermissoes(usuarioId, json);
+        Resposta r = controller.atualizarPermissoes(auth, usuarioId, json);
         enviarResposta(exchange, r.body, r.status);
     }
 

@@ -18,6 +18,22 @@ public class ParametersControl {
         return instancia;
     }
 
+    private String emailDoToken(String auth) {
+        if (auth != null && auth.startsWith("Bearer ")) {
+            return org.example.util.Token.validarToken(auth.substring(7));
+        }
+        return null;
+    }
+
+    private boolean usuarioPodeGerenciar(String auth) {
+        String email = emailDoToken(auth);
+        if (email != null) {
+            org.example.model.Usuario u = new org.example.dao.UsuarioDao().buscarPorEmail(email);
+            if (u != null) return u.getNivelAcesso() == 1;
+        }
+        return false;
+    }
+
     public Resposta buscar() {
         try {
             return new Resposta(200, gson.toJson(facade.buscar()));
@@ -26,7 +42,10 @@ public class ParametersControl {
         }
     }
 
-    public Resposta salvar(String json) {
+    public Resposta salvar(String auth, String json) {
+        if (!usuarioPodeGerenciar(auth)) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
         try {
             ParametrizacaoIgreja parametros = gson.fromJson(json, ParametrizacaoIgreja.class);
             ParametrizacaoIgreja salvo = facade.salvar(parametros);
@@ -38,7 +57,10 @@ public class ParametersControl {
         }
     }
 
-    public Resposta salvarLogo(String caminhoLogo) {
+    public Resposta salvarLogo(String auth, String caminhoLogo) {
+        if (!usuarioPodeGerenciar(auth)) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
         try {
             ParametrizacaoIgreja salvo = facade.salvarLogo(caminhoLogo);
             return new Resposta(200, gson.toJson(salvo));

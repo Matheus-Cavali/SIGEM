@@ -6,10 +6,10 @@ const mainItems = [
   { label: 'Investimentos', path: '/investimentos', icon: 'trend' },
   { label: 'Aportes', path: '/aportes', icon: 'dollar' },
   { label: 'Materiais', path: '/materiais', icon: 'box' },
-  { label: 'Cat Materiais', path: '/categorias-materiais', icon: 'box' },
-  { label: 'Cat Eventos', path: '/categorias-eventos', icon: 'box' },
+  { label: 'Cat Materiais', path: '/categorias-materiais', icon: 'plus' },
+  { label: 'Cat Eventos', path: '/categorias-eventos', icon: 'calendar' },
   { label: 'Despesas', path: '/despesas', icon: 'dollar' },
-  { label: 'Cat Despesa', path: '/categorias-despesa', icon: 'dollar' },
+  { label: 'Cat Despesa', path: '/categorias-despesa', icon: 'target' },
   { label: 'Usuarios', path: '/usuarios', icon: 'users' }
 ]
 

@@ -34,16 +34,17 @@ public class ParametersRouter implements HttpHandler {
 
         String path = exchange.getRequestURI().getPath();
         String metodo = exchange.getRequestMethod();
+        String auth = exchange.getRequestHeaders().getFirst("Authorization");
 
         try {
             if ("GET".equalsIgnoreCase(metodo) && "/api/parameters".equals(path)) {
                 enviarResposta(exchange, controller.buscar());
             } else if ("PUT".equalsIgnoreCase(metodo) && "/api/parameters".equals(path)) {
                 String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-                enviarResposta(exchange, controller.salvar(json));
+                enviarResposta(exchange, controller.salvar(auth, json));
             } else if ("POST".equalsIgnoreCase(metodo) && "/api/parameters/logo".equals(path)) {
                 String caminhoLogo = salvarUpload(exchange);
-                enviarResposta(exchange, controller.salvarLogo(caminhoLogo));
+                enviarResposta(exchange, controller.salvarLogo(auth, caminhoLogo));
             } else {
                 enviarJson(exchange, "{\"erro\":\"Rota não encontrada\"}", 404);
             }

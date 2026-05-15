@@ -3,8 +3,12 @@ package org.example.controller;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import org.example.dao.ColaboradorDao;
+import org.example.dao.RecursoSistemaDao;
+import org.example.dao.UsuarioDao;
 import org.example.model.Colaborador;
+import org.example.model.RecursoSistema;
 import org.example.model.Resposta;
+import org.example.model.Usuario;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -18,7 +22,33 @@ public class ColaboradorControl {
         return instancia;
     }
 
-    public Resposta listar(String query) {
+    private String emailDoToken(String auth) {
+        if (auth != null && auth.startsWith("Bearer ")) {
+            return org.example.util.Token.validarToken(auth.substring(7));
+        }
+        return null;
+    }
+
+    private boolean usuarioTemPermissao(String auth, String recursoNome) {
+        String email = emailDoToken(auth);
+        if (email != null) {
+            UsuarioDao uDao = new UsuarioDao();
+            Usuario u = uDao.buscarPorEmail(email);
+            if (u != null) {
+                if (u.getNivelAcesso() == 1) return true;
+                RecursoSistemaDao rDao = new RecursoSistemaDao();
+                for (RecursoSistema r : rDao.listarPorUsuario(u.getId())) {
+                    if (r.getNome().equals(recursoNome)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public Resposta listar(String auth, String query) {
+        if (!usuarioTemPermissao(auth, "GESTAO_COLABORADORES")) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
         String nome = null, email = null;
         if (query != null) {
             for (String p : query.split("&")) {
@@ -50,7 +80,10 @@ public class ColaboradorControl {
         return new Resposta(200, json.toString());
     }
 
-    public Resposta buscarPorId(int id) {
+    public Resposta buscarPorId(String auth, int id) {
+        if (!usuarioTemPermissao(auth, "GESTAO_COLABORADORES")) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
         Colaborador c = new ColaboradorDao().buscarPorId(id);
         if (c == null) return new Resposta(404, "{\"erro\":\"Colaborador n\u00e3o encontrado\"}");
         JsonObject resp = new JsonObject();
@@ -63,7 +96,10 @@ public class ColaboradorControl {
         return new Resposta(200, resp.toString());
     }
 
-    public Resposta atualizar(int id, String jsonBody) {
+    public Resposta atualizar(String auth, int id, String jsonBody) {
+        if (!usuarioTemPermissao(auth, "GESTAO_COLABORADORES")) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
         Gson gson = new Gson();
         JsonObject body = gson.fromJson(jsonBody, JsonObject.class);
         ColaboradorDao dao = new ColaboradorDao();

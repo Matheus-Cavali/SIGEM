@@ -72,7 +72,9 @@ public class AporteInvestimentoDao {
     }
 
     public List<AporteInvestimento> listarPorInvestimento(int investimentoId) {
-        String sql = "SELECT * FROM aporte_investimento WHERE investimento_futuro_id = ? ORDER BY data_aporte DESC";
+        String sql = "SELECT a.*, u.nome AS colaborador_nome FROM aporte_investimento a " +
+                     "LEFT JOIN usuario u ON u.id = a.colaborador_id " +
+                     "WHERE a.investimento_futuro_id = ? ORDER BY a.data_aporte DESC";
         List<AporteInvestimento> lista = new ArrayList<>();
         try (Connection conn = Conexao.getConexao();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -85,6 +87,7 @@ public class AporteInvestimentoDao {
                     a.setValorAporte(rs.getBigDecimal("valor_aporte"));
                     a.setDataAporte(rs.getObject("data_aporte", LocalDate.class));
                     a.setColaboradorId((Integer) rs.getObject("colaborador_id"));
+                    a.setColaboradorNome(rs.getString("colaborador_nome"));
                     lista.add(a);
                 }
             }

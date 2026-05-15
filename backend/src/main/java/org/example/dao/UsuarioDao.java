@@ -265,7 +265,7 @@ public class UsuarioDao {
             stmt.setInt(13, u.getId());
             return stmt.executeUpdate() == 1;
         } catch (SQLException e) {
-            System.err.println("Erro ao atualizar usu\u00e1rio: " + e.getMessage());
+            System.err.println("Erro ao atualizar usuário: " + e.getMessage());
             return false;
         }
     }

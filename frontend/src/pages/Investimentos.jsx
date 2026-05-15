@@ -140,6 +140,7 @@ export default function Investimentos() {
               <div className="meta-row">
                 <span><Icon name="target" size={15} /> {moeda(item.valorMeta)}</span>
                 <span><Icon name="calendar" size={15} /> {item.dataAbertura}</span>
+                {item.colaboradorNome && <span><Icon name="users" size={15} /> {item.colaboradorNome}</span>}
               </div>
             </div>
             <div className="card-actions">

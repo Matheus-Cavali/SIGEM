@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { del, get, post, put } from '../api/http'
+import { useAuth } from '../state/AuthContext'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
 
@@ -12,6 +13,8 @@ export default function CategoriasEventos() {
   const [editing, setEditing] = useState(null)
   const [erro, setErro] = useState('')
   const [filtroNome, setFiltroNome] = useState('')
+  const { can } = useAuth()
+  const canManage = can('GESTAO_EVENTOS')
 
   const load = async (nome) => {
     try {
@@ -107,8 +110,8 @@ export default function CategoriasEventos() {
       <PageHeader
         title="Categorias de Eventos"
         subtitle="Gerencie as categorias dos eventos da igreja"
-        actionLabel="Nova Categoria"
-        onAction={openNew}
+        actionLabel={canManage ? 'Nova Categoria' : ''}
+        onAction={canManage ? openNew : null}
       />
 
       <section className="filter-bar">
@@ -143,7 +146,7 @@ export default function CategoriasEventos() {
             </label>
 
             <div className="form-submit">
-              <button className="danger-action">
+              <button className="primary-action">
                 {editing ? 'Salvar Alterações' : 'Salvar Categoria'}
               </button>
             </div>
@@ -164,21 +167,25 @@ export default function CategoriasEventos() {
             </div>
 
             <div className="card-actions">
-              <button
-                className="icon-button"
-                onClick={() => openEdit(item)}
-                title="Editar"
-              >
-                <Icon name="edit" size={16} />
-              </button>
+              {canManage && (
+                <button
+                  className="icon-button"
+                  onClick={() => openEdit(item)}
+                  title="Editar"
+                >
+                  <Icon name="edit" size={16} />
+                </button>
+              )}
 
-              <button
-                className="icon-button icon-button--danger"
-                onClick={() => remove(item)}
-                title="Excluir"
-              >
-                <Icon name="trash" size={16} />
-              </button>
+              {canManage && (
+                <button
+                  className="icon-button icon-button--danger"
+                  onClick={() => remove(item)}
+                  title="Excluir"
+                >
+                  <Icon name="trash" size={16} />
+                </button>
+              )}
             </div>
           </article>
         ))}

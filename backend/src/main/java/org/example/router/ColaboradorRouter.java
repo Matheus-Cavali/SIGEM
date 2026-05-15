@@ -34,19 +34,20 @@ public class ColaboradorRouter implements HttpHandler {
 
         String path = exchange.getRequestURI().getPath();
         String metodo = exchange.getRequestMethod();
+        String auth = exchange.getRequestHeaders().getFirst("Authorization");
 
         try {
             if ("GET".equalsIgnoreCase(metodo) && "/api/colaboradores".equals(path)) {
-                Resposta r = controller.listar(exchange.getRequestURI().getQuery());
+                Resposta r = controller.listar(auth, exchange.getRequestURI().getQuery());
                 enviarResposta(exchange, r.body, r.status);
             } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/colaboradores/\\d+")) {
                 int id = Integer.parseInt(path.split("/")[3]);
-                Resposta r = controller.buscarPorId(id);
+                Resposta r = controller.buscarPorId(auth, id);
                 enviarResposta(exchange, r.body, r.status);
             } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/colaboradores/\\d+")) {
                 int id = Integer.parseInt(path.split("/")[3]);
                 String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-                Resposta r = controller.atualizar(id, json);
+                Resposta r = controller.atualizar(auth, id, json);
                 enviarResposta(exchange, r.body, r.status);
             } else {
                 enviarResposta(exchange, "{\"erro\":\"Rota não encontrada\"}", 404);

@@ -139,6 +139,7 @@ export default function Aportes() {
               <div className="meta-row">
                 <span><Icon name="dollar" size={15} /> {moeda(item.valorAporte)}</span>
                 <span><Icon name="calendar" size={15} /> {item.dataAporte}</span>
+                {item.colaboradorNome && <span><Icon name="users" size={15} /> {item.colaboradorNome}</span>}
               </div>
             </div>
             <div className="card-actions">

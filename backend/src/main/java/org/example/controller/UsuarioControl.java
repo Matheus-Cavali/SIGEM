@@ -35,21 +35,31 @@ public class UsuarioControl {
         return resultado;
     }
 
+    private int nivelAcessoDoToken(String auth) {
+        if (auth != null && auth.startsWith("Bearer ")) {
+            return Token.extrairNivelAcesso(auth.substring(7));
+        }
+        return -1;
+    }
+
     private boolean usuarioTemPermissaoDb(String auth, String recursoNome) {
         boolean permitido = false;
-        String email = emailDoToken(auth);
-        if (email != null) {
-            UsuarioDao uDao = new UsuarioDao();
-            Usuario u = uDao.buscarPorEmail(email);
-            if (u != null) {
-                if (u.getNivelAcesso() == 1) {
-                    permitido = true;
-                } else {
-                    RecursoSistemaDao rDao = new RecursoSistemaDao();
-                    List<RecursoSistema> permissoes = rDao.listarPorUsuario(u.getId());
-                    for (RecursoSistema r : permissoes) {
-                        if (r.getNome().equals(recursoNome)) {
-                            permitido = true;
+        if (auth != null && auth.startsWith("Bearer ")) {
+            String token = auth.substring(7);
+            if (Token.extrairNivelAcesso(token) == 1) {
+                permitido = true;
+            } else {
+                String email = Token.validarToken(token);
+                if (email != null) {
+                    UsuarioDao uDao = new UsuarioDao();
+                    Usuario u = uDao.buscarPorEmail(email);
+                    if (u != null) {
+                        RecursoSistemaDao rDao = new RecursoSistemaDao();
+                        List<RecursoSistema> permissoes = rDao.listarPorUsuario(u.getId());
+                        for (RecursoSistema r : permissoes) {
+                            if (r.getNome().equals(recursoNome)) {
+                                permitido = true;
+                            }
                         }
                     }
                 }
@@ -60,13 +70,11 @@ public class UsuarioControl {
 
     private boolean usuarioPodeGerenciar(String auth) {
         boolean resultado = false;
-        String email = emailDoToken(auth);
-        if (email != null) {
-            UsuarioDao uDao = new UsuarioDao();
-            Usuario u = uDao.buscarPorEmail(email);
-            if (u != null) {
-                resultado = (u.getNivelAcesso() == 1)
-                    || usuarioTemPermissaoDb(auth, "GESTAO_USUARIOS");
+        if (auth != null && auth.startsWith("Bearer ")) {
+            if (Token.extrairNivelAcesso(auth.substring(7)) == 1) {
+                resultado = true;
+            } else {
+                resultado = usuarioTemPermissaoDb(auth, "GESTAO_USUARIOS");
             }
         }
         return resultado;
@@ -237,7 +245,10 @@ public class UsuarioControl {
         return new Resposta(500, "{\"erro\":\"Erro interno ao cadastrar\"}");
     }
 
-    public Resposta listarUsuarios(String query) {
+    public Resposta listarUsuarios(String auth, String query) {
+        if (!usuarioPodeGerenciar(auth)) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
         String nome = null, email = null, tipo = null;
         if (query != null) {
             for (String p : query.split("&")) {
@@ -278,7 +289,10 @@ public class UsuarioControl {
         return new Resposta(200, json.toString());
     }
 
-    public Resposta buscarUsuario(int id) {
+    public Resposta buscarUsuario(String auth, int id) {
+        if (!usuarioPodeGerenciar(auth)) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
         UsuarioDao dao = new UsuarioDao();
         Usuario u = dao.buscarPorId(id);
         if (u == null) {
@@ -397,7 +411,10 @@ public class UsuarioControl {
         return new Resposta(500, "{\"erro\":\"Erro ao remover usu\u00e1rio\"}");
     }
 
-    public Resposta listarTodosRecursos() {
+    public Resposta listarTodosRecursos(String auth) {
+        if (!usuarioTemPermissaoDb(auth, "GESTAO_PERMISSOES")) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
         RecursoSistemaDao dao = new RecursoSistemaDao();
         List<RecursoSistema> lista = dao.listarTodos();
         StringBuilder json = new StringBuilder("[");
@@ -412,7 +429,10 @@ public class UsuarioControl {
         return new Resposta(200, json.toString());
     }
 
-    public Resposta listarPermissoes(int usuarioId) {
+    public Resposta listarPermissoes(String auth, int usuarioId) {
+        if (!usuarioTemPermissaoDb(auth, "GESTAO_PERMISSOES")) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
         RecursoSistemaDao dao = new RecursoSistemaDao();
         List<RecursoSistema> permissoes = dao.listarPorUsuario(usuarioId);
         JsonArray arr = new JsonArray();
@@ -423,7 +443,10 @@ public class UsuarioControl {
         return new Resposta(200, resp.toString());
     }
 
-    public Resposta atualizarPermissoes(int usuarioId, String jsonBody) {
+    public Resposta atualizarPermissoes(String auth, int usuarioId, String jsonBody) {
+        if (!usuarioTemPermissaoDb(auth, "GESTAO_PERMISSOES")) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
         Gson gson = new Gson();
         JsonObject body = gson.fromJson(jsonBody, JsonObject.class);
         JsonArray arr = body.getAsJsonArray("recursoIds");

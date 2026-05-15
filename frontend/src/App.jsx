@@ -25,7 +25,6 @@ export default function App() {
         <Route path="investimentos" element={<Investimentos />} />
         <Route path="aportes" element={<Aportes />} />
         <Route path="doacoes" element={<SimplePage title="Doacoes" subtitle="Acompanhe doacoes financeiras e campanhas da igreja" />} />
-        <Route path="materiais" element={<SimplePage title="Materiais" subtitle="Controle materiais e recursos fisicos da igreja" />} />
         <Route path="configuracoes" element={<Configuracoes />} />
         <Route path="materiais" element={<Materiais />} />
         <Route path="categorias-eventos" element={<CategoriasEventos />} />

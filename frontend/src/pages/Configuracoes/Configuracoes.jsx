@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import PageHeader from '../../components/PageHeader'
 import Icon from '../../components/Icon'
 import { CnpjField, ColorField, LogoUpload, PhoneField, TextAreaField, TextField } from '../../components/form'
+import { useAuth } from '../../state/AuthContext'
 import { useParameters } from '../../state/ParametersContext'
 import './Configuracoes.scss'
 
@@ -25,6 +26,7 @@ function absoluteLogoUrl(path) {
 }
 
 export default function Configuracoes() {
+  const { user } = useAuth()
   const { parameters, loading, error, updateParameters, uploadLogo } = useParameters()
   const [form, setForm] = useState(initialForm)
   const [editing, setEditing] = useState(false)
@@ -108,7 +110,7 @@ export default function Configuracoes() {
       <PageHeader
         title="Configurações"
         subtitle="Gerencie as informações da igreja"
-        actionLabel={editing ? '' : 'Editar'}
+        actionLabel={!editing && user?.nivelAcesso === 1 ? 'Editar' : ''}
         actionIcon="edit"
         onAction={() => setEditing(true)}
       />
@@ -206,7 +208,7 @@ export default function Configuracoes() {
       {editing && (
         <div className="settings-actions">
           <button className="secondary-action" type="button" onClick={cancel} disabled={saving}>Cancelar</button>
-          <button className="danger-action" type="button" onClick={save} disabled={saving}>
+          <button className="primary-action" type="button" onClick={save} disabled={saving}>
             {saving ? 'Salvando...' : 'Salvar'}
           </button>
         </div>
