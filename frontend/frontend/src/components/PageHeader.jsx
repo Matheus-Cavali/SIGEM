@@ -1,6 +1,6 @@
 import Icon from './Icon'
 
-export default function PageHeader({ title, subtitle, actionLabel, onAction }) {
+export default function PageHeader({ title, subtitle, actionLabel, actionIcon = 'plus', onAction }) {
   return (
     <header className="page-header">
       <div>
@@ -9,7 +9,7 @@ export default function PageHeader({ title, subtitle, actionLabel, onAction }) {
       </div>
       {actionLabel && (
         <button className="primary-action" onClick={onAction}>
-          <Icon name="plus" size={16} />
+          <Icon name={actionIcon} size={16} />
           <span>{actionLabel}</span>
         </button>
       )}
