@@ -7,6 +7,7 @@ import Investimentos from './pages/Investimentos'
 import Aportes from './pages/Aportes'
 import Usuarios from './pages/Usuarios'
 import Permissoes from './pages/Permissoes'
+import Materiais from './pages/Materiais'
 import SimplePage from './pages/SimplePage'
 
 export default function App() {
@@ -21,7 +22,7 @@ export default function App() {
         <Route path="usuarios" element={<Usuarios />} />
         <Route path="permissoes" element={<Permissoes />} />
         <Route path="doacoes" element={<SimplePage title="Doacoes" subtitle="Acompanhe doacoes financeiras e campanhas da igreja" />} />
-        <Route path="materiais" element={<SimplePage title="Materiais" subtitle="Controle materiais e recursos fisicos da igreja" />} />
+        <Route path="materiais" element={<Materiais />} />
         <Route path="configuracoes" element={<SimplePage title="Configuracoes" subtitle="Ajustes gerais e permissoes do sistema" />} />
       </Route>
       <Route path="*" element={<Navigate to="/investimentos" replace />} />
