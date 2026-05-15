@@ -1,6 +1,7 @@
 package org.example;
 
 import com.sun.net.httpserver.HttpServer;
+import org.example.controller.CColaborador;
 import org.example.dao.InvestimentoFuturoDao;
 import org.example.dao.UsuarioDao;
 import org.example.view.VColaborador;
