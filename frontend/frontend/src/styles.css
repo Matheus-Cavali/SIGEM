@@ -464,6 +464,22 @@ select:focus {
   color: var(--muted);
 }
 
+.filter-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.filter-bar input,
+.filter-bar select {
+  width: 260px;
+}
+
+.icon-button--danger:hover {
+  background: #fce8ea;
+  color: var(--red);
+}
+
 .loading-page {
   min-height: 100vh;
   display: grid;
