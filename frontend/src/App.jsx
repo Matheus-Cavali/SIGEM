@@ -6,7 +6,7 @@ import Cadastro from './pages/Cadastro'
 import Investimentos from './pages/Investimentos'
 import Aportes from './pages/Aportes'
 import SimplePage from './pages/SimplePage'
-import Configuracoes from './pages/Configuracoes/Configuracoes'
+import Configuracoes from './pages/Configuracoes'
 import Materiais from './pages/Materiais'
 import CategoriasMateriais from './pages/CategoriasMateriais'
 import Usuarios from './pages/Usuarios'
@@ -34,7 +34,6 @@ export default function App() {
         <Route path="categorias-despesa" element={<CategoriasDespesa />} />
         <Route path="usuarios" element={<Usuarios />} />
         <Route path="permissoes" element={<Permissoes />} />
-        <Route path="configuracoes" element={<SimplePage title="Configuracoes" subtitle="Ajustes gerais e permissoes do sistema" />} />
       </Route>
       <Route path="*" element={<Navigate to="/investimentos" replace />} />
     </Routes>
