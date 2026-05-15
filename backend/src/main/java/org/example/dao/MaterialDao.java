@@ -9,6 +9,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MaterialDao {
+    private static final MaterialDao instancia = new MaterialDao();
+
+    private MaterialDao() {}
+
+    public static MaterialDao getInstancia(){
+        return instancia;
+    }
+
     public boolean cadastrar(Material m){
         String sql = "INSERT INTO material (nome, descricao, quantidade_estoque, categoria_material_id) VALUES (?, ?, ?, ?)";
 

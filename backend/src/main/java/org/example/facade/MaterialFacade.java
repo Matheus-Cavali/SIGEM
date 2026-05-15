@@ -6,7 +6,14 @@ import org.example.model.Material;
 import java.util.List;
 
 public class MaterialFacade {
-    private final MaterialDao dao = new MaterialDao();
+    private static final MaterialFacade instancia = new MaterialFacade();
+    private final MaterialDao dao = MaterialDao.getInstancia();
+
+    public MaterialFacade() {}
+
+    public static MaterialFacade getInstancia(){
+        return instancia;
+    }
 
     public void cadastrar(Material m){
         validarMaterial(m);
@@ -55,17 +62,15 @@ public class MaterialFacade {
     }
 
     private void validarMaterial(Material m){
-//        CategoriaMaterialDao catMatDao = new CategoriaMaterialDao();
-
         if(m.getQuantidadeEstoque() < 0){
             throw new IllegalArgumentException("Estoque não pode ser negativo.");
         }
-//        if(m.getNome() == null || m.getNome().trim().isEmpty()){
-//            throw new IllegalArgumentException("Nome obrigatório.");
-//        }
-//        if(m.getCategoriaMaterialId() == null || m.getCategoriaMaterialId() <= 0){
-//            throw new IllegalArgumentException("ID da categoria obrigatória.");
-//        }
+        if(m.getNome() == null || m.getNome().trim().isEmpty()){
+            throw new IllegalArgumentException("Nome obrigatório.");
+        }
+        if(m.getCategoriaMaterialId() == null || m.getCategoriaMaterialId() <= 0){
+            throw new IllegalArgumentException("ID da categoria obrigatória.");
+        }
 //        if(catMatDao.buscarPorId(m.getCategoriaMaterialId()) == null){
 //            throw new IllegalArgumentException("A categoria informada não existe no sistema.");
 //        }
