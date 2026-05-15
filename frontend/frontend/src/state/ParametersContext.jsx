@@ -21,12 +21,12 @@ export function ParametersProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  const fetchParameters = async () => {
+  async function fetchParameters() {
     setLoading(true)
     setError('')
 
     try {
-      const data = await get('/parameters')
+      const data = await get('/api/parameters')
       setParameters({ ...emptyParameters, ...(data || {}) })
       return data
     } catch (err) {
@@ -41,21 +41,25 @@ export function ParametersProvider({ children }) {
     fetchParameters().catch(() => {})
   }, [])
 
-  const updateParameters = async (payload) => {
+  async function updateParameters(payload) {
     setError('')
-    const data = await put('/parameters', payload)
+    const data = await put('/api/parameters', payload)
     setParameters({ ...emptyParameters, ...(data || {}) })
     return data
   }
 
-  const uploadLogo = async (file) => {
+  async function uploadLogo(file) {
     if (!file) return null
 
     const formData = new FormData()
     formData.append('logo', file)
 
-    const data = await postForm('/parameters/logo', formData)
-    setParameters(prev => ({ ...prev, caminhoLogo: data?.caminhoLogo || prev.caminhoLogo }))
+    const data = await postForm('/api/parameters/logo', formData)
+
+    if (data && data.caminhoLogo) {
+      setParameters(prev => ({ ...prev, caminhoLogo: data.caminhoLogo }))
+    }
+
     return data
   }
 

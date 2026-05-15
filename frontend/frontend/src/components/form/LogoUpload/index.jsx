@@ -2,13 +2,19 @@ import BaseField from '../BaseField'
 import './LogoUpload.scss'
 
 export default function LogoUpload({ value, setValue, preview, setPreview, label, disabled, error }) {
-  const onChange = (event) => {
-    const file = event.target.files?.[0]
+  function onChange(event) {
+    const files = event.target.files
+    const file = files && files.length > 0 ? files[0] : null
 
     if (!file) return
 
     setValue(file)
     setPreview(URL.createObjectURL(file))
+  }
+
+  function getDisplayValue() {
+    if (value instanceof File) return value.name
+    return value || ''
   }
 
   return (
@@ -20,7 +26,7 @@ export default function LogoUpload({ value, setValue, preview, setPreview, label
         <div className="logo-upload-actions">
           <input
             className="field-control"
-            value={value instanceof File ? value.name : value || ''}
+            value={getDisplayValue()}
             disabled
             placeholder="Nenhuma imagem selecionada"
           />

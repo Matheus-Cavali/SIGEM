@@ -17,9 +17,11 @@ function getSession() {
 
 export async function request(path, options = {}) {
   const session = getSession()
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(options.headers || {}),
+  const isFormData = options.body instanceof FormData
+  const headers = { ...(options.headers || {}) }
+
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json'
   }
 
   if (session?.token) {
@@ -59,6 +61,10 @@ export function post(path, body) {
 
 export function put(path, body) {
   return request(path, { method: 'PUT', body: JSON.stringify(body) })
+}
+
+export function postForm(path, formData) {
+  return request(path, { method: 'POST', body: formData })
 }
 
 export function del(path) {
