@@ -43,3 +43,6 @@ build/
 # Sistema
 .DS_Store
 Thumbs.db
+
+# Imagens salvas como icones
+*backend/uploads/parameters/
