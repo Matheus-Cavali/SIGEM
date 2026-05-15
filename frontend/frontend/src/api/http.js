@@ -49,8 +49,14 @@ export async function request(path, options = {}) {
   return data
 }
 
-export function get(path) {
-  return request(path)
+export function get(path, options = {}) {
+  let url = path
+  const params = options.params
+  if (params) {
+    const qs = Object.entries(params).filter(([, v]) => v).map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&')
+    if (qs) url += '?' + qs
+  }
+  return request(url)
 }
 
 export function post(path, body) {
@@ -63,4 +69,8 @@ export function put(path, body) {
 
 export function del(path) {
   return request(path, { method: 'DELETE' })
+}
+
+export function patch(path, body) {
+  return request(path, { method: 'PATCH', body: JSON.stringify(body) })
 }
