@@ -18,7 +18,7 @@ export default function App() {
         <Route path="aportes" element={<Aportes />} />
         <Route path="doacoes" element={<SimplePage title="Doacoes" subtitle="Acompanhe doacoes financeiras e campanhas da igreja" />} />
         <Route path="materiais" element={<SimplePage title="Materiais" subtitle="Controle materiais e recursos fisicos da igreja" />} />
-        <Route path="configuracoes" element={<SimplePage title="Configuracoes" subtitle="Ajustes gerais e permissoes do sistema" />} />
+        <Route path="configuracoes" element={<SimplePage title="Configurações" subtitle="Ajustes gerais e permissoes do sistema" />} />
       </Route>
       <Route path="*" element={<Navigate to="/investimentos" replace />} />
     </Routes>
