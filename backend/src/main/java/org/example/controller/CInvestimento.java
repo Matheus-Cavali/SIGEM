@@ -101,7 +101,9 @@ public class CInvestimento {
             json.append("\"valorMeta\":").append(inv.getValorMeta()).append(",");
             json.append("\"dataAbertura\":\"").append(inv.getDataAbertura().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))).append("\",");
             json.append("\"status\":\"").append(inv.getStatus()).append("\",");
-            json.append("\"saldoAtual\":").append(inv.getSaldoAtual());
+            json.append("\"saldoAtual\":").append(inv.getSaldoAtual()).append(",");
+            json.append("\"colaboradorId\":").append(inv.getColaboradorId()).append(",");
+            json.append("\"colaboradorNome\":\"").append(escaparJson(inv.getColaboradorNome())).append("\"");
             json.append("}");
             if (i < lista.size() - 1) json.append(",");
         }
@@ -117,6 +119,7 @@ public class CInvestimento {
         resp.addProperty("valorMeta", inv.getValorMeta());
         resp.addProperty("dataAbertura", inv.getDataAbertura().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
         resp.addProperty("status", inv.getStatus()); resp.addProperty("saldoAtual", inv.getSaldoAtual());
+        resp.addProperty("colaboradorId", inv.getColaboradorId()); resp.addProperty("colaboradorNome", inv.getColaboradorNome());
         return new Resposta(200, resp.toString());
     }
 
@@ -172,7 +175,10 @@ public class CInvestimento {
             AporteInvestimento a = lista.get(i);
             json.append("{\"id\":").append(a.getId()).append(",");
             json.append("\"valorAporte\":").append(a.getValorAporte()).append(",");
-            json.append("\"dataAporte\":\"").append(a.getDataAporte().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))).append("\"}");
+            json.append("\"dataAporte\":\"").append(a.getDataAporte().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))).append("\",");
+            Integer cId = a.getColaboradorId();
+            json.append("\"colaboradorId\":").append(cId != null ? cId : "null").append(",");
+            json.append("\"colaboradorNome\":\"").append(escaparJson(a.getColaboradorNome())).append("\"}");
             if (i < lista.size() - 1) json.append(",");
         }
         json.append("]");

@@ -12,6 +12,7 @@ public class AporteInvestimento {
     private LocalDate dataAporte;
     private Integer caixaId;
     private Integer colaboradorId;
+    private String colaboradorNome;
 
     public AporteInvestimento() {}
 
@@ -32,6 +33,9 @@ public class AporteInvestimento {
 
     public Integer getColaboradorId() { return colaboradorId; }
     public void setColaboradorId(Integer colaboradorId) { this.colaboradorId = colaboradorId; }
+
+    public String getColaboradorNome() { return colaboradorNome; }
+    public void setColaboradorNome(String colaboradorNome) { this.colaboradorNome = colaboradorNome; }
 
     public String validar(String dataStr) {
         if (valorAporte == null || valorAporte.compareTo(BigDecimal.ZERO) <= 0) {

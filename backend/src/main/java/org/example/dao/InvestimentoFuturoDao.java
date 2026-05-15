@@ -68,14 +68,15 @@ public class InvestimentoFuturoDao {
 
     public List<InvestimentoFuturo> listar(String filtroNome, String filtroStatus) {
         StringBuilder sql = new StringBuilder(
-            "SELECT i.*, COALESCE(SUM(a.valor_aporte), 0) AS saldo " +
+            "SELECT i.*, u.nome AS colaborador_nome, " +
+            "(SELECT COALESCE(SUM(valor_aporte), 0) FROM aporte_investimento WHERE investimento_futuro_id = i.id) AS saldo " +
             "FROM investimento_futuro i " +
-            "LEFT JOIN aporte_investimento a ON a.investimento_futuro_id = i.id " +
+            "LEFT JOIN usuario u ON u.id = i.colaborador_id " +
             "WHERE 1=1"
         );
         if (filtroNome != null && !filtroNome.isEmpty()) sql.append(" AND i.nome ILIKE ?");
         if (filtroStatus != null && !filtroStatus.isEmpty()) sql.append(" AND i.status = ?");
-        sql.append(" GROUP BY i.id ORDER BY i.nome");
+        sql.append(" ORDER BY i.nome");
 
         List<InvestimentoFuturo> lista = new ArrayList<>();
         try (Connection conn = Conexao.getConexao();
@@ -159,11 +160,8 @@ public class InvestimentoFuturoDao {
         inv.setDataAbertura(rs.getObject("data_abertura", LocalDate.class));
         inv.setStatus(rs.getString("status"));
         inv.setColaboradorId(rs.getInt("colaborador_id"));
-        try {
-            inv.setSaldoAtual(rs.getBigDecimal("saldo"));
-        } catch (SQLException e) {
-            inv.setSaldoAtual(BigDecimal.ZERO);
-        }
+        try { inv.setSaldoAtual(rs.getBigDecimal("saldo")); } catch (SQLException e) { inv.setSaldoAtual(BigDecimal.ZERO); }
+        try { inv.setColaboradorNome(rs.getString("colaborador_nome")); } catch (SQLException e) {}
         return inv;
     }
 }

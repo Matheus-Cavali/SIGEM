@@ -13,6 +13,7 @@ public class InvestimentoFuturo {
     private LocalDate dataAbertura;
     private String status;
     private int colaboradorId;
+    private String colaboradorNome;
     private BigDecimal saldoAtual;
 
     public InvestimentoFuturo() {}
@@ -34,6 +35,9 @@ public class InvestimentoFuturo {
 
     public int getColaboradorId() { return colaboradorId; }
     public void setColaboradorId(int colaboradorId) { this.colaboradorId = colaboradorId; }
+
+    public String getColaboradorNome() { return colaboradorNome; }
+    public void setColaboradorNome(String colaboradorNome) { this.colaboradorNome = colaboradorNome; }
 
     public BigDecimal getSaldoAtual() { return saldoAtual; }
     public void setSaldoAtual(BigDecimal saldoAtual) { this.saldoAtual = saldoAtual; }
