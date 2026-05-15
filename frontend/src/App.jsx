@@ -8,6 +8,8 @@ import Aportes from './pages/Aportes'
 import SimplePage from './pages/SimplePage'
 import Materiais from './pages/Materiais'
 import CategoriasMateriais from './pages/CategoriasMateriais'
+import Usuarios from './pages/Usuarios'
+import Permissoes from './pages/Permissoes'
 
 export default function App() {
   return (
@@ -21,6 +23,8 @@ export default function App() {
         <Route path="doacoes" element={<SimplePage title="Doacoes" subtitle="Acompanhe doacoes financeiras e campanhas da igreja" />} />
         <Route path="materiais" element={<Materiais />} />
         <Route path="categorias-materiais" element={<CategoriasMateriais />} />
+        <Route path="usuarios" element={<Usuarios />} />
+        <Route path="permissoes" element={<Permissoes />} />
         <Route path="configuracoes" element={<SimplePage title="Configuracoes" subtitle="Ajustes gerais e permissoes do sistema" />} />
       </Route>
       <Route path="*" element={<Navigate to="/investimentos" replace />} />

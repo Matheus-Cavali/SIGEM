@@ -65,7 +65,8 @@ public class UsuarioControl {
             UsuarioDao uDao = new UsuarioDao();
             Usuario u = uDao.buscarPorEmail(email);
             if (u != null) {
-                resultado = (u.getNivelAcesso() == 1);
+                resultado = (u.getNivelAcesso() == 1)
+                    || usuarioTemPermissaoDb(auth, "GESTAO_USUARIOS");
             }
         }
         return resultado;

@@ -265,6 +265,21 @@ label {
   font-weight: 600;
 }
 
+.checkbox-label {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
 input,
 select {
   width: 100%;
@@ -357,6 +372,40 @@ select:focus {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.empty-state {
+  color: #8899aa;
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 14px;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  border-radius: 999px;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
+.status-ativo {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-inativo {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status-pendente {
+  background: #fff3cd;
+  color: #856404;
 }
 
 .status {
@@ -508,6 +557,18 @@ select:focus {
 .icon-button--danger:hover {
   background: #fce8ea;
   color: var(--red);
+  transform: scale(1.06);
+}
+
+.icon-button--warning:hover {
+  background: #fff3cd;
+  color: #856404;
+  transform: scale(1.06);
+}
+
+.icon-button--success:hover {
+  background: #d4edda;
+  color: #155724;
   transform: scale(1.06);
 }
 

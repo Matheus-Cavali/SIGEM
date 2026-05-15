@@ -2,8 +2,12 @@ package org.example.controller;
 
 import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpExchange;
+import org.example.dao.RecursoSistemaDao;
+import org.example.dao.UsuarioDao;
 import org.example.facade.MaterialFacade;
 import org.example.model.Material;
+import org.example.model.RecursoSistema;
+import org.example.model.Usuario;
 
 import java.io.IOException;
 import java.io.OutputStream;

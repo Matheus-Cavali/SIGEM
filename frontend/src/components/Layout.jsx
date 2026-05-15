@@ -8,10 +8,11 @@ const mainItems = [
   { label: 'Doacoes', path: '/doacoes', icon: 'heart' },
   { label: 'Materiais', path: '/materiais', icon: 'box' },
   { label: 'Cat Materiais', path: '/categorias-materiais', icon: 'box' },
+  { label: 'Usuarios', path: '/usuarios', icon: 'users' },
 ]
 
 export default function Layout() {
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
 
   const sair = () => {
@@ -35,6 +36,13 @@ export default function Layout() {
               <span>{item.label}</span>
             </NavLink>
           ))}
+
+          {user?.nivelAcesso === 1 && (
+            <NavLink className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')} to="/permissoes">
+              <Icon name="settings" size={18} />
+              <span>Permissoes</span>
+            </NavLink>
+          )}
 
           <span className="nav-label nav-label-spaced">GERAL</span>
           <NavLink className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')} to="/configuracoes">
