@@ -6,6 +6,7 @@ import Cadastro from './pages/Cadastro'
 import Investimentos from './pages/Investimentos'
 import Aportes from './pages/Aportes'
 import SimplePage from './pages/SimplePage'
+import Configuracoes from './pages/Configuracoes/Configuracoes'
 import Materiais from './pages/Materiais'
 import CategoriasMateriais from './pages/CategoriasMateriais'
 import Usuarios from './pages/Usuarios'
@@ -24,6 +25,8 @@ export default function App() {
         <Route path="investimentos" element={<Investimentos />} />
         <Route path="aportes" element={<Aportes />} />
         <Route path="doacoes" element={<SimplePage title="Doacoes" subtitle="Acompanhe doacoes financeiras e campanhas da igreja" />} />
+        <Route path="materiais" element={<SimplePage title="Materiais" subtitle="Controle materiais e recursos fisicos da igreja" />} />
+        <Route path="configuracoes" element={<Configuracoes />} />
         <Route path="materiais" element={<Materiais />} />
         <Route path="categorias-eventos" element={<CategoriasEventos />} />
         <Route path="categorias-materiais" element={<CategoriasMateriais />} />

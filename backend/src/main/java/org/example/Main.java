@@ -29,6 +29,8 @@ public class Main {
             server.createContext("/api/categorias-materiais", CategoriaMaterialRouter.getInstancia());
             server.createContext("/api/materiais", MaterialRouter.getInstancia());
             server.createContext("/api/recurso", UsuarioRouter.getInstancia());
+            server.createContext("/api/parameters", ParametersRouter.getInstancia());
+            server.createContext("/uploads", UploadRouter.getInstancia());
             server.createContext("/api/categorias-eventos", CategoriaEventoRouter.getInstancia());
             server.createContext("/api/categorias-despesa", DespesaRouter.getInstancia());
             server.createContext("/api/despesas", DespesaRouter.getInstancia());
@@ -39,7 +41,7 @@ public class Main {
             System.out.println("Servidor SIGEM rodando na porta 8080...");
 
         } catch (IOException e) {
-            System.err.println("Erro ao iniciar o servidor: " + e.getMessage());
+            throw new RuntimeException("Erro ao iniciar o servidor.", e);
         }
     }
 }

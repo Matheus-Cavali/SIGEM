@@ -49,7 +49,7 @@ export default function Layout() {
           <span className="nav-label nav-label-spaced">GERAL</span>
           <NavLink className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')} to="/configuracoes">
             <Icon name="settings" size={18} />
-            <span>Configuracoes</span>
+            <span>Configurações</span>
           </NavLink>
           <button className="nav-item nav-button" onClick={sair}>
             <Icon name="logout" size={18} />
