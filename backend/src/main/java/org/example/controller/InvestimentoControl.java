@@ -1,4 +1,4 @@
-package org.example.controller;
+﻿package org.example.controller;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -113,7 +113,7 @@ public class InvestimentoControl {
 
     public Resposta buscarInvestimento(int id) {
         InvestimentoFuturo inv = facade.buscarInvestimentoPorId(id);
-        if (inv == null) return new Resposta(404, "{\"erro\":\"Investimento n\u00e3o encontrado\"}");
+        if (inv == null) return new Resposta(404, "{\"erro\":\"Investimento não encontrado\"}");
         JsonObject resp = new JsonObject();
         resp.addProperty("id", inv.getId()); resp.addProperty("nome", inv.getNome());
         resp.addProperty("valorMeta", inv.getValorMeta());
@@ -131,7 +131,7 @@ public class InvestimentoControl {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
         InvestimentoFuturo inv = facade.buscarInvestimentoPorId(id);
-        if (inv == null) return new Resposta(404, "{\"erro\":\"Investimento n\u00e3o encontrado\"}");
+        if (inv == null) return new Resposta(404, "{\"erro\":\"Investimento não encontrado\"}");
         if (body.has("nome")) inv.setNome(body.get("nome").getAsString());
         if (body.has("valorMeta")) inv.setValorMeta(body.get("valorMeta").getAsBigDecimal());
         if (body.has("status")) inv.setStatus(body.get("status").getAsString());
@@ -152,7 +152,7 @@ public class InvestimentoControl {
         String erro = facade.validarDadosAporte(valor, dataStr);
         if (erro != null) return new Resposta(400, "{\"erro\":\"" + erro + "\"}");
 
-        if (facade.buscarInvestimentoPorId(investimentoId) == null) return new Resposta(404, "{\"erro\":\"Investimento n\u00e3o encontrado\"}");
+        if (facade.buscarInvestimentoPorId(investimentoId) == null) return new Resposta(404, "{\"erro\":\"Investimento não encontrado\"}");
 
         AporteInvestimento aporte = new AporteInvestimento();
         aporte.setInvestimentoFuturoId(investimentoId); aporte.setValorAporte(valor);

@@ -1,4 +1,4 @@
-package org.example.controller;
+﻿package org.example.controller;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -85,7 +85,7 @@ public class ColaboradorControl {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
         Colaborador c = new ColaboradorDao().buscarPorId(id);
-        if (c == null) return new Resposta(404, "{\"erro\":\"Colaborador n\u00e3o encontrado\"}");
+        if (c == null) return new Resposta(404, "{\"erro\":\"Colaborador não encontrado\"}");
         JsonObject resp = new JsonObject();
         resp.addProperty("id", c.getId()); resp.addProperty("nome", c.getNome());
         resp.addProperty("email", c.getEmail()); resp.addProperty("cpf", c.getCpf());
@@ -104,7 +104,7 @@ public class ColaboradorControl {
         JsonObject body = gson.fromJson(jsonBody, JsonObject.class);
         ColaboradorDao dao = new ColaboradorDao();
         Colaborador c = dao.buscarPorId(id);
-        if (c == null) return new Resposta(404, "{\"erro\":\"Colaborador n\u00e3o encontrado\"}");
+        if (c == null) return new Resposta(404, "{\"erro\":\"Colaborador não encontrado\"}");
         if (body.has("nome")) c.setNome(body.get("nome").getAsString());
         if (body.has("email")) c.setEmail(body.get("email").getAsString());
         if (body.has("celular")) c.setCelular(body.get("celular").getAsString());

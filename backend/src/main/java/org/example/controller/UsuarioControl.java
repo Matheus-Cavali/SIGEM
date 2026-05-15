@@ -1,4 +1,4 @@
-package org.example.controller;
+﻿package org.example.controller;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -83,13 +83,13 @@ public class UsuarioControl {
     public Resposta processarLogin(String jsonRecebido) {
         try {
             if (jsonRecebido == null || jsonRecebido.trim().isEmpty()) {
-                return new Resposta(400, "{\"erro\":\"Corpo da requisi\u00e7\u00e3o vazio\"}");
+                return new Resposta(400, "{\"erro\":\"Corpo da requisição vazio\"}");
             }
             Gson gson = new Gson();
             Usuario usuarioLogin = gson.fromJson(jsonRecebido, Usuario.class);
 
             if (usuarioLogin == null || usuarioLogin.getEmail() == null || usuarioLogin.getEmail().trim().isEmpty()) {
-                return new Resposta(400, "{\"erro\":\"Email ou CPF \u00e9 obrigat\u00f3rio\"}");
+                return new Resposta(400, "{\"erro\":\"Email ou CPF é obrigatório\"}");
             }
 
             UsuarioDao dao = new UsuarioDao();
@@ -108,10 +108,10 @@ public class UsuarioControl {
                 return new Resposta(401, "{\"erro\":\"" + campo + " ou senha incorretos\"}");
             }
             if (!usuarioDoBanco.isStatusAtivo()) {
-                return new Resposta(403, "{\"erro\":\"Usu\u00e1rio desativado. Contate um administrador.\"}");
+                return new Resposta(403, "{\"erro\":\"Usuário desativado. Contate um administrador.\"}");
             }
             if ("voluntario".equalsIgnoreCase(usuarioDoBanco.getTipoUsuario())) {
-                return new Resposta(403, "{\"erro\":\"Volunt\u00e1rios n\u00e3o podem acessar o sistema. Apenas colaboradores.\"}");
+                return new Resposta(403, "{\"erro\":\"Voluntários não podem acessar o sistema. Apenas colaboradores.\"}");
             }
             if (usuarioDoBanco.isPrimeiroAcesso()) {
                 JsonObject resp = new JsonObject();
@@ -148,15 +148,15 @@ public class UsuarioControl {
 
     public Resposta processarCadastro(String jsonRecebido) {
         if (jsonRecebido == null || jsonRecebido.trim().isEmpty()) {
-            return new Resposta(400, "{\"erro\":\"Corpo da requisi\u00e7\u00e3o vazio\"}");
+            return new Resposta(400, "{\"erro\":\"Corpo da requisição vazio\"}");
         }
         Gson gson = new Gson();
         Usuario usuarioLogin = gson.fromJson(jsonRecebido, Usuario.class);
         if (usuarioLogin == null || usuarioLogin.getEmail() == null || usuarioLogin.getSenha() == null || usuarioLogin.getSenha().trim().isEmpty()) {
-            return new Resposta(400, "{\"erro\":\"Dados inv\u00e1lidos. Email e senha s\u00e3o obrigat\u00f3rios.\"}");
+            return new Resposta(400, "{\"erro\":\"Dados inválidos. Email e senha são obrigatórios.\"}");
         }
         if (usuarioLogin.getSenha().length() < 4) {
-            return new Resposta(400, "{\"erro\":\"Senha deve ter no m\u00ednimo 4 caracteres\"}");
+            return new Resposta(400, "{\"erro\":\"Senha deve ter no mínimo 4 caracteres\"}");
         }
 
         String senhaBanco = Criptografia.hashSenha(usuarioLogin.getSenha());
@@ -171,34 +171,34 @@ public class UsuarioControl {
         );
 
         if (resultado == 0) return new Resposta(201, "{\"mensagem\":\"Cadastro realizado!\"}");
-        if (resultado == 1) return new Resposta(409, "{\"erro\":\"Email j\u00e1 cadastrado no sistema\"}");
-        if (resultado == 2) return new Resposta(409, "{\"erro\":\"CPF j\u00e1 cadastrado no sistema\"}");
+        if (resultado == 1) return new Resposta(409, "{\"erro\":\"Email já cadastrado no sistema\"}");
+        if (resultado == 2) return new Resposta(409, "{\"erro\":\"CPF já cadastrado no sistema\"}");
         return new Resposta(500, "{\"erro\":\"Erro interno ao cadastrar\"}");
     }
 
     public Resposta processarAlteracaoSenha(String jsonRecebido) {
         if (jsonRecebido == null || jsonRecebido.trim().isEmpty()) {
-            return new Resposta(400, "{\"erro\":\"Corpo da requisi\u00e7\u00e3o vazio\"}");
+            return new Resposta(400, "{\"erro\":\"Corpo da requisição vazio\"}");
         }
         Gson gson = new Gson();
         Usuario dadosNovos = gson.fromJson(jsonRecebido, Usuario.class);
         if (dadosNovos == null || dadosNovos.getCpf() == null || dadosNovos.getSenha() == null || dadosNovos.getSenha().trim().isEmpty()) {
-            return new Resposta(400, "{\"erro\":\"CPF e nova senha s\u00e3o obrigat\u00f3rios\"}");
+            return new Resposta(400, "{\"erro\":\"CPF e nova senha são obrigatórios\"}");
         }
         if (dadosNovos.getSenha().length() < 4) {
-            return new Resposta(400, "{\"erro\":\"Senha deve ter no m\u00ednimo 4 caracteres\"}");
+            return new Resposta(400, "{\"erro\":\"Senha deve ter no mínimo 4 caracteres\"}");
         }
 
         UsuarioDao dao = new UsuarioDao();
         String cpfLimpo = dadosNovos.getCpf().replaceAll("[^0-9]", "");
 
         if (dao.buscarPorCPF(cpfLimpo) == null) {
-            return new Resposta(404, "{\"erro\":\"CPF n\u00e3o encontrado no sistema\"}");
+            return new Resposta(404, "{\"erro\":\"CPF não encontrado no sistema\"}");
         }
 
         boolean sucesso = dao.mudarSenha(cpfLimpo, Criptografia.hashSenha(dadosNovos.getSenha()));
         if (sucesso) {
-            return new Resposta(200, "{\"mensagem\":\"Senha alterada! Fa\u00e7a login novamente.\"}");
+            return new Resposta(200, "{\"mensagem\":\"Senha alterada! Faça login novamente.\"}");
         }
         return new Resposta(500, "{\"erro\":\"Erro ao atualizar a senha.\"}");
     }
@@ -206,18 +206,18 @@ public class UsuarioControl {
     public Resposta processarCadastroInterno(String jsonRecebido, String auth) {
         String email = emailDoToken(auth);
         if (email == null) {
-            return new Resposta(401, "{\"erro\":\"Acesso negado. Fa\u00e7a login.\"}");
+            return new Resposta(401, "{\"erro\":\"Acesso negado. Faça login.\"}");
         }
         if (jsonRecebido == null || jsonRecebido.trim().isEmpty()) {
-            return new Resposta(400, "{\"erro\":\"Corpo da requisi\u00e7\u00e3o vazio\"}");
+            return new Resposta(400, "{\"erro\":\"Corpo da requisição vazio\"}");
         }
         Gson gson = new Gson();
         Usuario dados = gson.fromJson(jsonRecebido, Usuario.class);
         if (dados == null || dados.getEmail() == null || dados.getSenha() == null || dados.getTipoUsuario() == null) {
-            return new Resposta(400, "{\"erro\":\"Dados inv\u00e1lidos. Email, senha e tipo s\u00e3o obrigat\u00f3rios.\"}");
+            return new Resposta(400, "{\"erro\":\"Dados inválidos. Email, senha e tipo são obrigatórios.\"}");
         }
         if (dados.getSenha().length() < 4) {
-            return new Resposta(400, "{\"erro\":\"Senha deve ter no m\u00ednimo 4 caracteres\"}");
+            return new Resposta(400, "{\"erro\":\"Senha deve ter no mínimo 4 caracteres\"}");
         }
 
         String tipo = dados.getTipoUsuario().trim();
@@ -226,10 +226,10 @@ public class UsuarioControl {
         boolean isAdmin = quemCadastra != null && quemCadastra.getNivelAcesso() == 1;
 
         if (!isAdmin && "colaborador".equalsIgnoreCase(tipo) && !usuarioTemPermissaoDb(auth, "GESTAO_USUARIOS") && !usuarioTemPermissaoDb(auth, "GESTAO_COLABORADORES")) {
-            return new Resposta(403, "{\"erro\":\"Acesso negado. Voc\u00ea n\u00e3o pode cadastrar colaboradores.\"}");
+            return new Resposta(403, "{\"erro\":\"Acesso negado. Você não pode cadastrar colaboradores.\"}");
         }
         if (!isAdmin && "voluntario".equalsIgnoreCase(tipo) && !usuarioTemPermissaoDb(auth, "GESTAO_USUARIOS") && !usuarioTemPermissaoDb(auth, "GESTAO_VOLUNTARIOS")) {
-            return new Resposta(403, "{\"erro\":\"Acesso negado. Voc\u00ea n\u00e3o pode cadastrar volunt\u00e1rios.\"}");
+            return new Resposta(403, "{\"erro\":\"Acesso negado. Você não pode cadastrar voluntários.\"}");
         }
 
         String senhaBanco = Criptografia.hashSenha(dados.getSenha());
@@ -240,8 +240,8 @@ public class UsuarioControl {
         );
 
         if (resultado == 0) return new Resposta(201, "{\"mensagem\":\"Cadastro realizado!\"}");
-        if (resultado == 1) return new Resposta(409, "{\"erro\":\"Email j\u00e1 cadastrado no sistema\"}");
-        if (resultado == 2) return new Resposta(409, "{\"erro\":\"CPF j\u00e1 cadastrado no sistema\"}");
+        if (resultado == 1) return new Resposta(409, "{\"erro\":\"Email já cadastrado no sistema\"}");
+        if (resultado == 2) return new Resposta(409, "{\"erro\":\"CPF já cadastrado no sistema\"}");
         return new Resposta(500, "{\"erro\":\"Erro interno ao cadastrar\"}");
     }
 
@@ -296,7 +296,7 @@ public class UsuarioControl {
         UsuarioDao dao = new UsuarioDao();
         Usuario u = dao.buscarPorId(id);
         if (u == null) {
-            return new Resposta(404, "{\"erro\":\"Usu\u00e1rio n\u00e3o encontrado\"}");
+            return new Resposta(404, "{\"erro\":\"Usuário não encontrado\"}");
         }
         StringBuilder json = new StringBuilder("{");
         json.append("\"id\":").append(u.getId()).append(",");
@@ -328,7 +328,7 @@ public class UsuarioControl {
         UsuarioDao dao = new UsuarioDao();
         Usuario u = dao.buscarPorId(id);
         if (u == null) {
-            return new Resposta(404, "{\"erro\":\"Usu\u00e1rio n\u00e3o encontrado\"}");
+            return new Resposta(404, "{\"erro\":\"Usuário não encontrado\"}");
         }
 
         if (body.has("nome")) u.setNome(body.get("nome").getAsString());
@@ -345,9 +345,9 @@ public class UsuarioControl {
         if (body.has("tipoUsuario")) u.setTipoUsuario(body.get("tipoUsuario").getAsString());
 
         if (dao.atualizar(u)) {
-            return new Resposta(200, "{\"mensagem\":\"Usu\u00e1rio atualizado com sucesso\"}");
+            return new Resposta(200, "{\"mensagem\":\"Usuário atualizado com sucesso\"}");
         }
-        return new Resposta(500, "{\"erro\":\"Erro ao atualizar usu\u00e1rio\"}");
+        return new Resposta(500, "{\"erro\":\"Erro ao atualizar usuário\"}");
     }
 
     public Resposta alterarStatusUsuario(String auth, int id, String jsonBody) {
@@ -361,13 +361,13 @@ public class UsuarioControl {
         UsuarioDao dao = new UsuarioDao();
         Usuario usuario = dao.buscarPorId(id);
         if (usuario == null) {
-            return new Resposta(404, "{\"erro\":\"Usu\u00e1rio n\u00e3o encontrado\"}");
+            return new Resposta(404, "{\"erro\":\"Usuário não encontrado\"}");
         }
 
         if (!ativo && "colaborador".equalsIgnoreCase(usuario.getTipoUsuario()) && usuario.getNivelAcesso() == 1) {
             int totalAtivos = dao.contarColaboradorAcessoTotalAtivo();
             if (totalAtivos <= 1) {
-                return new Resposta(400, "{\"erro\":\"N\u00e3o \u00e9 poss\u00edvel desativar o \u00fanico colaborador com acesso total\"}");
+                return new Resposta(400, "{\"erro\":\"Não é possível desativar o único colaborador com acesso total\"}");
             }
         }
 
@@ -398,17 +398,17 @@ public class UsuarioControl {
         UsuarioDao dao = new UsuarioDao();
         Usuario usuario = dao.buscarPorId(id);
         if (usuario == null) {
-            return new Resposta(404, "{\"erro\":\"Usu\u00e1rio n\u00e3o encontrado\"}");
+            return new Resposta(404, "{\"erro\":\"Usuário não encontrado\"}");
         }
         if ("colaborador".equalsIgnoreCase(usuario.getTipoUsuario()) && usuario.getNivelAcesso() == 1) {
             if (dao.contarColaboradorAcessoTotalAtivo() <= 1) {
-                return new Resposta(400, "{\"erro\":\"N\u00e3o \u00e9 poss\u00edvel remover o \u00fanico colaborador com acesso total\"}");
+                return new Resposta(400, "{\"erro\":\"Não é possível remover o único colaborador com acesso total\"}");
             }
         }
         if (dao.deletar(id)) {
-            return new Resposta(200, "{\"mensagem\":\"Usu\u00e1rio removido com sucesso\"}");
+            return new Resposta(200, "{\"mensagem\":\"Usuário removido com sucesso\"}");
         }
-        return new Resposta(500, "{\"erro\":\"Erro ao remover usu\u00e1rio\"}");
+        return new Resposta(500, "{\"erro\":\"Erro ao remover usuário\"}");
     }
 
     public Resposta listarTodosRecursos(String auth) {
@@ -455,9 +455,9 @@ public class UsuarioControl {
 
         RecursoSistemaDao dao = new RecursoSistemaDao();
         if (dao.atualizarPermissoes(usuarioId, ids)) {
-            return new Resposta(200, "{\"mensagem\":\"Permiss\u00f5es atualizadas\"}");
+            return new Resposta(200, "{\"mensagem\":\"Permissões atualizadas\"}");
         }
-        return new Resposta(500, "{\"erro\":\"Erro ao atualizar permiss\u00f5es\"}");
+        return new Resposta(500, "{\"erro\":\"Erro ao atualizar permissões\"}");
     }
 
     private String escaparJson(String s) {

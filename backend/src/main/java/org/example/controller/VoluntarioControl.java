@@ -1,4 +1,4 @@
-package org.example.controller;
+﻿package org.example.controller;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -84,7 +84,7 @@ public class VoluntarioControl {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
         Voluntario v = new VoluntarioDao().buscarPorId(id);
-        if (v == null) return new Resposta(404, "{\"erro\":\"Volunt\u00e1rio n\u00e3o encontrado\"}");
+        if (v == null) return new Resposta(404, "{\"erro\":\"Voluntário não encontrado\"}");
         JsonObject resp = new JsonObject();
         resp.addProperty("id", v.getId()); resp.addProperty("nome", v.getNome());
         resp.addProperty("email", v.getEmail()); resp.addProperty("cpf", v.getCpf());
@@ -102,11 +102,11 @@ public class VoluntarioControl {
         JsonObject body = gson.fromJson(jsonBody, JsonObject.class);
         VoluntarioDao dao = new VoluntarioDao();
         Voluntario v = dao.buscarPorId(id);
-        if (v == null) return new Resposta(404, "{\"erro\":\"Volunt\u00e1rio n\u00e3o encontrado\"}");
+        if (v == null) return new Resposta(404, "{\"erro\":\"Voluntário não encontrado\"}");
         if (body.has("nome")) v.setNome(body.get("nome").getAsString());
         if (body.has("email")) v.setEmail(body.get("email").getAsString());
         if (body.has("celular")) v.setCelular(body.get("celular").getAsString());
-        if (dao.atualizar(v)) return new Resposta(200, "{\"mensagem\":\"Volunt\u00e1rio atualizado\"}");
+        if (dao.atualizar(v)) return new Resposta(200, "{\"mensagem\":\"Voluntário atualizado\"}");
         return new Resposta(500, "{\"erro\":\"Erro ao atualizar\"}");
     }
 
