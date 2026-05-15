@@ -7,6 +7,7 @@ const initialForm = { nome: '', descricao: '', quantidadeEstoque: '', categoriaM
 
 export default function Materiais() {
   const [items, setItems] = useState([])
+  const [categorias, setCategorias] = useState([])
   const [form, setForm] = useState(initialForm)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -30,6 +31,14 @@ export default function Materiais() {
 
   useEffect(() => { load() }, [])
 
+  const carregarCategorias = () => {
+    get('/api/categorias-materiais').then(data => {
+      setCategorias(Array.isArray(data) ? data : [])
+    }).catch(() => {})
+  }
+
+  useEffect(carregarCategorias, [])
+
   useEffect(() => {
     const timer = setTimeout(() => {
       load(filtroNome, filtroCategoria || null)
@@ -42,6 +51,7 @@ export default function Materiais() {
     setEditing(null)
     setErro('')
     setFormOpen(true)
+    carregarCategorias()
   }
 
   const openEdit = (item) => {
@@ -54,6 +64,7 @@ export default function Materiais() {
     setEditing(item.id)
     setErro('')
     setFormOpen(true)
+    carregarCategorias()
   }
 
   const save = async (event) => {
@@ -117,8 +128,9 @@ export default function Materiais() {
           onChange={e => setFiltroCategoria(e.target.value)}
         >
           <option value="">Todas as categorias</option>
-          <option value="1">Categoria 1</option>
-          <option value="2">Categoria 2</option>
+          {categorias.map(cat => (
+            <option key={cat.id} value={cat.id}>{cat.nome}</option>
+          ))}
         </select>
       </section>
 
@@ -146,12 +158,13 @@ export default function Materiais() {
               <span>Categoria</span>
               <select value={form.categoriaMaterialId} onChange={e => setForm(prev => ({ ...prev, categoriaMaterialId: e.target.value }))}>
                 <option value="">Selecione...</option>
-                <option value="1">Categoria 1</option>
-                <option value="2">Categoria 2</option>
+                {categorias.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.nome}</option>
+                ))}
               </select>
             </label>
             <div className="form-submit">
-              <button className="danger-action">{editing ? 'Salvar Alteracoes' : 'Salvar Material'}</button>
+              <button className="primary-action">{editing ? 'Salvar Alteracoes' : 'Salvar Material'}</button>
             </div>
           </form>
         </section>
@@ -159,13 +172,13 @@ export default function Materiais() {
 
       <div className="cards-list">
         {items.map((item, index) => (
-          <article className={'finance-card ' + (index % 2 ? 'accent-red' : '')} key={item.id}>
+          <article className="finance-card" key={item.id}>
             <div>
               <h3>{item.nome}</h3>
               <div className="meta-row">
                 {item.descricao && <span><Icon name="box" size={14} /> {item.descricao}</span>}
                 <span>Estoque: {item.quantidadeEstoque}</span>
-                {item.categoriaMaterialId && <span>Cat: {item.categoriaMaterialId}</span>}
+                {categorias.find(c => c.id === item.categoriaMaterialId) && <span>{categorias.find(c => c.id === item.categoriaMaterialId).nome}</span>}
               </div>
             </div>
             <div className="card-actions">

@@ -125,7 +125,7 @@ export default function Aportes() {
               <input value={form.dataAporte} onChange={e => setForm(prev => ({ ...prev, dataAporte: formatarData(e.target.value) }))} placeholder="dd/mm/aaaa" />
             </label>
             <div className="form-submit">
-              <button className="danger-action">{editing ? 'Salvar Alteracoes' : 'Salvar Aporte'}</button>
+              <button className="primary-action">{editing ? 'Salvar Alteracoes' : 'Salvar Aporte'}</button>
             </div>
           </form>
         </section>
@@ -144,7 +144,7 @@ export default function Aportes() {
             <div className="card-actions">
               <strong className="amount">{moeda(item.valorAporte)}</strong>
               {canManage && <button className="icon-button" onClick={() => openEdit(item)}><Icon name="edit" size={16} /></button>}
-              {canManage && <button className="icon-button" onClick={() => remove(item)}><Icon name="trash" size={16} /></button>}
+              {canManage && <button className="icon-button icon-button--danger" onClick={() => remove(item)}><Icon name="trash" size={16} /></button>}
             </div>
           </article>
         ))}
