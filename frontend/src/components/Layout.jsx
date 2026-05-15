@@ -8,7 +8,10 @@ const mainItems = [
   { label: 'Doacoes', path: '/doacoes', icon: 'heart' },
   { label: 'Materiais', path: '/materiais', icon: 'box' },
   { label: 'Cat Materiais', path: '/categorias-materiais', icon: 'box' },
-  { label: 'Usuarios', path: '/usuarios', icon: 'users' },
+  { label: 'Cat Eventos', path: '/categorias-eventos', icon: 'box' },
+  { label: 'Despesas', path: '/despesas', icon: 'dollar' },
+  { label: 'Cat Despesa', path: '/categorias-despesa', icon: 'dollar' },
+  { label: 'Usuarios', path: '/usuarios', icon: 'users' }
 ]
 
 export default function Layout() {

@@ -29,6 +29,9 @@ public class Main {
             server.createContext("/api/categorias-materiais", CategoriaMaterialRouter.getInstancia());
             server.createContext("/api/materiais", MaterialRouter.getInstancia());
             server.createContext("/api/recurso", UsuarioRouter.getInstancia());
+            server.createContext("/api/categorias-eventos", CategoriaEventoRouter.getInstancia());
+            server.createContext("/api/categorias-despesa", DespesaRouter.getInstancia());
+            server.createContext("/api/despesas", DespesaRouter.getInstancia());
 
             server.setExecutor(null);
             server.start();
