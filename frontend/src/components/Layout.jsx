@@ -5,7 +5,6 @@ import Icon from './Icon'
 const mainItems = [
   { label: 'Investimentos', path: '/investimentos', icon: 'trend' },
   { label: 'Aportes', path: '/aportes', icon: 'dollar' },
-  { label: 'Doacoes', path: '/doacoes', icon: 'heart' },
   { label: 'Materiais', path: '/materiais', icon: 'box' },
   { label: 'Cat Materiais', path: '/categorias-materiais', icon: 'box' },
   { label: 'Cat Eventos', path: '/categorias-eventos', icon: 'box' },
