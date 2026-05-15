@@ -3,6 +3,8 @@ package org.example.model;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import org.example.util.Data;
+
 public class AporteInvestimento {
     private int id;
     private int investimentoFuturoId;
@@ -34,4 +36,17 @@ public class AporteInvestimento {
 
     public String getColaboradorNome() { return colaboradorNome; }
     public void setColaboradorNome(String colaboradorNome) { this.colaboradorNome = colaboradorNome; }
+
+    public String validar(String dataStr) {
+        if (valorAporte == null || valorAporte.compareTo(BigDecimal.ZERO) <= 0) {
+            return "Valor do aporte deve ser maior que zero";
+        }
+        if (dataStr == null || dataStr.trim().isEmpty()) {
+            return "Data da transação é obrigatória";
+        }
+        if (Data.parseFlexivel(dataStr) == null) {
+            return "Data inválida. Use o formato dd/mm/aaaa ou ddmmaaaa";
+        }
+        return null;
+    }
 }

@@ -43,7 +43,7 @@ export default function Cadastro() {
 
     try {
       if (form.senha !== form.confirmar) {
-        throw new Error('As senhas nÃ£o conferem')
+        throw new Error('As senhas nao conferem')
       }
 
       await post('/api/cadastrar', {
@@ -108,7 +108,7 @@ export default function Cadastro() {
             </label>
             <label>
               <span>Senha</span>
-              <input type="password" value={form.senha} onChange={e => update('senha', e.target.value)} placeholder="MÃ­nimo 4 caracteres" />
+              <input type="password" value={form.senha} onChange={e => update('senha', e.target.value)} placeholder="Minimo 4 caracteres" />
             </label>
             <label>
               <span>Confirmar senha</span>

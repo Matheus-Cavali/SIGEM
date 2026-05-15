@@ -8,8 +8,6 @@ import { formatarCpf } from '../utils/format'
 export default function Login() {
   const [form, setForm] = useState({ email: '', senha: '' })
   const [trocaSenha, setTrocaSenha] = useState({ ativo: false, cpf: '', senha: '', confirmar: '' })
-  const [esqueciSenha, setEsqueciSenha] = useState(false)
-  const [redefinir, setRedefinir] = useState({ cpf: '', senha: '', confirmar: '' })
   const [erro, setErro] = useState('')
   const [loading, setLoading] = useState(false)
   const { login } = useAuth()
@@ -42,10 +40,10 @@ export default function Login() {
 
     try {
       if (trocaSenha.senha !== trocaSenha.confirmar) {
-        throw new Error('As senhas nÃ£o conferem')
+        throw new Error('As senhas nao conferem')
       }
 
-      await post('/api/alterar-Primeira-Senha', { cpf: trocaSenha.cpf.replace(/\D/g, ''), senha: trocaSenha.senha })
+      await post('/api/alterar-Primeira-Senha', { cpf: trocaSenha.cpf, senha: trocaSenha.senha })
       setTrocaSenha({ ativo: false, cpf: '', senha: '', confirmar: '' })
       setForm(prev => ({ ...prev, senha: '' }))
       setErro('Senha alterada. Entre novamente.')
@@ -54,22 +52,6 @@ export default function Login() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const redefinirSenha = async (event) => {
-    event.preventDefault()
-    setErro('')
-    if (redefinir.senha !== redefinir.confirmar) { setErro('Senhas nÃ£o conferem'); return }
-    if (redefinir.senha.length < 4) { setErro('MÃ­nimo 4 caracteres'); return }
-    if (!redefinir.cpf) { setErro('Digite seu CPF'); return }
-    setLoading(true)
-    try {
-      await post('/api/alterar-Primeira-Senha', { cpf: redefinir.cpf.replace(/\D/g, ''), senha: redefinir.senha })
-      setRedefinir({ cpf: '', senha: '', confirmar: '' })
-      setEsqueciSenha(false)
-      setErro('Senha redefinida! Faca login.')
-    } catch (error) { setErro(error.message) }
-    finally { setLoading(false) }
   }
 
   return (
@@ -83,7 +65,7 @@ export default function Login() {
           </div>
         </div>
 
-        {!trocaSenha.ativo && !esqueciSenha && (
+        {!trocaSenha.ativo && (
           <form className="auth-card" onSubmit={enviar}>
             <h2>Entrar</h2>
             <p>Acesse os investimentos, aportes e registros da igreja.</p>
@@ -97,34 +79,7 @@ export default function Login() {
               <input type="password" value={form.senha} onChange={e => setForm(prev => ({ ...prev, senha: e.target.value }))} placeholder="Digite sua senha" />
             </label>
             <button className="danger-action" disabled={loading}>{loading ? 'Entrando...' : 'Entrar'}</button>
-            <div style={{ textAlign: 'center', marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <button type="button" onClick={() => setEsqueciSenha(true)} style={{ background: 'none', border: 'none', color: '#23598d', cursor: 'pointer', fontSize: 13 }}>Esqueceu a senha?</button>
-              <Link to="/cadastro" style={{ fontSize: 13 }}>Criar cadastro</Link>
-            </div>
-          </form>
-        )}
-
-        {esqueciSenha && (
-          <form className="auth-card" onSubmit={redefinirSenha}>
-            <h2>Redefinir Senha</h2>
-            <p>Digite seu CPF e a nova senha.</p>
-            {erro && <div className="message">{erro}</div>}
-            <label>
-              <span>CPF</span>
-              <input value={redefinir.cpf} onChange={e => setRedefinir(prev => ({ ...prev, cpf: e.target.value }))} placeholder="000.000.000-00" />
-            </label>
-            <label>
-              <span>Nova senha</span>
-              <input type="password" value={redefinir.senha} onChange={e => setRedefinir(prev => ({ ...prev, senha: e.target.value }))} />
-            </label>
-            <label>
-              <span>Confirmar senha</span>
-              <input type="password" value={redefinir.confirmar} onChange={e => setRedefinir(prev => ({ ...prev, confirmar: e.target.value }))} />
-            </label>
-            <button className="danger-action" disabled={loading}>{loading ? 'Redefinindo...' : 'Redefinir Senha'}</button>
-            <div style={{ textAlign: 'center', marginTop: 12 }}>
-              <button type="button" onClick={() => { setEsqueciSenha(false); setRedefinir({ cpf: '', senha: '', confirmar: '' }); setErro('') }} style={{ background: 'none', border: 'none', color: '#23598d', cursor: 'pointer', fontSize: 13 }}>Voltar para o login</button>
-            </div>
+            <Link to="/cadastro">Criar cadastro</Link>
           </form>
         )}
 

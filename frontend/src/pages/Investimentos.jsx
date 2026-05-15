@@ -59,7 +59,7 @@ export default function Investimentos() {
       const value = valorParaNumero(form.valorMeta)
 
       if (!form.nome || !value) {
-        throw new Error('Nome e valor sao obrigatÃ³rios')
+        throw new Error('Nome e valor sao obrigatorios')
       }
 
       if (editing) {
@@ -126,7 +126,7 @@ export default function Investimentos() {
               </label>
             )}
             <div className="form-submit">
-              <button className="primary-action">{editing ? 'Salvar AlteraÃ§Ãµes' : 'Salvar Investimento'}</button>
+              <button className="danger-action">{editing ? 'Salvar Alteracoes' : 'Salvar Investimento'}</button>
             </div>
           </form>
         </section>
@@ -134,7 +134,7 @@ export default function Investimentos() {
 
       <div className="cards-list">
         {items.map((item, index) => (
-          <article className="finance-card" key={item.id}>
+          <article className={'finance-card ' + (index % 2 ? 'accent-red' : '')} key={item.id}>
             <div>
               <h3>{item.nome}</h3>
               <div className="meta-row">
@@ -146,7 +146,7 @@ export default function Investimentos() {
             <div className="card-actions">
               <span className={'status ' + (item.status === 'ENCERRADO' ? 'closed' : '')}>{item.status === 'ENCERRADO' ? 'Encerrado' : 'Em andamento'}</span>
               {canManage && <button className="icon-button" onClick={() => openEdit(item)}><Icon name="edit" size={16} /></button>}
-              {canManage && <button className="icon-button icon-button--danger" onClick={() => remove(item)}><Icon name="trash" size={16} /></button>}
+              {canManage && <button className="icon-button" onClick={() => remove(item)}><Icon name="trash" size={16} /></button>}
             </div>
           </article>
         ))}

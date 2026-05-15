@@ -9,7 +9,7 @@ public class MaterialFacade {
     private static final MaterialFacade instancia = new MaterialFacade();
     private final MaterialDao dao = MaterialDao.getInstancia();
 
-    private MaterialFacade() {}
+    public MaterialFacade() {}
 
     public static MaterialFacade getInstancia(){
         return instancia;

@@ -78,4 +78,20 @@ public class Usuario {
     public boolean isPrimeiroAcesso() { return primeiroAcesso; }
 
     public void setPrimeiroAcesso(boolean primeiroAcesso) { this.primeiroAcesso = primeiroAcesso; }
+
+    public String validarCadastro() {
+        if (nome == null || nome.trim().isEmpty()) {
+            return "Nome \u00e9 obrigat\u00f3rio";
+        }
+        if (email == null || email.trim().isEmpty()) {
+            return "Email \u00e9 obrigat\u00f3rio";
+        }
+        if (senha == null || senha.trim().isEmpty()) {
+            return "Senha \u00e9 obrigat\u00f3ria";
+        }
+        if (senha.length() < 4) {
+            return "Senha deve ter no m\u00ednimo 4 caracteres";
+        }
+        return null;
+    }
 }

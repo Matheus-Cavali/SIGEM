@@ -10,7 +10,8 @@ const initialForm = {
   cpf: '', rg: '', celular: '',
   rua: '', bairro: '', cep: '', cidade: '', estado: '',
   nivelAcesso: 2, tipoUsuario: 'colaborador',
-  statusAtivo: true, dataDesligamento: '', usarDataAtual: true,
+  statusAtivo: true, dataDesligamento: '',
+  usarDataAtual: true,
 }
 
 export default function Usuarios() {
@@ -31,15 +32,6 @@ export default function Usuarios() {
       if (filtroTipo) params.tipo = filtroTipo
       const data = await get('/api/usuarios', { params })
       let lista = Array.isArray(data) ? data : []
-      if (filtro) {
-        const search = filtro.toLowerCase()
-        const cpfDigits = filtro.replace(/\D/g, '')
-        lista = lista.filter(i =>
-          (i.nome && i.nome.toLowerCase().includes(search)) ||
-          (i.email && i.email.toLowerCase().includes(search)) ||
-          (i.cpf && i.cpf.replace(/\D/g, '').includes(cpfDigits))
-        )
-      }
       if (filtroStatus === 'ativo') lista = lista.filter(i => i.statusAtivo)
       if (filtroStatus === 'inativo') lista = lista.filter(i => !i.statusAtivo)
       setItems(lista)
@@ -62,8 +54,11 @@ export default function Usuarios() {
         cpf: data.cpf || '', rg: data.rg || '', celular: data.celular || '',
         rua: data.rua || '', bairro: data.bairro || '', cep: data.cep || '',
         cidade: data.cidade || '', estado: data.estado || '',
-        nivelAcesso: data.nivelAcesso || 2, tipoUsuario: data.tipoUsuario || 'colaborador',
-        statusAtivo: data.statusAtivo !== false, dataDesligamento: '', usarDataAtual: true,
+        nivelAcesso: data.nivelAcesso || 2,
+        tipoUsuario: data.tipoUsuario || 'colaborador',
+        statusAtivo: data.statusAtivo !== false,
+        dataDesligamento: '',
+        usarDataAtual: true,
       })
       setEditing(item.id); setFormOpen(true)
     } catch (error) { setErro(error.message) }
@@ -72,24 +67,26 @@ export default function Usuarios() {
   const save = async (event) => {
     event.preventDefault(); setErro('')
     try {
-      if (!form.nome || !form.email) throw new Error('Nome e email sao obrigatÃ³rios')
-      const cpfDigits = form.cpf ? form.cpf.replace(/\D/g, '') : ''
-      if (cpfDigits.length !== 11) throw new Error('CPF invÃ¡lido')
+      if (!form.nome || !form.email) throw new Error('Nome e email sao obrigatorios')
+
       if (editing) {
         await put('/api/usuarios/' + editing, form)
-        await patch('/api/usuarios/' + editing + '/status', {
-          status_ativo: form.statusAtivo,
-          data_desligamento: form.statusAtivo ? undefined : (form.usarDataAtual ? 'SYSDATE' : form.dataDesligamento.replace(/\D/g, '')),
-        })
+        if (form.statusAtivo !== undefined) {
+          await patch('/api/usuarios/' + editing + '/status', {
+            status_ativo: form.statusAtivo,
+            data_desligamento: form.statusAtivo ? undefined : (form.usarDataAtual ? 'SYSDATE' : form.dataDesligamento.replace(/\D/g, '')),
+          })
+        }
       } else {
-        if (!form.senha || form.senha.length < 4) throw new Error('Senha deve ter no MÃ­nimo 4 caracteres')
-        if (form.senha !== form.confirmarSenha) throw new Error('Senhas nÃ£o conferem')
+        if (!form.senha || form.senha.length < 4) throw new Error('Senha deve ter no minimo 4 caracteres')
+        if (form.senha !== form.confirmarSenha) throw new Error('Senhas nao conferem')
         await post('/api/cadastrar-interno', {
           nome: form.nome, email: form.email, senha: form.senha,
           cpf: form.cpf ? form.cpf.replace(/\D/g, '') : '',
           nivelAcesso: form.nivelAcesso, tipoUsuario: form.tipoUsuario, data: '',
         })
       }
+
       setFormOpen(false); setEditing(null); setForm(initialForm)
     } catch (error) { setErro(error.message) }
   }
@@ -106,17 +103,17 @@ export default function Usuarios() {
       <PageHeader title="Usuarios" subtitle="Gerencie os usuarios do sistema" actionLabel="Novo Usuario" onAction={openNew} />
       {erro && <div className="message">{erro}</div>}
 
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         <input placeholder="Pesquisar por nome, CPF ou email..." value={filtro} onChange={e => setFiltro(e.target.value)}
-          style={{ flex: 1, minWidth: 200, padding: '8px 10px', border: '1px solid #d9e0ea', borderRadius: 4, fontSize: 13 }} />
+          style={{ flex: 1, minWidth: 200, padding: '8px 10px', border: '1px solid #E0E0E0', borderRadius: 4, fontSize: 13 }} />
         <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}
-          style={{ padding: '8px 10px', border: '1px solid #d9e0ea', borderRadius: 4, fontSize: 13, minWidth: 140 }}>
+          style={{ padding: '8px 10px', border: '1px solid #E0E0E0', borderRadius: 4, fontSize: 13, minWidth: 140 }}>
           <option value="">Todos os tipos</option>
           <option value="colaborador">Colaborador</option>
           <option value="voluntario">Voluntario</option>
         </select>
         <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}
-          style={{ padding: '8px 10px', border: '1px solid #d9e0ea', borderRadius: 4, fontSize: 13, minWidth: 140 }}>
+          style={{ padding: '8px 10px', border: '1px solid #E0E0E0', borderRadius: 4, fontSize: 13, minWidth: 140 }}>
           <option value="">Todos os status</option>
           <option value="ativo">Ativo</option>
           <option value="inativo">Inativo</option>
@@ -137,50 +134,47 @@ export default function Usuarios() {
             <label><span>Celular</span><input value={form.celular} onChange={e => setForm(p => ({ ...p, celular: e.target.value }))} /></label>
             <label><span>Tipo</span>
               <select value={form.tipoUsuario} onChange={e => setForm(p => ({ ...p, tipoUsuario: e.target.value }))}>
-                <option value="colaborador">Colaborador</option><option value="voluntario">Voluntario</option>
+                <option value="colaborador">Colaborador</option>
+                <option value="voluntario">Voluntario</option>
               </select>
             </label>
             <label><span>Nivel</span>
               <select value={form.nivelAcesso} onChange={e => setForm(p => ({ ...p, nivelAcesso: parseInt(e.target.value) }))}>
-                <option value={2}>Restrito</option><option value={1}>Total</option>
+                <option value={2}>Restrito</option>
+                <option value={1}>Total</option>
               </select>
             </label>
-
             {editing && (
               <>
                 <label><span>Ativo</span>
                   <select value={form.statusAtivo ? '1' : '0'} onChange={e => setForm(p => ({ ...p, statusAtivo: e.target.value === '1' }))}>
-                    <option value="1">Sim</option><option value="0">Nao</option>
+                    <option value="1">Sim</option>
+                    <option value="0">Nao</option>
                   </select>
                 </label>
                 {!form.statusAtivo && (
                   <label className="full" style={{ marginTop: 4 }}>
                     <span style={{ fontSize: 11, color: '#888', marginBottom: 8, display: 'block' }}>Data de desligamento</span>
                     <div style={{ display: 'flex', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, padding: '6px 12px', border: '1px solid ' + (form.usarDataAtual ? '#23598d' : '#d9e0ea'), borderRadius: 4, background: form.usarDataAtual ? 'rgba(35,89,141,0.05)' : '#fff' }}>
-                        <input type="radio" checked={form.usarDataAtual} onChange={() => setForm(p => ({ ...p, usarDataAtual: true }))} /> Hoje
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, padding: '6px 12px', border: '1px solid ' + (form.usarDataAtual ? '#2A5C82' : '#E0E0E0'), borderRadius: 4, background: form.usarDataAtual ? 'rgba(42,92,130,0.05)' : '#fff' }}>
+                        <input type="radio" checked={form.usarDataAtual} onChange={() => setForm(p => ({ ...p, usarDataAtual: true }))} />
+                        Hoje
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, padding: '6px 12px', border: '1px solid ' + (!form.usarDataAtual ? '#23598d' : '#d9e0ea'), borderRadius: 4, background: !form.usarDataAtual ? 'rgba(35,89,141,0.05)' : '#fff' }}>
-                        <input type="radio" checked={!form.usarDataAtual} onChange={() => setForm(p => ({ ...p, usarDataAtual: false }))} /> Digitar
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, padding: '6px 12px', border: '1px solid ' + (!form.usarDataAtual ? '#2A5C82' : '#E0E0E0'), borderRadius: 4, background: !form.usarDataAtual ? 'rgba(42,92,130,0.05)' : '#fff' }}>
+                        <input type="radio" checked={!form.usarDataAtual} onChange={() => setForm(p => ({ ...p, usarDataAtual: false }))} />
+                        Digitar
                       </label>
                     </div>
                     {!form.usarDataAtual && (
                       <input placeholder="ddmmaaaa ou dd/mm/aaaa" value={form.dataDesligamento} onChange={e => setForm(p => ({ ...p, dataDesligamento: e.target.value }))}
-                        style={{ width: '100%', padding: '8px 10px', border: '1px solid #d9e0ea', borderRadius: 4, fontSize: 13 }} autoFocus />
+                        style={{ width: '100%', padding: '8px 10px', border: '1px solid #E0E0E0', borderRadius: 4, fontSize: 13 }} autoFocus />
                     )}
                   </label>
                 )}
               </>
             )}
 
-            {!editing && (
-              <>
-                <label><span>Senha *</span><input type="password" value={form.senha} onChange={e => setForm(p => ({ ...p, senha: e.target.value }))} /></label>
-                <label><span>Confirmar Senha *</span><input type="password" value={form.confirmarSenha} onChange={e => setForm(p => ({ ...p, confirmarSenha: e.target.value }))} /></label>
-              </>
-            )}
-
-            <label className="full" style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #d9e0ea' }}>
+            <label className="full" style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #E0E0E0' }}>
               <span style={{ fontSize: 11, color: '#888' }}>Endereco (opcional)</span>
             </label>
             <label><span>Rua</span><input value={form.rua} onChange={e => setForm(p => ({ ...p, rua: e.target.value }))} /></label>
@@ -189,10 +183,17 @@ export default function Usuarios() {
             <label><span>Cidade</span><input value={form.cidade} onChange={e => setForm(p => ({ ...p, cidade: e.target.value }))} /></label>
             <label><span>Estado</span><input value={form.estado} onChange={e => setForm(p => ({ ...p, estado: e.target.value }))} maxLength={2} /></label>
 
+            {!editing && (
+              <>
+                <label><span>Senha *</span><input type="password" value={form.senha} onChange={e => setForm(p => ({ ...p, senha: e.target.value }))} /></label>
+                <label><span>Confirmar Senha *</span><input type="password" value={form.confirmarSenha} onChange={e => setForm(p => ({ ...p, confirmarSenha: e.target.value }))} /></label>
+              </>
+            )}
+
             <div className="form-submit" style={{ justifyContent: 'flex-start', gap: 10 }}>
               <button className="danger-action">{editing ? 'Salvar' : 'Cadastrar'}</button>
               <button type="button" onClick={() => setFormOpen(false)}
-                style={{ padding: '9px 20px', border: '1px solid #d9e0ea', borderRadius: 4, background: '#fff', cursor: 'pointer', fontSize: 13 }}>
+                style={{ padding: '9px 20px', border: '1px solid #E0E0E0', borderRadius: 4, background: '#fff', cursor: 'pointer', fontSize: 13 }}>
                 Cancelar
               </button>
             </div>
@@ -215,7 +216,7 @@ export default function Usuarios() {
             <div className="card-actions">
               <button className="icon-button" onClick={() => openEdit(item)} title="Editar"><Icon name="edit" size={16} /></button>
               {user?.id !== item.id && (
-                <button className="icon-button" onClick={() => remove(item)} title="Excluir"><Icon name="trash" size={16} /></button>
+                <button className="icon-button danger" onClick={() => remove(item)} title="Excluir"><Icon name="trash" size={16} /></button>
               )}
             </div>
           </article>

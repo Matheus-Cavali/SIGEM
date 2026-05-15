@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react'
 import { del, get, post, put } from '../api/http'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
+import { useAuth } from '../state/AuthContext'
 
 const initialForm = { nome: '', descricao: '', quantidadeEstoque: '', categoriaMaterialId: '' }
 
 export default function Materiais() {
+  const { user, can } = useAuth()
+  const podeGerenciar = user?.nivelAcesso === 1 || can('GESTAO_DOACOES')
   const [items, setItems] = useState([])
   const [categorias, setCategorias] = useState([])
   const [form, setForm] = useState(initialForm)
@@ -75,7 +78,7 @@ export default function Materiais() {
       const quantidade = parseInt(form.quantidadeEstoque, 10)
 
       if (!form.nome || isNaN(quantidade)) {
-        throw new Error('Nome e quantidade sao obrigatorios')
+        throw new Error('Nome e quantidade sao obrigatÃ³rios')
       }
 
       const payload = {
@@ -115,7 +118,7 @@ export default function Materiais() {
 
   return (
     <>
-      <PageHeader title="Materiais" subtitle="Controle materiais e recursos fisicos da igreja" actionLabel="Adicionar Material" onAction={openNew} />
+      <PageHeader title="Materiais" subtitle="Controle materiais e recursos fisicos da igreja" actionLabel={podeGerenciar ? 'Adicionar Material' : ''} onAction={openNew} />
 
       <section className="filter-bar">
         <input
@@ -164,7 +167,7 @@ export default function Materiais() {
               </select>
             </label>
             <div className="form-submit">
-              <button className="primary-action">{editing ? 'Salvar Alteracoes' : 'Salvar Material'}</button>
+              <button className="primary-action">{editing ? 'Salvar AlteraÃ§Ãµes' : 'Salvar Material'}</button>
             </div>
           </form>
         </section>
@@ -182,8 +185,8 @@ export default function Materiais() {
               </div>
             </div>
             <div className="card-actions">
-              <button className="icon-button" onClick={() => openEdit(item)} title="Editar"><Icon name="edit" size={16} /></button>
-              <button className="icon-button icon-button--danger" onClick={() => remove(item)} title="Excluir"><Icon name="trash" size={16} /></button>
+              {podeGerenciar && <button className="icon-button" onClick={() => openEdit(item)} title="Editar"><Icon name="edit" size={16} /></button>}
+              {podeGerenciar && <button className="icon-button icon-button--danger" onClick={() => remove(item)} title="Excluir"><Icon name="trash" size={16} /></button>}
             </div>
           </article>
         ))}
