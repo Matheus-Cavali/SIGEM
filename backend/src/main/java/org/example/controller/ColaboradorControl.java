@@ -1,4 +1,3 @@
-
 package org.example.controller;
 
 import com.google.gson.Gson;
@@ -10,12 +9,12 @@ import org.example.model.Resposta;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-public class CColaborador {
+public class ColaboradorControl {
 
-    private static CColaborador instancia;
-    private CColaborador() {}
-    public static CColaborador getInstancia() {
-        if (instancia == null) instancia = new CColaborador();
+    private static ColaboradorControl instancia;
+    private ColaboradorControl() {}
+    public static ColaboradorControl getInstancia() {
+        if (instancia == null) instancia = new ColaboradorControl();
         return instancia;
     }
 
