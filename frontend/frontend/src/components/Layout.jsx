@@ -7,6 +7,7 @@ const mainItems = [
   { label: 'Aportes', path: '/aportes', icon: 'dollar' },
   { label: 'Doacoes', path: '/doacoes', icon: 'heart' },
   { label: 'Materiais', path: '/materiais', icon: 'box' },
+  { label: 'Categorias Eventos', path: '/categorias-eventos', icon: 'box' },
 ]
 
 export default function Layout() {
