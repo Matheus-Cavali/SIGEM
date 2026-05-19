@@ -16,6 +16,7 @@ export default function Permissoes() {
   const [usuarioId, setUsuarioId] = useState('')
   const [recursoIds, setRecursoIds] = useState([])
   const [erro, setErro] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
   const [salvo, setSalvo] = useState('')
 
   const loadUsuarios = async () => {
@@ -23,7 +24,7 @@ export default function Permissoes() {
       const data = await get('/api/usuarios?tipo=colaborador')
       setUsuarios(Array.isArray(data) ? data.filter(u => u.nivelAcesso !== 1) : [])
     } catch (error) {
-      setErro(error.message)
+      if (!error.fieldErrors) setErro(error.message)
     }
   }
 
@@ -32,26 +33,33 @@ export default function Permissoes() {
       const data = await get('/api/recurso')
       setRecursos(Array.isArray(data) ? data : [])
     } catch (error) {
-      setErro(error.message)
+      if (!error.fieldErrors) setErro(error.message)
     }
   }
 
   useEffect(() => { loadUsuarios(); loadRecursos() }, [])
 
   const loadPermissoes = async (id) => {
-    if (!id) { setRecursoIds([]); return }
-    try {
-      const data = await get('/api/recurso/' + id + '/permissoes')
-      if (data && Array.isArray(data.permissoes)) {
-        const ids = data.permissoes.map(nome =>
-          recursos.find(r => r.nome === nome)
-        ).filter(Boolean).map(r => r.id)
-        setRecursoIds(ids)
-      } else {
+    if (id) {
+      try {
+        const data = await get('/api/recurso/' + id + '/permissoes')
+        if (data && Array.isArray(data.permissoes)) {
+          const ids = data.permissoes.map(nome =>
+            recursos.find(r => r.nome === nome)
+          ).filter(Boolean).map(r => r.id)
+          setRecursoIds(ids)
+        } else {
+          setRecursoIds([])
+        }
+      } catch (error) {
+        if (error.fieldErrors) {
+          setFieldErrors(error.fieldErrors)
+        } else {
+          setErro(error.message)
+        }
         setRecursoIds([])
       }
-    } catch (error) {
-      setErro(error.message)
+    } else {
       setRecursoIds([])
     }
   }
@@ -67,13 +75,20 @@ export default function Permissoes() {
   }
 
   const salvar = async () => {
-    setErro(''); setSalvo('')
-    if (!usuarioId) { setErro('Selecione um colaborador'); return }
-    try {
-      await put('/api/recurso/' + usuarioId + '/permissoes', { recursoIds })
-      setSalvo('Permissões salvas com sucesso!')
-    } catch (error) {
-      setErro(error.message)
+    setErro(''); setSalvo(''); setFieldErrors({})
+    if (usuarioId) {
+      try {
+        await put('/api/recurso/' + usuarioId + '/permissoes', { recursoIds })
+        setSalvo('Permissões salvas com sucesso!')
+      } catch (error) {
+        if (error.fieldErrors) {
+          setFieldErrors(error.fieldErrors)
+        } else {
+          setErro(error.message)
+        }
+      }
+    } else {
+      setFieldErrors({ usuarioId: 'Selecione um colaborador' })
     }
   }
 
@@ -87,15 +102,17 @@ export default function Permissoes() {
         {salvo && <div className="message success">{salvo}</div>}
 
         <div className="inline-form">
-          <label>
-            <span>Colaborador</span>
-            <select value={usuarioId} onChange={e => setUsuarioId(e.target.value)}>
+          <div className="field-container">
+            <label className="field-label">Colaborador <span className="required-star">*</span></label>
+            <select className={'field-control' + (fieldErrors.usuarioId ? ' is-invalid' : '')}
+                    value={usuarioId} onChange={e => { setUsuarioId(e.target.value); setFieldErrors(prev => ({ ...prev, usuarioId: '' })) }}>
               <option value="">Selecione um colaborador...</option>
               {usuarios.map(u => (
                 <option key={u.id} value={u.id}>{u.nome} ({u.email})</option>
               ))}
             </select>
-          </label>
+            {fieldErrors.usuarioId && <span className="field-error">{fieldErrors.usuarioId}</span>}
+          </div>
         </div>
       </section>
 

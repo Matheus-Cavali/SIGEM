@@ -3,6 +3,7 @@ import { del, get, post, put } from '../api/http'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
 import { dataParaBackend, formatarData, moeda, valorParaNumero } from '../utils/format'
+import CurrencyField from '../components/form/CurrencyField'
 import { useAuth } from '../state/AuthContext'
 
 const initialForm = { nome: '', valorMeta: '', dataAbertura: '', status: 'ABERTO' }
@@ -13,6 +14,7 @@ export default function Investimentos() {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [erro, setErro] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
   const { user, can } = useAuth()
   const canManage = can('REGISTRAR_INVESTIMENTO')
 
@@ -21,7 +23,7 @@ export default function Investimentos() {
       const data = await get('/api/investimentos')
       setItems(Array.isArray(data) ? data : [])
     } catch (error) {
-      setErro(error.message)
+      if (!error.fieldErrors) setErro(error.message)
     }
   }
 
@@ -31,11 +33,13 @@ export default function Investimentos() {
     setForm(initialForm)
     setEditing(null)
     setErro('')
+    setFieldErrors({})
     setFormOpen(true)
   }
 
   const openEdit = async (item) => {
     setErro('')
+    setFieldErrors({})
     try {
       const data = await get('/api/investimentos/' + item.id)
       setForm({
@@ -47,34 +51,56 @@ export default function Investimentos() {
       setEditing(item.id)
       setFormOpen(true)
     } catch (error) {
-      setErro(error.message)
+      if (!error.fieldErrors) setErro(error.message)
     }
+  }
+
+  const validarCampos = () => {
+    const erros = {}
+    if (!form.nome.trim()) erros.nome = 'Nome do investimento é obrigatório'
+    if (!form.valorMeta || !valorParaNumero(form.valorMeta)) erros.valorMeta = 'Valor meta deve ser maior que zero'
+    if (!editing && !form.dataAbertura.trim()) erros.dataAbertura = 'Data de abertura é obrigatória'
+    return erros
   }
 
   const save = async (event) => {
     event.preventDefault()
     setErro('')
+    setFieldErrors({})
 
-    try {
-      const value = valorParaNumero(form.valorMeta)
-
-      if (!form.nome || !value) {
-        throw new Error('Nome e valor sao obrigatorios')
-      }
-
-      if (editing) {
-        await put('/api/investimentos/' + editing, { nome: form.nome, valorMeta: value, status: form.status })
-      } else {
-        await post('/api/investimentos', { nome: form.nome, valorMeta: value, dataAbertura: dataParaBackend(form.dataAbertura), colaboradorId: user.id })
-      }
-
-      setFormOpen(false)
-      setEditing(null)
-      setForm(initialForm)
-      load()
-    } catch (error) {
-      setErro(error.message)
+    const campos = validarCampos()
+    const temErros = Object.keys(campos).length > 0
+    if (temErros) {
+      setFieldErrors(campos)
     }
+
+    if (!temErros) {
+      try {
+        const value = valorParaNumero(form.valorMeta)
+
+        if (editing) {
+          await put('/api/investimentos/' + editing, { nome: form.nome, valorMeta: value, status: form.status })
+        } else {
+          await post('/api/investimentos', { nome: form.nome, valorMeta: value, dataAbertura: dataParaBackend(form.dataAbertura), colaboradorId: user.id })
+        }
+
+        setFormOpen(false)
+        setEditing(null)
+        setForm(initialForm)
+        load()
+      } catch (error) {
+        if (error.fieldErrors) {
+          setFieldErrors(error.fieldErrors)
+        } else {
+          setErro(error.message)
+        }
+      }
+    }
+  }
+
+  const handleFieldChange = (field, value) => {
+    setForm(prev => ({ ...prev, [field]: value }))
+    setFieldErrors(prev => ({ ...prev, [field]: '' }))
   }
 
   const remove = async (item) => {
@@ -102,28 +128,30 @@ export default function Investimentos() {
           </div>
           {erro && <div className="message inline">{erro}</div>}
           <form className="inline-form" onSubmit={save}>
-            <label>
-              <span>Nome</span>
-              <input value={form.nome} onChange={e => setForm(prev => ({ ...prev, nome: e.target.value }))} placeholder="Nome do investimento" />
-            </label>
-            <label>
-              <span>Meta de Valor (R$)</span>
-              <input value={form.valorMeta} onChange={e => setForm(prev => ({ ...prev, valorMeta: e.target.value }))} placeholder="0,00" />
-            </label>
+            <div className="field-container">
+              <label className="field-label">Nome <span className="required-star">*</span></label>
+              <input className={'field-control' + (fieldErrors.nome ? ' is-invalid' : '')}
+                     value={form.nome} onChange={e => handleFieldChange('nome', e.target.value)} placeholder="Nome do investimento" />
+              {fieldErrors.nome && <span className="field-error">{fieldErrors.nome}</span>}
+            </div>
+            <CurrencyField label="Meta de Valor (R$)" value={form.valorMeta}
+              setValue={v => handleFieldChange('valorMeta', v)} error={fieldErrors.valorMeta} />
             {!editing && (
-              <label>
-                <span>Data Meta</span>
-                <input value={form.dataAbertura} onChange={e => setForm(prev => ({ ...prev, dataAbertura: formatarData(e.target.value) }))} placeholder="dd/mm/aaaa" />
-              </label>
+              <div className="field-container">
+                <label className="field-label">Data Meta <span className="required-star">*</span></label>
+                <input className={'field-control' + (fieldErrors.dataAbertura ? ' is-invalid' : '')}
+                       value={form.dataAbertura} onChange={e => handleFieldChange('dataAbertura', formatarData(e.target.value))} placeholder="dd/mm/aaaa" />
+                {fieldErrors.dataAbertura && <span className="field-error">{fieldErrors.dataAbertura}</span>}
+              </div>
             )}
             {editing && (
-              <label>
-                <span>Status</span>
-                <select value={form.status} onChange={e => setForm(prev => ({ ...prev, status: e.target.value }))}>
+              <div className="field-container">
+                <label className="field-label">Status</label>
+                <select className="field-control" value={form.status} onChange={e => handleFieldChange('status', e.target.value)}>
                   <option value="ABERTO">Em andamento</option>
                   <option value="ENCERRADO">Encerrado</option>
                 </select>
-              </label>
+              </div>
             )}
             <div className="form-submit">
               <button className="primary-action">{editing ? 'Salvar Alteracoes' : 'Salvar Investimento'}</button>

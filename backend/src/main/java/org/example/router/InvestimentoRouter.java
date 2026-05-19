@@ -41,11 +41,11 @@ public class InvestimentoRouter implements HttpHandler {
                 Resposta r = controller.registrarInvestimento(auth, json);
                 enviarResposta(exchange, r.body, r.status);
             } else if ("GET".equalsIgnoreCase(metodo) && "/api/investimentos".equals(path)) {
-                Resposta r = controller.listarInvestimentos(exchange.getRequestURI().getQuery());
+                Resposta r = controller.listarInvestimentos(auth, exchange.getRequestURI().getQuery());
                 enviarResposta(exchange, r.body, r.status);
             } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/investimentos/\\d+")) {
                 int id = extrairId(path);
-                Resposta r = controller.buscarInvestimento(id);
+                Resposta r = controller.buscarInvestimento(auth, id);
                 enviarResposta(exchange, r.body, r.status);
             } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/investimentos/\\d+")) {
                 int id = extrairId(path);
@@ -54,7 +54,7 @@ public class InvestimentoRouter implements HttpHandler {
                 enviarResposta(exchange, r.body, r.status);
             } else if ("GET".equalsIgnoreCase(metodo) && (path.matches("/api/investimentos/\\d+/aportes") || path.matches("/api/investimentos/\\d+/aporte"))) {
                 int id = extrairId(path);
-                Resposta r = controller.listarAportes(id);
+                Resposta r = controller.listarAportes(auth, id);
                 enviarResposta(exchange, r.body, r.status);
             } else if ("POST".equalsIgnoreCase(metodo) && (path.matches("/api/investimentos/\\d+/aportes") || path.matches("/api/investimentos/\\d+/aporte"))) {
                 int id = extrairId(path);

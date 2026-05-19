@@ -1,10 +1,16 @@
 package org.example.controller;
 
 import com.google.gson.Gson;
+import org.example.conexao.ConexaoSingleton;
 import org.example.exception.DatabaseException;
 import org.example.facade.ParametersFacade;
 import org.example.model.ParametrizacaoIgreja;
 import org.example.model.Resposta;
+import org.example.model.Usuario;
+import org.example.dao.UsuarioDao;
+
+import java.sql.Connection;
+import java.sql.SQLException;
 
 public class ParametersControl {
     private static ParametersControl instancia;
@@ -28,8 +34,12 @@ public class ParametersControl {
     private boolean usuarioPodeGerenciar(String auth) {
         String email = emailDoToken(auth);
         if (email != null) {
-            org.example.model.Usuario u = new org.example.dao.UsuarioDao().buscarPorEmail(email);
-            if (u != null) return u.getNivelAcesso() == 1;
+            try (Connection conn = ConexaoSingleton.getInstance().getConexao()) {
+                Usuario u = new UsuarioDao().buscarPorEmail(conn, email);
+                if (u != null) return u.getNivelAcesso() == 1;
+            } catch (SQLException e) {
+                System.err.println("Erro ao verificar permissao: " + e.getMessage());
+            }
         }
         return false;
     }

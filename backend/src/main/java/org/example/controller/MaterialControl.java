@@ -1,6 +1,7 @@
 package org.example.controller;
 
 import com.google.gson.Gson;
+import org.example.conexao.ConexaoSingleton;
 import org.example.dao.RecursoSistemaDao;
 import org.example.dao.UsuarioDao;
 import org.example.facade.MaterialFacade;
@@ -11,6 +12,8 @@ import org.example.model.Usuario;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.List;
 
 public class MaterialControl {
@@ -34,14 +37,18 @@ public class MaterialControl {
     private boolean usuarioTemPermissao(String auth, String recursoNome) {
         String email = emailDoToken(auth);
         if (email != null) {
-            UsuarioDao uDao = new UsuarioDao();
-            Usuario u = uDao.buscarPorEmail(email);
-            if (u != null) {
-                if (u.getNivelAcesso() == 1) return true;
-                RecursoSistemaDao rDao = new RecursoSistemaDao();
-                for (RecursoSistema r : rDao.listarPorUsuario(u.getId())) {
-                    if (r.getNome().equals(recursoNome)) return true;
+            try (Connection conn = ConexaoSingleton.getInstance().getConexao()) {
+                UsuarioDao uDao = new UsuarioDao();
+                Usuario u = uDao.buscarPorEmail(conn, email);
+                if (u != null) {
+                    if (u.getNivelAcesso() == 1) return true;
+                    RecursoSistemaDao rDao = new RecursoSistemaDao();
+                    for (RecursoSistema r : rDao.listarPorUsuario(conn, u.getId())) {
+                        if (r.getNome().equals(recursoNome)) return true;
+                    }
                 }
+            } catch (SQLException e) {
+                System.err.println("Erro ao verificar permissao: " + e.getMessage());
             }
         }
         return false;

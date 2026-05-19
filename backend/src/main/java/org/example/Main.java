@@ -13,13 +13,13 @@ public class Main {
     public static void main(String[] args) {
         try {
             UsuarioDao dao = new UsuarioDao();
+
             dao.criarAdmin();
             InvestimentoFuturoDao invDao = new InvestimentoFuturoDao();
             invDao.migrarStatus();
             HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
 
             server.createContext("/api/login", UsuarioRouter.getInstancia());
-            server.createContext("/api/cadastrar", UsuarioRouter.getInstancia());
             server.createContext("/api/alterar-Primeira-Senha", UsuarioRouter.getInstancia());
             server.createContext("/api/cadastrar-interno", UsuarioRouter.getInstancia());
             server.createContext("/api/usuarios", UsuarioRouter.getInstancia());

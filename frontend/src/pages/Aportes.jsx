@@ -3,6 +3,7 @@ import { del, get, post, put } from '../api/http'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
 import { dataParaBackend, formatarData, moeda, valorParaNumero } from '../utils/format'
+import CurrencyField from '../components/form/CurrencyField'
 import { useAuth } from '../state/AuthContext'
 
 const initialForm = { investimentoId: '', valorAporte: '', dataAporte: '' }
@@ -14,6 +15,7 @@ export default function Aportes() {
   const [form, setForm] = useState(initialForm)
   const [editing, setEditing] = useState(null)
   const [erro, setErro] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
   const { user, can } = useAuth()
   const canManage = can(['LANCAR_APORTE', 'REGISTRAR_INVESTIMENTO'])
 
@@ -34,7 +36,7 @@ export default function Aportes() {
       setInvestimentos(safeInvs)
       setAportes(flat)
     } catch (error) {
-      setErro(error.message)
+      if (!error.fieldErrors) setErro(error.message)
     }
   }
 
@@ -44,6 +46,7 @@ export default function Aportes() {
     setForm(initialForm)
     setEditing(null)
     setErro('')
+    setFieldErrors({})
     setFormOpen(true)
   }
 
@@ -55,33 +58,56 @@ export default function Aportes() {
     })
     setEditing(item)
     setErro('')
+    setFieldErrors({})
     setFormOpen(true)
+  }
+
+  const validarCampos = () => {
+    const erros = {}
+    if (!form.investimentoId) erros.investimentoId = 'Selecione um investimento'
+    if (!form.valorAporte || !valorParaNumero(form.valorAporte)) erros.valorAporte = 'Valor do aporte deve ser maior que zero'
+    if (!form.dataAporte.trim()) erros.dataAporte = 'Data do aporte é obrigatória'
+    return erros
   }
 
   const save = async (event) => {
     event.preventDefault()
     setErro('')
+    setFieldErrors({})
 
-    try {
-      const value = valorParaNumero(form.valorAporte)
-
-      if (!form.investimentoId || !value || !form.dataAporte) {
-        throw new Error('Investimento, valor e data sao obrigatorios')
-      }
-
-      if (editing) {
-        await put('/api/investimentos/' + form.investimentoId + '/aportes/' + editing.id, { valorAporte: value, dataAporte: dataParaBackend(form.dataAporte) })
-      } else {
-        await post('/api/investimentos/' + form.investimentoId + '/aporte', { valorAporte: value, dataAporte: dataParaBackend(form.dataAporte), colaboradorId: user.id })
-      }
-
-      setFormOpen(false)
-      setEditing(null)
-      setForm(initialForm)
-      load()
-    } catch (error) {
-      setErro(error.message)
+    const campos = validarCampos()
+    const temErros = Object.keys(campos).length > 0
+    if (temErros) {
+      setFieldErrors(campos)
     }
+
+    if (!temErros) {
+      try {
+        const value = valorParaNumero(form.valorAporte)
+
+        if (editing) {
+          await put('/api/investimentos/' + form.investimentoId + '/aportes/' + editing.id, { valorAporte: value, dataAporte: dataParaBackend(form.dataAporte) })
+        } else {
+          await post('/api/investimentos/' + form.investimentoId + '/aporte', { valorAporte: value, dataAporte: dataParaBackend(form.dataAporte), colaboradorId: user.id })
+        }
+
+        setFormOpen(false)
+        setEditing(null)
+        setForm(initialForm)
+        load()
+      } catch (error) {
+        if (error.fieldErrors) {
+          setFieldErrors(error.fieldErrors)
+        } else {
+          setErro(error.message)
+        }
+      }
+    }
+  }
+
+  const handleFieldChange = (field, value) => {
+    setForm(prev => ({ ...prev, [field]: value }))
+    setFieldErrors(prev => ({ ...prev, [field]: '' }))
   }
 
   const remove = async (item) => {
@@ -109,21 +135,27 @@ export default function Aportes() {
           </div>
           {erro && <div className="message inline">{erro}</div>}
           <form className="inline-form" onSubmit={save}>
-            <label>
-              <span>Investimento</span>
-              <select value={form.investimentoId} onChange={e => setForm(prev => ({ ...prev, investimentoId: e.target.value }))}>
+            <div className="field-container">
+              <label className="field-label">Investimento <span className="required-star">*</span></label>
+              <select className={'field-control' + (fieldErrors.investimentoId ? ' is-invalid' : '')}
+                      value={form.investimentoId} onChange={e => handleFieldChange('investimentoId', e.target.value)}>
                 <option value="">Selecione o investimento</option>
-                {investimentos.map(item => <option key={item.id} value={item.id}>{item.nome}</option>)}
+                {investimentos.map(item => (
+                  <option key={item.id} value={item.id} disabled={item.status === 'ENCERRADO'}>
+                    {item.nome}{item.status === 'ENCERRADO' ? ' (Encerrado)' : ''}
+                  </option>
+                ))}
               </select>
-            </label>
-            <label>
-              <span>Valor (R$)</span>
-              <input value={form.valorAporte} onChange={e => setForm(prev => ({ ...prev, valorAporte: e.target.value }))} placeholder="0,00" />
-            </label>
-            <label>
-              <span>Data</span>
-              <input value={form.dataAporte} onChange={e => setForm(prev => ({ ...prev, dataAporte: formatarData(e.target.value) }))} placeholder="dd/mm/aaaa" />
-            </label>
+              {fieldErrors.investimentoId && <span className="field-error">{fieldErrors.investimentoId}</span>}
+            </div>
+            <CurrencyField label="Valor (R$)" value={form.valorAporte}
+              setValue={v => handleFieldChange('valorAporte', v)} error={fieldErrors.valorAporte} />
+            <div className="field-container">
+              <label className="field-label">Data <span className="required-star">*</span></label>
+              <input className={'field-control' + (fieldErrors.dataAporte ? ' is-invalid' : '')}
+                     value={form.dataAporte} onChange={e => handleFieldChange('dataAporte', formatarData(e.target.value))} placeholder="dd/mm/aaaa" />
+              {fieldErrors.dataAporte && <span className="field-error">{fieldErrors.dataAporte}</span>}
+            </div>
             <div className="form-submit">
               <button className="primary-action">{editing ? 'Salvar Alteracoes' : 'Salvar Aporte'}</button>
             </div>

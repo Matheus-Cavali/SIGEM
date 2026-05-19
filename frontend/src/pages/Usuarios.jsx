@@ -4,6 +4,7 @@ import { useAuth } from '../state/AuthContext'
 import { formatarCpf } from '../utils/format'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
+import { CpfField, PhoneField, CepField } from '../components/form'
 
 const initialForm = {
   nome: '', email: '', senha: '', cpf: '', rg: '',
@@ -20,6 +21,7 @@ export default function Usuarios() {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [erro, setErro] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
   const [filtroNome, setFiltroNome] = useState('')
   const [filtroTipo, setFiltroTipo] = useState('')
 
@@ -33,7 +35,7 @@ export default function Usuarios() {
       const data = await get(path)
       setItems(Array.isArray(data) ? data : [])
     } catch (error) {
-      setErro(error.message)
+      if (!error.fieldErrors) setErro(error.message)
     }
   }
 
@@ -48,6 +50,7 @@ export default function Usuarios() {
     setForm(initialForm)
     setEditing(null)
     setErro('')
+    setFieldErrors({})
     setFormOpen(true)
   }
 
@@ -69,47 +72,65 @@ export default function Usuarios() {
     })
     setEditing(item.id)
     setErro('')
+    setFieldErrors({})
     setFormOpen(true)
+  }
+
+  const validarCampos = () => {
+    const erros = {}
+    if (!form.nome.trim()) erros.nome = 'Nome é obrigatório'
+    if (!form.email.trim()) erros.email = 'Email é obrigatório'
+    if (!editing && !form.senha) erros.senha = 'Senha é obrigatória'
+    if (!editing && form.senha && form.senha.length < 4) erros.senha = 'Senha deve ter no mínimo 4 caracteres'
+    if (!form.cpf.trim()) erros.cpf = 'CPF é obrigatório'
+    return erros
   }
 
   const save = async (event) => {
     event.preventDefault()
     setErro('')
+    setFieldErrors({})
 
-    try {
-      if (!form.nome) throw new Error('Nome é obrigatório')
-      if (!form.email) throw new Error('Email é obrigatório')
-      if (!form.senha && !editing) throw new Error('Senha é obrigatória')
-      if (!form.cpf) throw new Error('CPF é obrigatório')
-      if (!editing && form.senha.length < 4) throw new Error('Senha deve ter no mínimo 4 caracteres')
+    const campos = validarCampos()
+    const temErros = Object.keys(campos).length > 0
+    if (temErros) {
+      setFieldErrors(campos)
+    }
 
-      const payload = {
-        nome: form.nome,
-        email: form.email,
-        cpf: form.cpf,
-        rg: form.rg || null,
-        celular: form.celular || null,
-        rua: form.rua || null,
-        bairro: form.bairro || null,
-        cep: form.cep || null,
-        cidade: form.cidade || null,
-        estado: form.estado || null,
-        tipoUsuario: form.tipoUsuario,
-        nivelAcesso: parseInt(form.nivelAcesso, 10),
+    if (!temErros) {
+      try {
+        const payload = {
+          nome: form.nome,
+          email: form.email,
+          cpf: form.cpf,
+          rg: form.rg || null,
+          celular: form.celular || null,
+          rua: form.rua || null,
+          bairro: form.bairro || null,
+          cep: form.cep || null,
+          cidade: form.cidade || null,
+          estado: form.estado || null,
+          tipoUsuario: form.tipoUsuario,
+          nivelAcesso: parseInt(form.nivelAcesso, 10),
+        }
+
+        if (editing) {
+          await put('/api/usuarios/' + editing, payload)
+        } else {
+          await post('/api/cadastrar-interno', { ...payload, senha: form.senha })
+        }
+
+        setFormOpen(false)
+        setEditing(null)
+        setForm(initialForm)
+        load(filtroNome, filtroTipo || null)
+      } catch (error) {
+        if (error.fieldErrors) {
+          setFieldErrors(error.fieldErrors)
+        } else {
+          setErro(error.message)
+        }
       }
-
-      if (editing) {
-        await put('/api/usuarios/' + editing, payload)
-      } else {
-        await post('/api/cadastrar-interno', { ...payload, senha: form.senha })
-      }
-
-      setFormOpen(false)
-      setEditing(null)
-      setForm(initialForm)
-      load(filtroNome, filtroTipo || null)
-    } catch (error) {
-      setErro(error.message)
     }
   }
 
@@ -119,33 +140,41 @@ export default function Usuarios() {
     const confirmado = window.confirm(acao === 'desativar'
       ? 'Desativar usuario "' + item.nome + '"? Ele nao podera acessar o sistema.'
       : 'Reativar usuario "' + item.nome + '"?')
-    if (!confirmado) return
 
-    try {
-      await request('/api/usuarios/' + item.id + '/status', {
-        method: 'PATCH',
-        body: JSON.stringify({ status_ativo: novoStatus }),
-      })
-      setItems(prev => prev.map(u => u.id === item.id ? { ...u, statusAtivo: novoStatus } : u))
-    } catch (error) {
-      alert(error.message)
+    if (confirmado) {
+      try {
+        await request('/api/usuarios/' + item.id + '/status', {
+          method: 'PATCH',
+          body: JSON.stringify({ status_ativo: novoStatus }),
+        })
+        setItems(prev => prev.map(u => u.id === item.id ? { ...u, statusAtivo: novoStatus } : u))
+      } catch (error) {
+        alert(error.message)
+      }
     }
   }
 
   const remove = async (item) => {
     const confirmado = window.confirm('Excluir permanentemente o usuario "' + item.nome + '"?')
-    if (!confirmado) return
 
-    try {
-      await del('/api/usuarios/' + item.id)
-      setItems(prev => prev.filter(u => u.id !== item.id))
-    } catch (error) {
-      alert(error.message)
+    if (confirmado) {
+      try {
+        await del('/api/usuarios/' + item.id)
+        setItems(prev => prev.filter(u => u.id !== item.id))
+      } catch (error) {
+        alert(error.message)
+      }
     }
   }
 
-  const handleCpfChange = (e) => {
-    setForm(prev => ({ ...prev, cpf: formatarCpf(e.target.value) }))
+  const handleCpfChange = (value) => {
+    setForm(prev => ({ ...prev, cpf: formatarCpf(value) }))
+    setFieldErrors(prev => ({ ...prev, cpf: '' }))
+  }
+
+  const handleFieldChange = (field, value) => {
+    setForm(prev => ({ ...prev, [field]: value }))
+    setFieldErrors(prev => ({ ...prev, [field]: '' }))
   }
 
   const nivelLabel = (nivel) => {
@@ -177,76 +206,63 @@ export default function Usuarios() {
           </div>
           {erro && <div className="message inline">{erro}</div>}
           <form className="inline-form" onSubmit={save}>
-            <label>
-              <span>Nome</span>
-              <input value={form.nome} onChange={e => setForm(prev => ({ ...prev, nome: e.target.value }))}
-                     placeholder="Nome completo" />
-            </label>
-            <label>
-              <span>Email</span>
-              <input type="email" value={form.email} onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
-                     placeholder="email@exemplo.com" />
-            </label>
+            <div className="field-container">
+              <label className="field-label">Nome <span className="required-star">*</span></label>
+              <input className={'field-control' + (fieldErrors.nome ? ' is-invalid' : '')}
+                     value={form.nome} onChange={e => handleFieldChange('nome', e.target.value)} placeholder="Nome completo" />
+              {fieldErrors.nome && <span className="field-error">{fieldErrors.nome}</span>}
+            </div>
+            <div className="field-container">
+              <label className="field-label">Email <span className="required-star">*</span></label>
+              <input className={'field-control' + (fieldErrors.email ? ' is-invalid' : '')}
+                     type="email" value={form.email} onChange={e => handleFieldChange('email', e.target.value)} placeholder="email@exemplo.com" />
+              {fieldErrors.email && <span className="field-error">{fieldErrors.email}</span>}
+            </div>
             {!editing && (
-              <label>
-                <span>Senha</span>
-                <input type="password" value={form.senha} onChange={e => setForm(prev => ({ ...prev, senha: e.target.value }))}
-                       placeholder="Minimo 4 caracteres" />
-              </label>
+              <div className="field-container">
+                <label className="field-label">Senha <span className="required-star">*</span></label>
+                <input className={'field-control' + (fieldErrors.senha ? ' is-invalid' : '')}
+                       type="password" value={form.senha} onChange={e => handleFieldChange('senha', e.target.value)} placeholder="Minimo 4 caracteres" />
+                {fieldErrors.senha && <span className="field-error">{fieldErrors.senha}</span>}
+              </div>
             )}
-            <label>
-              <span>CPF</span>
-              <input value={form.cpf} onChange={handleCpfChange} placeholder="000.000.000-00" maxLength={14} />
-            </label>
-            <label>
-              <span>RG</span>
-              <input value={form.rg} onChange={e => setForm(prev => ({ ...prev, rg: e.target.value }))}
-                     placeholder="RG" />
-            </label>
-            <label>
-              <span>Celular</span>
-              <input value={form.celular} onChange={e => setForm(prev => ({ ...prev, celular: e.target.value }))}
-                     placeholder="(00) 00000-0000" />
-            </label>
-            <label>
-              <span>CEP</span>
-              <input value={form.cep} onChange={e => setForm(prev => ({ ...prev, cep: e.target.value }))}
-                     placeholder="00000-000" />
-            </label>
-            <label>
-              <span>Rua</span>
-              <input value={form.rua} onChange={e => setForm(prev => ({ ...prev, rua: e.target.value }))}
-                     placeholder="Rua, numero" />
-            </label>
-            <label>
-              <span>Bairro</span>
-              <input value={form.bairro} onChange={e => setForm(prev => ({ ...prev, bairro: e.target.value }))}
-                     placeholder="Bairro" />
-            </label>
-            <label>
-              <span>Cidade</span>
-              <input value={form.cidade} onChange={e => setForm(prev => ({ ...prev, cidade: e.target.value }))}
-                     placeholder="Cidade" />
-            </label>
-            <label>
-              <span>Estado</span>
-              <input value={form.estado} onChange={e => setForm(prev => ({ ...prev, estado: e.target.value }))}
-                     placeholder="Estado (UF)" maxLength={2} />
-            </label>
-            <label>
-              <span>Tipo de Usuario</span>
-              <select value={form.tipoUsuario} onChange={e => setForm(prev => ({ ...prev, tipoUsuario: e.target.value }))}>
+            <CpfField label="CPF" value={form.cpf} setValue={handleCpfChange} error={fieldErrors.cpf} />
+            <div className="field-container">
+              <label className="field-label">RG</label>
+              <input className="field-control" value={form.rg} onChange={e => handleFieldChange('rg', e.target.value)} placeholder="RG" />
+            </div>
+            <PhoneField label="Celular" value={form.celular} setValue={(v) => handleFieldChange('celular', v)} />
+            <CepField label="CEP" value={form.cep} setValue={(v) => handleFieldChange('cep', v)} />
+            <div className="field-container">
+              <label className="field-label">Rua</label>
+              <input className="field-control" value={form.rua} onChange={e => handleFieldChange('rua', e.target.value)} placeholder="Rua, numero" />
+            </div>
+            <div className="field-container">
+              <label className="field-label">Bairro</label>
+              <input className="field-control" value={form.bairro} onChange={e => handleFieldChange('bairro', e.target.value)} placeholder="Bairro" />
+            </div>
+            <div className="field-container">
+              <label className="field-label">Cidade</label>
+              <input className="field-control" value={form.cidade} onChange={e => handleFieldChange('cidade', e.target.value)} placeholder="Cidade" />
+            </div>
+            <div className="field-container">
+              <label className="field-label">Estado</label>
+              <input className="field-control" value={form.estado} onChange={e => handleFieldChange('estado', e.target.value)} placeholder="Estado (UF)" maxLength={2} />
+            </div>
+            <div className="field-container">
+              <label className="field-label">Tipo de Usuario</label>
+              <select className="field-control" value={form.tipoUsuario} onChange={e => handleFieldChange('tipoUsuario', e.target.value)}>
                 <option value="colaborador">Colaborador</option>
                 <option value="voluntario">Voluntario</option>
               </select>
-            </label>
-            <label>
-              <span>Nivel de Acesso</span>
-              <select value={form.nivelAcesso} onChange={e => setForm(prev => ({ ...prev, nivelAcesso: e.target.value }))}>
+            </div>
+            <div className="field-container">
+              <label className="field-label">Nivel de Acesso</label>
+              <select className="field-control" value={form.nivelAcesso} onChange={e => handleFieldChange('nivelAcesso', e.target.value)}>
                 <option value="2">Restrito</option>
                 <option value="1">Total</option>
               </select>
-            </label>
+            </div>
             <div className="form-submit">
               <button className="primary-action">{editing ? 'Salvar Alteracoes' : 'Salvar Usuario'}</button>
             </div>

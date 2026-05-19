@@ -2,6 +2,7 @@ package org.example.controller;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import org.example.conexao.ConexaoSingleton;
 import org.example.dao.DespesaDao;
 import org.example.dao.RecursoSistemaDao;
 import org.example.dao.CategoriaDespesaDao;
@@ -10,6 +11,8 @@ import org.example.model.*;
 import org.example.util.Data;
 
 import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -34,14 +37,18 @@ public class DespesaControl {
     private boolean usuarioTemPermissao(String auth, String recursoNome) {
         String email = emailDoToken(auth);
         if (email != null) {
-            UsuarioDao uDao = new UsuarioDao();
-            Usuario u = uDao.buscarPorEmail(email);
-            if (u != null) {
-                if (u.getNivelAcesso() == 1) return true;
-                RecursoSistemaDao rDao = new RecursoSistemaDao();
-                for (RecursoSistema r : rDao.listarPorUsuario(u.getId())) {
-                    if (r.getNome().equals(recursoNome)) return true;
+            try (Connection conn = ConexaoSingleton.getInstance().getConexao()) {
+                UsuarioDao uDao = new UsuarioDao();
+                Usuario u = uDao.buscarPorEmail(conn, email);
+                if (u != null) {
+                    if (u.getNivelAcesso() == 1) return true;
+                    RecursoSistemaDao rDao = new RecursoSistemaDao();
+                    for (RecursoSistema r : rDao.listarPorUsuario(conn, u.getId())) {
+                        if (r.getNome().equals(recursoNome)) return true;
+                    }
                 }
+            } catch (SQLException e) {
+                System.err.println("Erro ao verificar permissao: " + e.getMessage());
             }
         }
         return false;
@@ -50,8 +57,12 @@ public class DespesaControl {
     private boolean usuarioPodeGerenciar(String auth) {
         String email = emailDoToken(auth);
         if (email != null) {
-            Usuario u = new UsuarioDao().buscarPorEmail(email);
-            if (u != null) return u.getNivelAcesso() == 1 || usuarioTemPermissao(auth, "GERENCIAR_DESPESA");
+            try (Connection conn = ConexaoSingleton.getInstance().getConexao()) {
+                Usuario u = new UsuarioDao().buscarPorEmail(conn, email);
+                if (u != null) return u.getNivelAcesso() == 1 || usuarioTemPermissao(auth, "GERENCIAR_DESPESA");
+            } catch (SQLException e) {
+                System.err.println("Erro ao verificar permissao: " + e.getMessage());
+            }
         }
         return false;
     }

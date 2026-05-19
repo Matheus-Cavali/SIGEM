@@ -41,8 +41,6 @@ public class UsuarioRouter implements HttpHandler {
             if ("POST".equalsIgnoreCase(metodo)) {
                 if ("/api/login".equals(path)) {
                     processarLogin(exchange);
-                } else if ("/api/cadastrar".equals(path)) {
-                    processarCadastro(exchange);
                 } else if ("/api/alterar-Primeira-Senha".equals(path)) {
                     processarAlteracaoSenha(exchange);
                 } else if ("/api/cadastrar-interno".equals(path)) {
@@ -74,12 +72,6 @@ public class UsuarioRouter implements HttpHandler {
     private void processarLogin(HttpExchange exchange) throws IOException {
         String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
         Resposta r = controller.processarLogin(json);
-        enviarResposta(exchange, r.body, r.status);
-    }
-
-    private void processarCadastro(HttpExchange exchange) throws IOException {
-        String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-        Resposta r = controller.processarCadastro(json);
         enviarResposta(exchange, r.body, r.status);
     }
 

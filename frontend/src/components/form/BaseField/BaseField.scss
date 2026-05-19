@@ -11,6 +11,10 @@
   font-weight: 600;
 }
 
+.required-star {
+  color: var(--red);
+}
+
 .field-control {
   width: 100%;
   min-height: 34px;
@@ -45,4 +49,9 @@ textarea.field-control {
 .field-error {
   color: var(--red);
   font-size: 12px;
+}
+
+.has-error .field-control {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(125, 10, 30, 0.12);
 }
