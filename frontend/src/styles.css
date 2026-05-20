@@ -511,6 +511,7 @@ input.is-invalid,
 select.is-invalid {
   border-color: var(--red);
   box-shadow: 0 0 0 3px rgba(125, 10, 30, 0.12);
+   background: #fff5f6;
 }
 
 .form-grid {

@@ -137,6 +137,7 @@ export default function CategoriasEventos() {
             <label>
               <span>Nome</span>
               <input
+                className={erro && !form.nome ? 'is-invalid' : ''}
                 value={form.nome}
                 onChange={e =>
                   setForm(prev => ({ ...prev, nome: e.target.value }))
