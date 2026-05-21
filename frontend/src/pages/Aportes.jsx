@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { del, get, post, put } from '../api/http'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
-import { dataParaBackend, formatarData, moeda, valorParaNumero } from '../utils/format'
+import { dataParaBackend, moeda, valorParaNumero } from '../utils/format'
 import CurrencyField from '../components/form/CurrencyField'
+import DateField from '../components/form/DateField'
 import { useAuth } from '../state/AuthContext'
 
 const initialForm = { investimentoId: '', valorAporte: '', dataAporte: '' }
@@ -150,12 +151,7 @@ export default function Aportes() {
             </div>
             <CurrencyField label="Valor (R$)" value={form.valorAporte}
               setValue={v => handleFieldChange('valorAporte', v)} error={fieldErrors.valorAporte} />
-            <div className="field-container">
-              <label className="field-label">Data <span className="required-star">*</span></label>
-              <input className={'field-control' + (fieldErrors.dataAporte ? ' is-invalid' : '')}
-                     value={form.dataAporte} onChange={e => handleFieldChange('dataAporte', formatarData(e.target.value))} placeholder="dd/mm/aaaa" />
-              {fieldErrors.dataAporte && <span className="field-error">{fieldErrors.dataAporte}</span>}
-            </div>
+            <DateField label="Data" value={form.dataAporte} setValue={v => handleFieldChange('dataAporte', v)} error={fieldErrors.dataAporte} required />
             <div className="form-submit">
               <button className="primary-action">{editing ? 'Salvar Alteracoes' : 'Salvar Aporte'}</button>
             </div>

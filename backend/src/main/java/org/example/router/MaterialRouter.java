@@ -10,13 +10,15 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
 public class MaterialRouter implements HttpHandler {
-    private static final MaterialRouter instancia = new MaterialRouter();
+    private static MaterialControl control;
 
-    private MaterialRouter() {}
-
-    public static MaterialRouter getInstancia(){
-        return instancia;
+    public static synchronized MaterialControl getControl() {
+        if (control == null)
+            control = new MaterialControl();
+        return control;
     }
+
+    public MaterialRouter() {}
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
@@ -34,24 +36,23 @@ public class MaterialRouter implements HttpHandler {
         }
 
         try{
-            MaterialControl control = MaterialControl.getInstancia();
             Resposta r;
 
             if("POST".equalsIgnoreCase(metodo) && "/api/materiais".equals(path)){
                 String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-                r = control.cadastrar(auth, json);
+                r = getControl().cadastrar(auth, json);
             }
             else if("GET".equalsIgnoreCase(metodo) && "/api/materiais".equals(path)){
-                r = control.listar(exchange.getRequestURI().getQuery());
+                r = getControl().listar(exchange.getRequestURI().getQuery());
             }
             else if("PUT".equalsIgnoreCase(metodo) && path.matches("/api/materiais/\\d+")){
                 int id = Integer.parseInt(path.substring(path.lastIndexOf("/") + 1));
                 String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-                r = control.atualizar(auth, id, json);
+                r = getControl().atualizar(auth, id, json);
             }
             else if("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/materiais/\\d+")){
                 int id = Integer.parseInt(path.substring(path.lastIndexOf("/") + 1));
-                r = control.excluir(auth, id);
+                r = getControl().excluir(auth, id);
             }
             else{
                 r = new Resposta(404, "{\"erro\":\"Rota não encontrada\"}");

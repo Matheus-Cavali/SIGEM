@@ -2,7 +2,7 @@ package org.example.controller;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import org.example.conexao.ConexaoSingleton;
+import org.example.conexao.Conexao;
 import org.example.dao.RecursoSistemaDao;
 import org.example.dao.UsuarioDao;
 import org.example.dao.VoluntarioDao;
@@ -37,7 +37,7 @@ public class VoluntarioControl {
         boolean permitido = false;
         String email = emailDoToken(auth);
         if (email != null) {
-            try (Connection conn = ConexaoSingleton.getInstance().getConexao()) {
+            try (Connection conn = Conexao.getConexao()) {
                 UsuarioDao uDao = new UsuarioDao();
                 Usuario u = uDao.buscarPorEmail(conn, email);
                 if (u != null) {
@@ -74,7 +74,7 @@ public class VoluntarioControl {
                     }
                 }
             }
-            try (Connection conn = ConexaoSingleton.getInstance().getConexao()) {
+            try (Connection conn = Conexao.getConexao()) {
                 List<Voluntario> lista = new VoluntarioDao().listar(conn, nome, email);
                 StringBuilder json = new StringBuilder("[");
                 for (int i = 0; i < lista.size(); i++) {
@@ -95,7 +95,7 @@ public class VoluntarioControl {
                 result = new Resposta(200, json.toString());
             } catch (SQLException e) {
                 System.err.println("Erro ao listar voluntarios: " + e.getMessage());
-                result = new Resposta(500, "{\"erro\":\"Falha ao listar voluntários.\"}");
+                result = new Resposta(500, "{\"erro\":\"Falha ao listar voluntÃ¡rios.\"}");
             }
         }
         return result;
@@ -106,10 +106,10 @@ public class VoluntarioControl {
         if (!usuarioTemPermissao(auth, "GESTAO_VOLUNTARIOS")) {
             result = new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         } else {
-            try (Connection conn = ConexaoSingleton.getInstance().getConexao()) {
+            try (Connection conn = Conexao.getConexao()) {
                 Voluntario v = new VoluntarioDao().buscarPorId(conn, id);
                 if (v == null) {
-                    result = new Resposta(404, "{\"erro\":\"Voluntário não encontrado\"}");
+                    result = new Resposta(404, "{\"erro\":\"VoluntÃ¡rio nÃ£o encontrado\"}");
                 } else {
                     JsonObject resp = new JsonObject();
                     resp.addProperty("id", v.getId()); resp.addProperty("nome", v.getNome());
@@ -121,7 +121,7 @@ public class VoluntarioControl {
                 }
             } catch (SQLException e) {
                 System.err.println("Erro ao buscar voluntario: " + e.getMessage());
-                result = new Resposta(500, "{\"erro\":\"Falha ao buscar voluntário.\"}");
+                result = new Resposta(500, "{\"erro\":\"Falha ao buscar voluntÃ¡rio.\"}");
             }
         }
         return result;
@@ -132,26 +132,26 @@ public class VoluntarioControl {
         if (!usuarioTemPermissao(auth, "GESTAO_VOLUNTARIOS")) {
             result = new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         } else {
-            try (Connection conn = ConexaoSingleton.getInstance().getConexao()) {
+            try (Connection conn = Conexao.getConexao()) {
                 Gson gson = new Gson();
                 JsonObject body = gson.fromJson(jsonBody, JsonObject.class);
                 VoluntarioDao dao = new VoluntarioDao();
                 Voluntario v = dao.buscarPorId(conn, id);
                 if (v == null) {
-                    result = new Resposta(404, "{\"erro\":\"Voluntário não encontrado\"}");
+                    result = new Resposta(404, "{\"erro\":\"VoluntÃ¡rio nÃ£o encontrado\"}");
                 } else {
                     if (body.has("nome")) v.setNome(body.get("nome").getAsString());
                     if (body.has("email")) v.setEmail(body.get("email").getAsString());
                     if (body.has("celular")) v.setCelular(body.get("celular").getAsString());
                     if (dao.atualizar(conn, v)) {
-                        result = new Resposta(200, "{\"mensagem\":\"Voluntário atualizado\"}");
+                        result = new Resposta(200, "{\"mensagem\":\"VoluntÃ¡rio atualizado\"}");
                     } else {
-                        result = new Resposta(500, "{\"erro\":\"Erro ao atualizar voluntário\"}");
+                        result = new Resposta(500, "{\"erro\":\"Erro ao atualizar voluntÃ¡rio\"}");
                     }
                 }
             } catch (SQLException e) {
                 System.err.println("Erro ao atualizar voluntario: " + e.getMessage());
-                result = new Resposta(500, "{\"erro\":\"Falha ao atualizar voluntário.\"}");
+                result = new Resposta(500, "{\"erro\":\"Falha ao atualizar voluntÃ¡rio.\"}");
             }
         }
         return result;

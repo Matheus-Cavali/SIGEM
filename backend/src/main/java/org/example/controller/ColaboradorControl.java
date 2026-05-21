@@ -2,7 +2,7 @@ package org.example.controller;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import org.example.conexao.ConexaoSingleton;
+import org.example.conexao.Conexao;
 import org.example.dao.ColaboradorDao;
 import org.example.dao.RecursoSistemaDao;
 import org.example.dao.UsuarioDao;
@@ -37,7 +37,7 @@ public class ColaboradorControl {
         boolean permitido = false;
         String email = emailDoToken(auth);
         if (email != null) {
-            try (Connection conn = ConexaoSingleton.getInstance().getConexao()) {
+            try (Connection conn = Conexao.getConexao()) {
                 UsuarioDao uDao = new UsuarioDao();
                 Usuario u = uDao.buscarPorEmail(conn, email);
                 if (u != null) {
@@ -74,7 +74,7 @@ public class ColaboradorControl {
                     }
                 }
             }
-            try (Connection conn = ConexaoSingleton.getInstance().getConexao()) {
+            try (Connection conn = Conexao.getConexao()) {
                 List<Colaborador> lista = new ColaboradorDao().listar(conn, nome, email);
                 StringBuilder json = new StringBuilder("[");
                 for (int i = 0; i < lista.size(); i++) {
@@ -107,10 +107,10 @@ public class ColaboradorControl {
         if (!usuarioTemPermissao(auth, "GESTAO_COLABORADORES")) {
             result = new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         } else {
-            try (Connection conn = ConexaoSingleton.getInstance().getConexao()) {
+            try (Connection conn = Conexao.getConexao()) {
                 Colaborador c = new ColaboradorDao().buscarPorId(conn, id);
                 if (c == null) {
-                    result = new Resposta(404, "{\"erro\":\"Colaborador não encontrado\"}");
+                    result = new Resposta(404, "{\"erro\":\"Colaborador nÃ£o encontrado\"}");
                 } else {
                     JsonObject resp = new JsonObject();
                     resp.addProperty("id", c.getId()); resp.addProperty("nome", c.getNome());
@@ -134,13 +134,13 @@ public class ColaboradorControl {
         if (!usuarioTemPermissao(auth, "GESTAO_COLABORADORES")) {
             result = new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         } else {
-            try (Connection conn = ConexaoSingleton.getInstance().getConexao()) {
+            try (Connection conn = Conexao.getConexao()) {
                 Gson gson = new Gson();
                 JsonObject body = gson.fromJson(jsonBody, JsonObject.class);
                 ColaboradorDao dao = new ColaboradorDao();
                 Colaborador c = dao.buscarPorId(conn, id);
                 if (c == null) {
-                    result = new Resposta(404, "{\"erro\":\"Colaborador não encontrado\"}");
+                    result = new Resposta(404, "{\"erro\":\"Colaborador nÃ£o encontrado\"}");
                 } else {
                     if (body.has("nome")) c.setNome(body.get("nome").getAsString());
                     if (body.has("email")) c.setEmail(body.get("email").getAsString());

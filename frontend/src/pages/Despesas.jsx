@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { del, get, post, put } from '../api/http'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
-import { formatarData, moeda, valorParaNumero } from '../utils/format'
+import { moeda, valorParaNumero } from '../utils/format'
+import DateField from '../components/form/DateField'
 import { useAuth } from '../state/AuthContext'
 
 const initialForm = { descricao: '', valor: '', dataVencimento: '', categoriaDespesaId: '' }
@@ -155,10 +156,7 @@ export default function Despesas() {
                 ))}
               </select>
             </label>
-            <label>
-              <span>Data Vencimento</span>
-              <input value={form.dataVencimento} onChange={e => setForm(prev => ({ ...prev, dataVencimento: formatarData(e.target.value) }))} placeholder="dd/mm/aaaa" />
-            </label>
+            <DateField label="Data Vencimento" value={form.dataVencimento} setValue={v => setForm(prev => ({ ...prev, dataVencimento: v }))} />
             <div className="form-submit">
               <button className="primary-action">{editing ? 'Salvar Alteracoes' : 'Salvar Despesa'}</button>
             </div>

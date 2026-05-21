@@ -1,5 +1,6 @@
 package org.example.dao;
 
+import org.example.conexao.Conexao;
 import org.example.model.InvestimentoFuturo;
 
 import java.math.BigDecimal;
@@ -116,7 +117,7 @@ public class InvestimentoFuturoDao {
     }
 
     public void migrarStatus() {
-        try (Connection conn = org.example.conexao.ConexaoSingleton.getInstance().getConexao()) {
+        try (Connection conn = Conexao.getConexao()) {
             migrarStatus(conn);
         } catch (SQLException e) {
             System.err.println("Erro na migracao de status: " + e.getMessage());

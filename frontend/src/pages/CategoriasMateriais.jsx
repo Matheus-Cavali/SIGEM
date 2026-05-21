@@ -3,6 +3,7 @@ import { del, get, post, put } from '../api/http'
 import { useAuth } from '../state/AuthContext'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
+import '../components/form/BaseField/BaseField.scss'
 
 const initialForm = { nome: '' }
 
@@ -12,6 +13,8 @@ export default function CategoriasMateriais() {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [erro, setErro] = useState('')
+  const [success, setSuccess] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
   const [filtroNome, setFiltroNome] = useState('')
   const { can } = useAuth()
   const canManage = can('GESTAO_DOACOES')
@@ -19,7 +22,9 @@ export default function CategoriasMateriais() {
   const load = async (nome) => {
     try {
       let path = '/api/categorias-materiais'
-      if (nome) path += '?nome=' + encodeURIComponent(nome)
+      const params = []
+      if (nome) params.push('nome=' + encodeURIComponent(nome))
+      if (params.length) path += '?' + params.join('&')
       const data = await get(path)
       setItems(Array.isArray(data) ? data : [])
     } catch (error) {
@@ -40,6 +45,8 @@ export default function CategoriasMateriais() {
     setForm(initialForm)
     setEditing(null)
     setErro('')
+    setFieldErrors({})
+    setSuccess('')
     setFormOpen(true)
   }
 
@@ -47,32 +54,58 @@ export default function CategoriasMateriais() {
     setForm({ nome: item.nome || '' })
     setEditing(item.id)
     setErro('')
+    setFieldErrors({})
+    setSuccess('')
     setFormOpen(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleFieldChange = (field, value) => {
+    setForm(prev => ({ ...prev, [field]: value }))
+    setFieldErrors(prev => ({ ...prev, [field]: '' }))
+  }
+
+  const validarCampos = () => {
+    const erros = {}
+    if (!form.nome.trim()) erros.nome = 'Nome da categoria é obrigatório'
+    return erros
   }
 
   const save = async (event) => {
     event.preventDefault()
     setErro('')
+    setSuccess('')
+    setFieldErrors({})
 
-    try {
-      if (!form.nome) {
-        throw new Error('Nome é obrigatorio')
+    const campos = validarCampos()
+    const temErros = Object.keys(campos).length > 0
+    if (temErros) {
+      setFieldErrors(campos)
+    }
+
+    if (!temErros) {
+      try {
+        const payload = { nome: form.nome }
+
+        if (editing) {
+          await put('/api/categorias-materiais/' + editing, payload)
+          setSuccess('Categoria alterada com sucesso.')
+          setFormOpen(false)
+        } else {
+          await post('/api/categorias-materiais', payload)
+          setSuccess('Categoria cadastrada com sucesso.')
+        }
+
+        setEditing(null)
+        setForm(initialForm)
+        load(filtroNome)
+      } catch (error) {
+        if (error.fieldErrors) {
+          setFieldErrors(error.fieldErrors)
+        } else {
+          setErro(error.message)
+        }
       }
-
-      const payload = { nome: form.nome }
-
-      if (editing) {
-        await put('/api/categorias-materiais/' + editing, payload)
-      } else {
-        await post('/api/categorias-materiais', payload)
-      }
-
-      setFormOpen(false)
-      setEditing(null)
-      setForm(initialForm)
-      load(filtroNome)
-    } catch (error) {
-      setErro(error.message)
     }
   }
 
@@ -83,11 +116,18 @@ export default function CategoriasMateriais() {
       try {
         await del('/api/categorias-materiais/' + item.id)
         setItems(prev => prev.filter(current => current.id !== item.id))
+        setSuccess('Categoria excluída com sucesso.')
       } catch (error) {
         alert(error.message)
       }
     }
   }
+
+  useEffect(() => {
+    if (!success) return
+    const timer = setTimeout(() => setSuccess(''), 4000)
+    return () => clearTimeout(timer)
+  }, [success])
 
   return (
     <>
@@ -101,6 +141,8 @@ export default function CategoriasMateriais() {
         />
       </section>
 
+      {success && <div className="message success">{success}</div>}
+
       {formOpen && (
         <section className="editor-card">
           <div className="editor-title">
@@ -108,11 +150,13 @@ export default function CategoriasMateriais() {
             <button className="ghost-icon" onClick={() => setFormOpen(false)}><Icon name="close" size={16} /></button>
           </div>
           {erro && <div className="message inline">{erro}</div>}
-          <form className="inline-form" onSubmit={save}>
-            <label>
-              <span>Nome</span>
-              <input value={form.nome} onChange={e => setForm(prev => ({ ...prev, nome: e.target.value }))} placeholder="Nome da categoria" />
-            </label>
+          <form className="inline-form" onSubmit={save} noValidate>
+            <div className="field-container">
+              <label className="field-label"><span>Nome <span className="required-star">*</span></span></label>
+              <input className={'field-control' + (fieldErrors.nome ? ' is-invalid' : '')}
+                     value={form.nome} onChange={e => handleFieldChange('nome', e.target.value)} placeholder="Nome da categoria" />
+              {fieldErrors.nome && <span className="field-error">{fieldErrors.nome}</span>}
+            </div>
             <div className="form-submit">
               <button className="primary-action">{editing ? 'Salvar Alteracoes' : 'Salvar Categoria'}</button>
             </div>

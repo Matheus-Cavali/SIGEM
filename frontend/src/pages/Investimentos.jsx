@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { del, get, post, put } from '../api/http'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
-import { dataParaBackend, formatarData, moeda, valorParaNumero } from '../utils/format'
+import { dataParaBackend, moeda, valorParaNumero } from '../utils/format'
 import CurrencyField from '../components/form/CurrencyField'
+import DateField from '../components/form/DateField'
 import { useAuth } from '../state/AuthContext'
 
 const initialForm = { nome: '', valorMeta: '', dataAbertura: '', status: 'ABERTO' }
@@ -137,12 +138,7 @@ export default function Investimentos() {
             <CurrencyField label="Meta de Valor (R$)" value={form.valorMeta}
               setValue={v => handleFieldChange('valorMeta', v)} error={fieldErrors.valorMeta} />
             {!editing && (
-              <div className="field-container">
-                <label className="field-label">Data Meta <span className="required-star">*</span></label>
-                <input className={'field-control' + (fieldErrors.dataAbertura ? ' is-invalid' : '')}
-                       value={form.dataAbertura} onChange={e => handleFieldChange('dataAbertura', formatarData(e.target.value))} placeholder="dd/mm/aaaa" />
-                {fieldErrors.dataAbertura && <span className="field-error">{fieldErrors.dataAbertura}</span>}
-              </div>
+              <DateField label="Data Meta" value={form.dataAbertura} setValue={v => handleFieldChange('dataAbertura', v)} error={fieldErrors.dataAbertura} required />
             )}
             {editing && (
               <div className="field-container">

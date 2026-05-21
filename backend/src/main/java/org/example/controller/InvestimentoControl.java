@@ -2,7 +2,7 @@ package org.example.controller;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import org.example.conexao.ConexaoSingleton;
+import org.example.conexao.Conexao;
 import org.example.dao.AporteInvestimentoDao;
 import org.example.dao.InvestimentoFuturoDao;
 import org.example.dao.RecursoSistemaDao;
@@ -38,7 +38,7 @@ public class InvestimentoControl {
         boolean permitido = false;
         String email = emailDoToken(auth);
         if (email != null) {
-            try (Connection conn = ConexaoSingleton.getInstance().getConexao()) {
+            try (Connection conn = Conexao.getConexao()) {
                 UsuarioDao uDao = new UsuarioDao();
                 Usuario u = uDao.buscarPorEmail(conn, email);
                 if (u != null) {
@@ -64,7 +64,7 @@ public class InvestimentoControl {
         boolean pode = false;
         String email = emailDoToken(auth);
         if (email != null) {
-            try (Connection conn = ConexaoSingleton.getInstance().getConexao()) {
+            try (Connection conn = Conexao.getConexao()) {
                 Usuario u = new UsuarioDao().buscarPorEmail(conn, email);
                 if (u != null) {
                     pode = u.getNivelAcesso() == 1 || usuarioTemPermissao(auth, "REGISTRAR_INVESTIMENTO");
@@ -105,14 +105,14 @@ public class InvestimentoControl {
                     if (!erros.isEmpty()) {
                         result = new Resposta(400, gson.toJson(Collections.singletonMap("erros", erros)));
                     } else {
-                        conn = ConexaoSingleton.getInstance().getConexao();
+                        conn = Conexao.getConexao();
                         conn.setAutoCommit(false);
 
                         InvestimentoFuturo existente = InvestimentoFuturo.buscarPorNome(conn, nome.trim());
                         if (existente != null) {
                             conn.rollback();
                             Map<String, String> err = new LinkedHashMap<>();
-                            err.put("nome", "Já existe um investimento com este nome");
+                            err.put("nome", "JÃ¡ existe um investimento com este nome");
                             result = new Resposta(409, gson.toJson(Collections.singletonMap("erros", err)));
                         } else {
                             int id = InvestimentoFuturo.salvar(conn, inv);
@@ -140,7 +140,7 @@ public class InvestimentoControl {
     public Resposta listarInvestimentos(String auth, String query) {
         Resposta result;
         if (emailDoToken(auth) == null) {
-            result = new Resposta(401, "{\"erro\":\"Acesso negado. Faça login.\"}");
+            result = new Resposta(401, "{\"erro\":\"Acesso negado. FaÃ§a login.\"}");
         } else {
             String nome = null, status = null;
             if (query != null) {
@@ -152,7 +152,7 @@ public class InvestimentoControl {
                     }
                 }
             }
-            try (Connection conn = ConexaoSingleton.getInstance().getConexao()) {
+            try (Connection conn = Conexao.getConexao()) {
                 InvestimentoFuturoDao dao = new InvestimentoFuturoDao();
                 List<InvestimentoFuturo> lista = dao.listar(conn, nome, status);
                 StringBuilder json = new StringBuilder("[");
@@ -181,12 +181,12 @@ public class InvestimentoControl {
     public Resposta buscarInvestimento(String auth, int id) {
         Resposta result;
         if (emailDoToken(auth) == null) {
-            result = new Resposta(401, "{\"erro\":\"Acesso negado. Faça login.\"}");
+            result = new Resposta(401, "{\"erro\":\"Acesso negado. FaÃ§a login.\"}");
         } else {
-            try (Connection conn = ConexaoSingleton.getInstance().getConexao()) {
+            try (Connection conn = Conexao.getConexao()) {
                 InvestimentoFuturo inv = InvestimentoFuturo.buscarPorId(conn, id);
                 if (inv == null) {
-                    result = new Resposta(404, "{\"erro\":\"Investimento não encontrado\"}");
+                    result = new Resposta(404, "{\"erro\":\"Investimento nÃ£o encontrado\"}");
                 } else {
                     JsonObject resp = new JsonObject();
                     resp.addProperty("id", inv.getId()); resp.addProperty("nome", inv.getNome());
@@ -214,13 +214,13 @@ public class InvestimentoControl {
         } else {
             Connection conn = null;
             try {
-                conn = ConexaoSingleton.getInstance().getConexao();
+                conn = Conexao.getConexao();
                 conn.setAutoCommit(false);
 
                 InvestimentoFuturo inv = InvestimentoFuturo.buscarPorId(conn, id);
                 if (inv == null) {
                     conn.rollback();
-                    result = new Resposta(404, "{\"erro\":\"Investimento não encontrado\"}");
+                    result = new Resposta(404, "{\"erro\":\"Investimento nÃ£o encontrado\"}");
                 } else {
                     if (body.has("nome")) inv.setNome(body.get("nome").getAsString());
                     if (body.has("valorMeta")) inv.setValorMeta(body.get("valorMeta").getAsBigDecimal());
@@ -258,16 +258,16 @@ public class InvestimentoControl {
                 String dataStr = body.get("dataAporte").getAsString();
                 int colaboradorId = body.get("colaboradorId").getAsInt();
 
-                conn = ConexaoSingleton.getInstance().getConexao();
+                conn = Conexao.getConexao();
                 conn.setAutoCommit(false);
 
                 InvestimentoFuturo inv = InvestimentoFuturo.buscarPorId(conn, investimentoId);
                 if (inv == null) {
                     conn.rollback();
-                    result = new Resposta(404, "{\"erro\":\"Investimento não encontrado\"}");
+                    result = new Resposta(404, "{\"erro\":\"Investimento nÃ£o encontrado\"}");
                 } else if ("ENCERRADO".equals(inv.getStatus())) {
                     conn.rollback();
-                    result = new Resposta(400, "{\"erro\":\"Investimento encerrado. Não é permitido lançar aportes.\"}");
+                    result = new Resposta(400, "{\"erro\":\"Investimento encerrado. NÃ£o Ã© permitido lanÃ§ar aportes.\"}");
                 } else {
                     AporteInvestimento aporte = new AporteInvestimento();
                     aporte.setInvestimentoFuturoId(investimentoId);
@@ -294,7 +294,7 @@ public class InvestimentoControl {
             } catch (Exception e) {
                 if (conn != null) try { conn.rollback(); } catch (SQLException ex) { System.err.println("Erro no rollback: " + ex.getMessage()); }
                 System.err.println("ERRO no lancarAporte: " + e.getMessage());
-                result = new Resposta(500, "{\"erro\":\"Falha ao lançar aporte: " + e.getMessage() + "\"}");
+                result = new Resposta(500, "{\"erro\":\"Falha ao lanÃ§ar aporte: " + e.getMessage() + "\"}");
             } finally {
                 if (conn != null) try { conn.close(); } catch (SQLException e) { System.err.println("Erro ao fechar conexao: " + e.getMessage()); }
             }
@@ -305,9 +305,9 @@ public class InvestimentoControl {
     public Resposta listarAportes(String auth, int investimentoId) {
         Resposta result;
         if (emailDoToken(auth) == null) {
-            result = new Resposta(401, "{\"erro\":\"Acesso negado. Faça login.\"}");
+            result = new Resposta(401, "{\"erro\":\"Acesso negado. FaÃ§a login.\"}");
         } else {
-            try (Connection conn = ConexaoSingleton.getInstance().getConexao()) {
+            try (Connection conn = Conexao.getConexao()) {
                 AporteInvestimentoDao dao = new AporteInvestimentoDao();
                 List<AporteInvestimento> lista = dao.listarPorInvestimento(conn, investimentoId);
                 StringBuilder json = new StringBuilder("[");
@@ -337,7 +337,7 @@ public class InvestimentoControl {
         } else {
             Connection conn = null;
             try {
-                conn = ConexaoSingleton.getInstance().getConexao();
+                conn = Conexao.getConexao();
                 conn.setAutoCommit(false);
 
                 new AporteInvestimentoDao().deletarPorInvestimento(conn, id);
@@ -366,7 +366,7 @@ public class InvestimentoControl {
         } else {
             Connection conn = null;
             try {
-                conn = ConexaoSingleton.getInstance().getConexao();
+                conn = Conexao.getConexao();
                 conn.setAutoCommit(false);
 
                 if (AporteInvestimento.deletar(conn, aporteId)) {
@@ -400,7 +400,7 @@ public class InvestimentoControl {
                 aporte.setValorAporte(body.get("valorAporte").getAsBigDecimal());
                 aporte.setDataAporte(Data.parseFlexivel(body.get("dataAporte").getAsString()));
 
-                conn = ConexaoSingleton.getInstance().getConexao();
+                conn = Conexao.getConexao();
                 conn.setAutoCommit(false);
 
                 if (AporteInvestimento.atualizar(conn, aporteId, aporte)) {
@@ -424,7 +424,7 @@ public class InvestimentoControl {
     private Resposta validarDataAbertura(String dataStr, LocalDate dataAbertura) {
         Resposta result = null;
         if (dataStr != null && !dataStr.trim().isEmpty() && dataAbertura == null) {
-            result = new Resposta(400, "{\"erros\":{\"dataAbertura\":\"Data de abertura inválida. Use o formato dd/mm/aaaa\"}}");
+            result = new Resposta(400, "{\"erros\":{\"dataAbertura\":\"Data de abertura invÃ¡lida. Use o formato dd/mm/aaaa\"}}");
         }
         return result;
     }

@@ -1,6 +1,6 @@
 package org.example.dao;
 
-import org.example.conexao.ConexaoSingleton;
+import org.example.conexao.Conexao;
 import org.example.model.Usuario;
 import org.example.util.Criptografia;
 
@@ -154,7 +154,7 @@ public class UsuarioDao {
     }
 
     public void criarAdmin() {
-        try (Connection conn = ConexaoSingleton.getInstance().getConexao()) {
+        try (Connection conn = Conexao.getConexao()) {
             if (buscarPorEmail(conn, "admin@sigem.com") == null) {
                 System.out.println("Criando Administrador padrao do sistema...");
                 String senhaHash = Criptografia.hashSenha("123");

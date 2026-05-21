@@ -1,7 +1,12 @@
 package org.example.model;
 
+import org.example.dao.DespesaDao;
+
 import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.List;
 
 public class Despesa {
     private int id;
@@ -15,6 +20,31 @@ public class Despesa {
     private Integer colaboradorLancouId;
 
     public Despesa() {}
+
+    public static int inserir(Connection conn, Despesa d) throws SQLException {
+        DespesaDao dao = new DespesaDao();
+        return dao.inserir(conn, d);
+    }
+
+    public static boolean atualizar(Connection conn, Despesa d) throws SQLException {
+        DespesaDao dao = new DespesaDao();
+        return dao.atualizar(conn, d);
+    }
+
+    public static boolean deletar(Connection conn, int id) throws SQLException {
+        DespesaDao dao = new DespesaDao();
+        return dao.deletar(conn, id);
+    }
+
+    public static Despesa buscarPorId(Connection conn, int id) throws SQLException {
+        DespesaDao dao = new DespesaDao();
+        return dao.buscarPorId(conn, id);
+    }
+
+    public static List<Despesa> listar(Connection conn, String descricao, Integer categoriaId) throws SQLException {
+        DespesaDao dao = new DespesaDao();
+        return dao.listar(conn, descricao, categoriaId);
+    }
 
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }

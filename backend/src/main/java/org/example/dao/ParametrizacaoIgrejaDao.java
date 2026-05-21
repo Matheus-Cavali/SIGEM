@@ -1,77 +1,58 @@
 package org.example.dao;
 
-import org.example.conexao.Conexao;
-import org.example.exception.DatabaseException;
 import org.example.model.ParametrizacaoIgreja;
 
 import java.sql.*;
 
 public class ParametrizacaoIgrejaDao {
 
-    public ParametrizacaoIgreja buscar() {
+    public ParametrizacaoIgreja buscar(Connection conn) throws SQLException {
         String sql = "SELECT * FROM parametrizacao_igreja ORDER BY id LIMIT 1";
-
-        try (Connection conn = Conexao.getConexao();
-             PreparedStatement stmt = conn.prepareStatement(sql);
+        try (PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
             if (rs.next()) return extrair(rs);
-        } catch (SQLException e) {
-            throw new DatabaseException("Erro ao buscar parametrização da igreja.", e);
         }
-
         return null;
     }
 
-    public ParametrizacaoIgreja salvar(ParametrizacaoIgreja parametros) {
-        ParametrizacaoIgreja atual = buscar();
-
+    public ParametrizacaoIgreja salvar(Connection conn, ParametrizacaoIgreja parametros) throws SQLException {
+        ParametrizacaoIgreja atual = buscar(conn);
         if (atual == null) {
-            return inserir(parametros);
+            return inserir(conn, parametros);
         }
-
         parametros.setId(atual.getId());
-        return atualizar(parametros);
+        return atualizar(conn, parametros);
     }
 
-    private ParametrizacaoIgreja inserir(ParametrizacaoIgreja parametros) {
+    private ParametrizacaoIgreja inserir(Connection conn, ParametrizacaoIgreja parametros) throws SQLException {
         String sql = """
             INSERT INTO parametrizacao_igreja
             (nome_fantasia, razao_social, cnpj, caminho_logo, cor_primaria, cor_secundaria, telefone, email, site, endereco_completo)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
-
-        try (Connection conn = Conexao.getConexao();
-            PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             preencherStatement(stmt, parametros);
             stmt.executeUpdate();
-
             try (ResultSet rs = stmt.getGeneratedKeys()) {
                 if (rs.next()) parametros.setId(rs.getInt(1));
             }
-
-            return parametros;
-        } catch (SQLException e) {
-            throw new DatabaseException("Erro ao inserir parametrização da igreja.", e);
         }
+        return parametros;
     }
 
-    private ParametrizacaoIgreja atualizar(ParametrizacaoIgreja parametros) {
+    private ParametrizacaoIgreja atualizar(Connection conn, ParametrizacaoIgreja parametros) throws SQLException {
         String sql = """
             UPDATE parametrizacao_igreja
             SET nome_fantasia = ?, razao_social = ?, cnpj = ?, caminho_logo = ?, cor_primaria = ?,
                 cor_secundaria = ?, telefone = ?, email = ?, site = ?, endereco_completo = ?
             WHERE id = ?
             """;
-
-        try (Connection conn = Conexao.getConexao();
-            PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             preencherStatement(stmt, parametros);
             stmt.setInt(11, parametros.getId());
             stmt.executeUpdate();
-            return parametros;
-        } catch (SQLException e) {
-            throw new DatabaseException("Erro ao atualizar parametrização da igreja.", e);
         }
+        return parametros;
     }
 
     private void preencherStatement(PreparedStatement stmt, ParametrizacaoIgreja parametros) throws SQLException {

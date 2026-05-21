@@ -13,10 +13,8 @@ public class Main {
     public static void main(String[] args) {
         try {
             UsuarioDao dao = new UsuarioDao();
-
             dao.criarAdmin();
-            InvestimentoFuturoDao invDao = new InvestimentoFuturoDao();
-            invDao.migrarStatus();
+
             HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
 
             server.createContext("/api/login", UsuarioRouter.getInstancia());
@@ -26,8 +24,8 @@ public class Main {
             server.createContext("/api/investimentos", InvestimentoRouter.getInstancia());
             server.createContext("/api/colaboradores", ColaboradorRouter.getInstancia());
             server.createContext("/api/voluntarios", VoluntarioRouter.getInstancia());
-            server.createContext("/api/categorias-materiais", CategoriaMaterialRouter.getInstancia());
-            server.createContext("/api/materiais", MaterialRouter.getInstancia());
+            server.createContext("/api/categorias-materiais", new CategoriaMaterialRouter());
+            server.createContext("/api/materiais", new MaterialRouter());
             server.createContext("/api/recurso", UsuarioRouter.getInstancia());
             server.createContext("/api/parameters", ParametersRouter.getInstancia());
             server.createContext("/uploads", UploadRouter.getInstancia());

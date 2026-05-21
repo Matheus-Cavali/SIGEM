@@ -1,6 +1,5 @@
 package org.example.dao;
 
-import org.example.conexao.Conexao;
 import org.example.model.Despesa;
 
 import java.sql.*;
@@ -10,11 +9,10 @@ import java.util.List;
 
 public class DespesaDao {
 
-    public int inserir(Despesa despesa) {
+    public int inserir(Connection conn, Despesa despesa) throws SQLException {
         String sql = "INSERT INTO despesa (descricao, valor, data_lancamento, data_vencimento, categoria_despesa_id, colaborador_lancou_id) " +
                 "VALUES (?, ?, ?, ?, ?, ?)";
-        try (Connection conn = Conexao.getConexao();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setString(1, despesa.getDescricao());
             stmt.setBigDecimal(2, despesa.getValor());
             stmt.setObject(3, despesa.getDataLancamento() != null ? despesa.getDataLancamento() : LocalDate.now());
@@ -29,28 +27,23 @@ public class DespesaDao {
             try (ResultSet rs = stmt.getGeneratedKeys()) {
                 if (rs.next()) return rs.getInt(1);
             }
-        } catch (SQLException e) {
-            System.err.println("Erro ao inserir despesa: " + e.getMessage());
         }
         return -1;
     }
 
-    public Despesa buscarPorId(int id) {
+    public Despesa buscarPorId(Connection conn, int id) throws SQLException {
         String sql = "SELECT d.*, t.nome AS tipo_nome FROM despesa d " +
                 "LEFT JOIN categoria_despesa t ON t.id = d.categoria_despesa_id WHERE d.id = ?";
-        try (Connection conn = Conexao.getConexao();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, id);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) return extrair(rs);
             }
-        } catch (SQLException e) {
-            System.err.println("Erro ao buscar despesa: " + e.getMessage());
         }
         return null;
     }
 
-    public List<Despesa> listar(String filtroDescricao, Integer filtroTipoId) {
+    public List<Despesa> listar(Connection conn, String filtroDescricao, Integer filtroTipoId) throws SQLException {
         StringBuilder sql = new StringBuilder(
                 "SELECT d.*, t.nome AS tipo_nome FROM despesa d " +
                         "LEFT JOIN categoria_despesa t ON t.id = d.categoria_despesa_id WHERE 1=1"
@@ -60,45 +53,34 @@ public class DespesaDao {
         sql.append(" ORDER BY d.data_vencimento, d.id");
 
         List<Despesa> lista = new ArrayList<>();
-        try (Connection conn = Conexao.getConexao();
-             PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
+        try (PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
             int idx = 1;
             if (filtroDescricao != null && !filtroDescricao.isEmpty()) stmt.setString(idx++, "%" + filtroDescricao + "%");
             if (filtroTipoId != null) stmt.setInt(idx++, filtroTipoId);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) lista.add(extrair(rs));
             }
-        } catch (SQLException e) {
-            System.err.println("Erro ao listar despesas: " + e.getMessage());
         }
         return lista;
     }
 
-    public boolean atualizar(Despesa despesa) {
+    public boolean atualizar(Connection conn, Despesa despesa) throws SQLException {
         String sql = "UPDATE despesa SET descricao = ?, valor = ?, data_vencimento = ?, categoria_despesa_id = ? WHERE id = ?";
-        try (Connection conn = Conexao.getConexao();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, despesa.getDescricao());
             stmt.setBigDecimal(2, despesa.getValor());
             stmt.setObject(3, despesa.getDataVencimento());
             stmt.setInt(4, despesa.getCategoriaDespesaId());
             stmt.setInt(5, despesa.getId());
             return stmt.executeUpdate() == 1;
-        } catch (SQLException e) {
-            System.err.println("Erro ao atualizar despesa: " + e.getMessage());
-            return false;
         }
     }
 
-    public boolean deletar(int id) {
+    public boolean deletar(Connection conn, int id) throws SQLException {
         String sql = "DELETE FROM despesa WHERE id = ?";
-        try (Connection conn = Conexao.getConexao();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, id);
             return stmt.executeUpdate() == 1;
-        } catch (SQLException e) {
-            System.err.println("Erro ao deletar despesa: " + e.getMessage());
-            return false;
         }
     }
 

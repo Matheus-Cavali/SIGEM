@@ -1,6 +1,5 @@
 package org.example.dao;
 
-import org.example.conexao.Conexao;
 import org.example.exception.DatabaseException;
 import org.example.model.CategoriaMaterial;
 
@@ -9,22 +8,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class CategoriaMaterialDao {
-    private static final CategoriaMaterialDao instancia = new CategoriaMaterialDao();
 
-    private CategoriaMaterialDao(){}
-
-    public static CategoriaMaterialDao getInstancia(){
-        return instancia;
-    }
-
-    public boolean cadastrar(CategoriaMaterial cm){
+    public boolean cadastrar(Connection conn, CategoriaMaterial cm){
         String sql = "INSERT INTO categoria_material (nome) VALUES (?)";
 
-        try(Connection conn = Conexao.getConexao();
-             PreparedStatement stmt = conn.prepareStatement(sql)){
-
-            stmt.setString(1, cm.getNome());
-
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
+            preencherStatement(stmt, cm);
             return stmt.executeUpdate() == 1;
         }
         catch (SQLException e){
@@ -32,15 +21,12 @@ public class CategoriaMaterialDao {
         }
     }
 
-    public boolean atualizar(CategoriaMaterial cm){
+    public boolean atualizar(Connection conn, CategoriaMaterial cm){
         String sql = "UPDATE categoria_material SET nome = ? WHERE id = ?";
 
-        try(Connection conn = Conexao.getConexao();
-             PreparedStatement stmt = conn.prepareStatement(sql)){
-
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
             stmt.setString(1, cm.getNome());
             stmt.setInt(2, cm.getId());
-
             return stmt.executeUpdate() == 1;
         }
         catch (SQLException e){
@@ -48,32 +34,30 @@ public class CategoriaMaterialDao {
         }
     }
 
-    public boolean excluir(Integer id){
+    public boolean excluir(Connection conn, Integer id){
         String sql = "DELETE FROM categoria_material WHERE id = ?";
 
-        try(Connection conn = Conexao.getConexao();
-             PreparedStatement stmt = conn.prepareStatement(sql)){
-
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
             stmt.setInt(1, id);
-
             return stmt.executeUpdate() == 1;
         }
         catch (SQLException e){
             if("23503".equals(e.getSQLState()))
                 throw new DatabaseException("Erro ao excluir categoria de material: há registros vinculados.", e);
+
             throw new DatabaseException("Erro ao excluir categoria de material", e);
         }
     }
 
-    public CategoriaMaterial buscarPorId(Integer id){
+    public CategoriaMaterial buscarPorId(Connection conn, Integer id){
         String sql = "SELECT * FROM categoria_material WHERE id = ?";
 
-        try(Connection conn = Conexao.getConexao();
-             PreparedStatement stmt = conn.prepareStatement(sql)){
-
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
             stmt.setInt(1, id);
+
             try(ResultSet rs = stmt.executeQuery()){
-                if (rs.next()) return extrair(rs);
+                if (rs.next())
+                    return extrair(rs);
             }
         }
         catch (SQLException e){
@@ -83,15 +67,15 @@ public class CategoriaMaterialDao {
         return null;
     }
 
-    public CategoriaMaterial buscarPorNomeExato(String nome){
+    public CategoriaMaterial buscarPorNomeExato(Connection conn, String nome){
         String sql = "SELECT * FROM categoria_material WHERE UPPER(nome) = UPPER(?)";
 
-        try(Connection conn = Conexao.getConexao();
-             PreparedStatement stmt = conn.prepareStatement(sql)){
-
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
             stmt.setString(1, nome.trim());
+
             try(ResultSet rs = stmt.executeQuery()){
-                if (rs.next()) return extrair(rs);
+                if(rs.next())
+                    return extrair(rs);
             }
         }
         catch (SQLException e){
@@ -101,15 +85,14 @@ public class CategoriaMaterialDao {
         return null;
     }
 
-    public List<CategoriaMaterial> listarTodos(){
+    public List<CategoriaMaterial> listarTodos(Connection conn){
         String sql = "SELECT * FROM categoria_material ORDER BY nome";
         List<CategoriaMaterial> lista = new ArrayList<>();
 
-        try(Connection conn = Conexao.getConexao();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()){
+        try(PreparedStatement stmt = conn.prepareStatement(sql);
+            ResultSet rs = stmt.executeQuery()){
 
-            while (rs.next())
+            while(rs.next())
                 lista.add(extrair(rs));
         }
         catch (SQLException e){
@@ -119,14 +102,19 @@ public class CategoriaMaterialDao {
         return lista;
     }
 
-    public List<CategoriaMaterial> listar(String nome){
-        String sql = "SELECT * FROM categoria_material WHERE nome ILIKE ? ORDER BY nome";
+    public List<CategoriaMaterial> listar(Connection conn, String nome){
+        StringBuilder sql = new StringBuilder("SELECT * FROM categoria_material WHERE 1=1");
+
+        if(nome != null && !nome.trim().isEmpty())
+            sql.append(" AND nome ILIKE ?");
+        sql.append(" ORDER BY nome");
+
         List<CategoriaMaterial> lista = new ArrayList<>();
+        try(PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
 
-        try(Connection conn = Conexao.getConexao();
-             PreparedStatement stmt = conn.prepareStatement(sql)){
+            if(nome != null && !nome.trim().isEmpty())
+                stmt.setString(1, "%" + nome.trim() + "%");
 
-            stmt.setString(1, "%" + nome.trim() + "%");
             try(ResultSet rs = stmt.executeQuery()){
                 while (rs.next())
                     lista.add(extrair(rs));
@@ -141,6 +129,10 @@ public class CategoriaMaterialDao {
 
     private CategoriaMaterial extrair(ResultSet rs) throws SQLException{
         return new CategoriaMaterial(rs.getInt("id"),
-                                     rs.getString("nome"));
+                rs.getString("nome"));
+    }
+
+    private void preencherStatement(PreparedStatement stmt, CategoriaMaterial cm) throws SQLException{
+        stmt.setString(1, cm.getNome());
     }
 }

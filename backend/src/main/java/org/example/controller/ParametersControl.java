@@ -1,13 +1,11 @@
 package org.example.controller;
 
 import com.google.gson.Gson;
-import org.example.conexao.ConexaoSingleton;
-import org.example.exception.DatabaseException;
-import org.example.facade.ParametersFacade;
+import org.example.conexao.Conexao;
+import org.example.dao.UsuarioDao;
 import org.example.model.ParametrizacaoIgreja;
 import org.example.model.Resposta;
 import org.example.model.Usuario;
-import org.example.dao.UsuarioDao;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -15,7 +13,6 @@ import java.sql.SQLException;
 public class ParametersControl {
     private static ParametersControl instancia;
     private final Gson gson = new Gson();
-    private final ParametersFacade facade = new ParametersFacade();
 
     private ParametersControl() {}
 
@@ -34,7 +31,7 @@ public class ParametersControl {
     private boolean usuarioPodeGerenciar(String auth) {
         String email = emailDoToken(auth);
         if (email != null) {
-            try (Connection conn = ConexaoSingleton.getInstance().getConexao()) {
+            try (Connection conn = Conexao.getConexao()) {
                 Usuario u = new UsuarioDao().buscarPorEmail(conn, email);
                 if (u != null) return u.getNivelAcesso() == 1;
             } catch (SQLException e) {
@@ -45,10 +42,10 @@ public class ParametersControl {
     }
 
     public Resposta buscar() {
-        try {
-            return new Resposta(200, gson.toJson(facade.buscar()));
-        } catch (DatabaseException e) {
-            return erro(500, "Erro ao buscar configurações da igreja.");
+        try (Connection conn = Conexao.getConexao()) {
+            return new Resposta(200, gson.toJson(ParametrizacaoIgreja.buscar(conn)));
+        } catch (Exception e) {
+            return erro(500, "Erro ao buscar configuraÃ§Ãµes da igreja.");
         }
     }
 
@@ -56,14 +53,14 @@ public class ParametersControl {
         if (!usuarioPodeGerenciar(auth)) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
-        try {
+        try (Connection conn = Conexao.getConexao()) {
             ParametrizacaoIgreja parametros = gson.fromJson(json, ParametrizacaoIgreja.class);
-            ParametrizacaoIgreja salvo = facade.salvar(parametros);
+            ParametrizacaoIgreja salvo = ParametrizacaoIgreja.salvar(conn, parametros);
             return new Resposta(200, gson.toJson(salvo));
         } catch (IllegalArgumentException e) {
             return erro(400, e.getMessage());
-        } catch (DatabaseException e) {
-            return erro(500, "Erro ao salvar configurações da igreja.");
+        } catch (Exception e) {
+            return erro(500, "Erro ao salvar configuraÃ§Ãµes da igreja.");
         }
     }
 
@@ -71,12 +68,12 @@ public class ParametersControl {
         if (!usuarioPodeGerenciar(auth)) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
-        try {
-            ParametrizacaoIgreja salvo = facade.salvarLogo(caminhoLogo);
+        try (Connection conn = Conexao.getConexao()) {
+            ParametrizacaoIgreja salvo = ParametrizacaoIgreja.salvarLogo(conn, caminhoLogo);
             return new Resposta(200, gson.toJson(salvo));
         } catch (IllegalArgumentException e) {
             return erro(400, e.getMessage());
-        } catch (DatabaseException e) {
+        } catch (Exception e) {
             return erro(500, "Erro ao salvar logo da igreja.");
         }
     }

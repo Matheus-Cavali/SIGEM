@@ -1,6 +1,5 @@
 package org.example.dao;
 
-import org.example.conexao.Conexao;
 import org.example.exception.DatabaseException;
 import org.example.model.Material;
 
@@ -9,20 +8,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MaterialDao {
-    private static final MaterialDao instancia = new MaterialDao();
-
-    private MaterialDao() {}
-
-    public static MaterialDao getInstancia(){
-        return instancia;
-    }
-
-    public boolean cadastrar(Material m){
+    public boolean cadastrar(Connection conn, Material m){
         String sql = "INSERT INTO material (nome, descricao, quantidade_estoque, categoria_material_id) VALUES (?, ?, ?, ?)";
 
-        try(Connection conn = Conexao.getConexao();
-            PreparedStatement stmt = conn.prepareStatement(sql)){
-
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
             preencherStatement(stmt, m);
 
             return stmt.executeUpdate() == 1;
@@ -32,12 +21,10 @@ public class MaterialDao {
         }
     }
 
-    public boolean atualizar(Material m) {
+    public boolean atualizar(Connection conn, Material m){
         String sql = "UPDATE material SET nome = ?, descricao = ?, quantidade_estoque = ?, categoria_material_id = ? WHERE id = ?";
 
-        try(Connection conn = Conexao.getConexao();
-            PreparedStatement stmt = conn.prepareStatement(sql)){
-
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
             preencherStatement(stmt, m);
             stmt.setInt(5, m.getId());
 
@@ -48,12 +35,10 @@ public class MaterialDao {
         }
     }
 
-    public boolean excluir(Integer id){
+    public boolean excluir(Connection conn, Integer id){
         String sql = "DELETE FROM material WHERE id = ?";
 
-        try(Connection conn = Conexao.getConexao();
-            PreparedStatement stmt = conn.prepareStatement(sql)){
-
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
             stmt.setInt(1, id);
 
             return stmt.executeUpdate() == 1;
@@ -66,12 +51,10 @@ public class MaterialDao {
         }
     }
 
-    public Material buscarPorId(Integer id){
+    public Material buscarPorId(Connection conn, Integer id){
         String sql = "SELECT * FROM material WHERE id = ?";
 
-        try(Connection conn = Conexao.getConexao();
-            PreparedStatement stmt = conn.prepareStatement(sql)){
-
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
             stmt.setInt(1, id);
 
             try(ResultSet rs = stmt.executeQuery()){
@@ -86,12 +69,10 @@ public class MaterialDao {
         return null;
     }
 
-    public Material buscarPorNomeExato(String nome){
+    public Material buscarPorNomeExato(Connection conn, String nome){
         String sql = "SELECT * FROM material WHERE UPPER(nome) = UPPER(?)";
 
-        try(Connection conn = Conexao.getConexao();
-             PreparedStatement stmt = conn.prepareStatement(sql)){
-
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
             stmt.setString(1, nome.trim());
 
             try(ResultSet rs = stmt.executeQuery()){
@@ -106,12 +87,11 @@ public class MaterialDao {
         return null;
     }
 
-    public List<Material> listarTodos(){
+    public List<Material> listarTodos(Connection conn){
         String sql = "SELECT * FROM material ORDER BY nome";
         List<Material> lista = new ArrayList<>();
 
-        try(Connection conn = Conexao.getConexao();
-            PreparedStatement stmt = conn.prepareStatement(sql);
+        try(PreparedStatement stmt = conn.prepareStatement(sql);
             ResultSet rs = stmt.executeQuery()){
 
             while(rs.next())
@@ -124,7 +104,7 @@ public class MaterialDao {
         return lista;
     }
 
-    public List<Material> listar(String nome, Integer categoriaId){
+    public List<Material> listar(Connection conn, String nome, Integer categoriaId){
         StringBuilder sql = new StringBuilder("SELECT * FROM material WHERE 1=1");
 
         if(nome != null && !nome.trim().isEmpty())
@@ -134,8 +114,7 @@ public class MaterialDao {
         sql.append(" ORDER BY nome");
 
         List<Material> lista = new ArrayList<>();
-        try(Connection conn = Conexao.getConexao();
-             PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
+        try(PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
 
             int i = 1;
             if(nome != null && !nome.trim().isEmpty())
@@ -157,10 +136,10 @@ public class MaterialDao {
 
     private Material extrair(ResultSet rs) throws SQLException{
         return new Material(rs.getInt("id"),
-                            rs.getString("nome"),
-                            rs.getString("descricao"),
-                            rs.getInt("quantidade_estoque"),
-                            rs.getObject("categoria_material_id", Integer.class));
+                rs.getString("nome"),
+                rs.getString("descricao"),
+                rs.getInt("quantidade_estoque"),
+                rs.getObject("categoria_material_id", Integer.class));
     }
 
     private void preencherStatement(PreparedStatement stmt, Material m) throws SQLException{

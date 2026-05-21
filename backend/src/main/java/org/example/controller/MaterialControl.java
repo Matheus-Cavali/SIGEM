@@ -1,10 +1,9 @@
 package org.example.controller;
 
 import com.google.gson.Gson;
-import org.example.conexao.ConexaoSingleton;
+import org.example.conexao.Conexao;
 import org.example.dao.RecursoSistemaDao;
 import org.example.dao.UsuarioDao;
-import org.example.facade.MaterialFacade;
 import org.example.model.Material;
 import org.example.model.RecursoSistema;
 import org.example.model.Resposta;
@@ -13,19 +12,20 @@ import org.example.model.Usuario;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.List;
 
 public class MaterialControl {
-    private static final MaterialControl instancia = new MaterialControl();
-    private final MaterialFacade facade = MaterialFacade.getInstancia();
+    private static Material material;
     private final Gson gson = new Gson();
 
-    private MaterialControl() {}
+    public static synchronized Material getMaterial(){
+        if(material == null)
+            material = new Material();
 
-    public static MaterialControl getInstancia(){
-        return instancia;
+        return material;
     }
+
+    public MaterialControl() {}
 
     private String emailDoToken(String auth) {
         if (auth != null && auth.startsWith("Bearer ")) {
@@ -34,11 +34,12 @@ public class MaterialControl {
         return null;
     }
 
-    private boolean usuarioTemPermissao(String auth, String recursoNome) {
+    private boolean usuarioTemPermissao(String auth, String recursoNome){
         String email = emailDoToken(auth);
         if (email != null) {
-            try (Connection conn = ConexaoSingleton.getInstance().getConexao()) {
+            try{
                 UsuarioDao uDao = new UsuarioDao();
+                Connection conn = Conexao.getConexao();
                 Usuario u = uDao.buscarPorEmail(conn, email);
                 if (u != null) {
                     if (u.getNivelAcesso() == 1) return true;
@@ -47,8 +48,9 @@ public class MaterialControl {
                         if (r.getNome().equals(recursoNome)) return true;
                     }
                 }
-            } catch (SQLException e) {
-                System.err.println("Erro ao verificar permissao: " + e.getMessage());
+            }
+            catch (Exception e){
+                return false;
             }
         }
         return false;
@@ -60,10 +62,14 @@ public class MaterialControl {
         }
         try{
             Material m = gson.fromJson(json, Material.class);
-            facade.cadastrar(m);
+            getMaterial().cadastrar(Conexao.getConexao(), m);
             return new Resposta(201, "{\"mensagem\":\"Material cadastrado com sucesso\"}");
         }
         catch (Exception e){
+            String msg = e.getMessage();
+            if(msg != null && msg.contains("\"erros\"")){
+                return new Resposta(400, msg);
+            }
             return new Resposta(400, "{\"erro\":\"Falha ao cadastrar material\"}");
         }
     }
@@ -87,7 +93,7 @@ public class MaterialControl {
                 }
             }
 
-            List<Material> lista = facade.filtrar(nome, categoriaId);
+            List<Material> lista = getMaterial().filtrar(Conexao.getConexao(), nome, categoriaId);
             return new Resposta(200, gson.toJson(lista));
         }
         catch (Exception e){
@@ -102,10 +108,14 @@ public class MaterialControl {
         try{
             Material m = gson.fromJson(json, Material.class);
             m.setId(id);
-            facade.alterar(m);
+            getMaterial().alterar(Conexao.getConexao(), m);
             return new Resposta(200, "{\"mensagem\":\"Material atualizado com sucesso\"}");
         }
         catch (Exception e){
+            String msg = e.getMessage();
+            if(msg != null && msg.contains("\"erros\"")){
+                return new Resposta(400, msg);
+            }
             return new Resposta(400, "{\"erro\":\"Erro ao atualizar material\"}");
         }
     }
@@ -115,7 +125,7 @@ public class MaterialControl {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
         try{
-            facade.excluir(id);
+            getMaterial().excluir(Conexao.getConexao(), id);
             return new Resposta(200, "{\"mensagem\":\"Material excluído com sucesso\"}");
         }
         catch (Exception e){

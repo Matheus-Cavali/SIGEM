@@ -2,7 +2,7 @@ package org.example.controller;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import org.example.conexao.ConexaoSingleton;
+import org.example.conexao.Conexao;
 import org.example.dao.RecursoSistemaDao;
 import org.example.dao.UsuarioDao;
 import org.example.model.CategoriaEvento;
@@ -53,7 +53,7 @@ public class CategoriaEventoControl {
 
         if (email != null) {
 
-            try (Connection conn = ConexaoSingleton.getInstance().getConexao()) {
+            try (Connection conn = Conexao.getConexao()) {
 
                 UsuarioDao uDao = new UsuarioDao();
 
@@ -116,7 +116,7 @@ public class CategoriaEventoControl {
 
                 } else {
 
-                    conn = ConexaoSingleton.getInstance().getConexao();
+                    conn = Conexao.getConexao();
 
                     conn.setAutoCommit(false);
 
@@ -129,7 +129,7 @@ public class CategoriaEventoControl {
 
                         Map<String, String> err = new LinkedHashMap<>();
 
-                        err.put("nome", "Categoria de evento já cadastrada");
+                        err.put("nome", "Categoria de evento jÃ¡ cadastrada");
 
                         result = new Resposta(
                                 409,
@@ -209,7 +209,7 @@ public class CategoriaEventoControl {
 
             result = new Resposta(
                     401,
-                    "{\"erro\":\"Acesso negado. Faça login.\"}"
+                    "{\"erro\":\"Acesso negado. FaÃ§a login.\"}"
             );
 
         } else {
@@ -237,7 +237,7 @@ public class CategoriaEventoControl {
                     }
                 }
 
-                try (Connection conn = ConexaoSingleton.getInstance().getConexao()) {
+                try (Connection conn = Conexao.getConexao()) {
 
                     List<CategoriaEvento> lista =
                             CategoriaEvento.listar(conn, nome);
@@ -311,7 +311,7 @@ public class CategoriaEventoControl {
 
                 } else {
 
-                    conn = ConexaoSingleton.getInstance().getConexao();
+                    conn = Conexao.getConexao();
 
                     conn.setAutoCommit(false);
 
@@ -324,7 +324,7 @@ public class CategoriaEventoControl {
 
                         result = new Resposta(
                                 404,
-                                "{\"erro\":\"Categoria não encontrada\"}"
+                                "{\"erro\":\"Categoria nÃ£o encontrada\"}"
                         );
 
                     } else {
@@ -344,7 +344,7 @@ public class CategoriaEventoControl {
 
                             Map<String, String> err = new LinkedHashMap<>();
 
-                            err.put("nome", "Categoria já cadastrada");
+                            err.put("nome", "Categoria jÃ¡ cadastrada");
 
                             result = new Resposta(
                                     409,
@@ -429,7 +429,7 @@ public class CategoriaEventoControl {
 
             try {
 
-                conn = ConexaoSingleton.getInstance().getConexao();
+                conn = Conexao.getConexao();
 
                 conn.setAutoCommit(false);
 
@@ -442,7 +442,7 @@ public class CategoriaEventoControl {
 
                     result = new Resposta(
                             404,
-                            "{\"erro\":\"Categoria não encontrada\"}"
+                            "{\"erro\":\"Categoria nÃ£o encontrada\"}"
                     );
 
                 } else {

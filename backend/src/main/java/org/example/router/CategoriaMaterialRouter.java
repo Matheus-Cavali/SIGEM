@@ -10,12 +10,15 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
 public class CategoriaMaterialRouter implements HttpHandler {
-    private static final CategoriaMaterialRouter instancia = new CategoriaMaterialRouter();
+    private static CategoriaMaterialControl control;
 
-    private CategoriaMaterialRouter(){}
-    public static CategoriaMaterialRouter getInstancia(){
-        return instancia;
+    public static synchronized CategoriaMaterialControl getControl() {
+        if (control == null)
+            control = new CategoriaMaterialControl();
+        return control;
     }
+
+    public CategoriaMaterialRouter() {}
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
@@ -27,30 +30,29 @@ public class CategoriaMaterialRouter implements HttpHandler {
         String path = exchange.getRequestURI().getPath();
         String auth = exchange.getRequestHeaders().getFirst("Authorization");
 
-        if ("OPTIONS".equalsIgnoreCase(metodo)){
+        if("OPTIONS".equalsIgnoreCase(metodo)){
             exchange.sendResponseHeaders(204, -1);
             return;
         }
 
         try{
-            CategoriaMaterialControl control = CategoriaMaterialControl.getInstancia();
             Resposta r;
 
-            if("POST".equalsIgnoreCase(metodo) && "/api/categorias-materiais".equals(path)) {
+            if("POST".equalsIgnoreCase(metodo) && "/api/categorias-materiais".equals(path)){
                 String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-                r = control.cadastrar(auth, json);
+                r = getControl().cadastrar(auth, json);
             }
             else if("GET".equalsIgnoreCase(metodo) && "/api/categorias-materiais".equals(path)){
-                r = control.listar(exchange.getRequestURI().getQuery());
+                r = getControl().listar(exchange.getRequestURI().getQuery());
             }
             else if("PUT".equalsIgnoreCase(metodo) && path.matches("/api/categorias-materiais/\\d+")){
                 int id = Integer.parseInt(path.substring(path.lastIndexOf("/") + 1));
                 String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-                r = control.atualizar(auth, id, json);
+                r = getControl().atualizar(auth, id, json);
             }
             else if("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/categorias-materiais/\\d+")){
                 int id = Integer.parseInt(path.substring(path.lastIndexOf("/") + 1));
-                r = control.excluir(auth, id);
+                r = getControl().excluir(auth, id);
             }
             else{
                 r = new Resposta(404, "{\"erro\":\"Rota não encontrada\"}");
