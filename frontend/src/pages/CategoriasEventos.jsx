@@ -12,6 +12,8 @@ export default function CategoriasEventos() {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [erro, setErro] = useState('')
+  const [success, setSuccess] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
   const [filtroNome, setFiltroNome] = useState('')
   const { can } = useAuth()
   const canManage = can('GESTAO_EVENTOS')
@@ -52,6 +54,8 @@ export default function CategoriasEventos() {
     setForm(initialForm)
     setEditing(null)
     setErro('')
+    setSuccess('')
+    setFieldErrors({})
     setFormOpen(true)
   }
 
@@ -59,36 +63,70 @@ export default function CategoriasEventos() {
     setForm({
       nome: item.nome || ''
     })
+
     setEditing(item.id)
     setErro('')
+    setSuccess('')
+    setFieldErrors({})
     setFormOpen(true)
+
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleFieldChange = (field, value) => {
+    setForm(prev => ({ ...prev, [field]: value }))
+    setFieldErrors(prev => ({ ...prev, [field]: '' }))
+  }
+
+  const validarCampos = () => {
+    const erros = {}
+
+    if (!form.nome.trim()) {
+      erros.nome = 'Nome da categoria é obrigatório'
+    }
+
+    return erros
   }
 
   const save = async (event) => {
     event.preventDefault()
+
     setErro('')
+    setSuccess('')
+    setFieldErrors({})
 
-    try {
-      if (!form.nome) {
-        throw new Error('Nome é obrigatório')
+    const campos = validarCampos()
+    const temErros = Object.keys(campos).length > 0
+
+    if (temErros) {
+      setFieldErrors(campos)
+    }
+
+    if (!temErros) {
+      try {
+        const payload = {
+          nome: form.nome
+        }
+
+        if (editing) {
+          await put('/api/categorias-eventos/' + editing, payload)
+          setSuccess('Categoria alterada com sucesso.')
+          setFormOpen(false)
+        } else {
+          await post('/api/categorias-eventos', payload)
+          setSuccess('Categoria cadastrada com sucesso.')
+        }
+
+        setEditing(null)
+        setForm(initialForm)
+        load(filtroNome)
+      } catch (error) {
+        if (error.fieldErrors) {
+          setFieldErrors(error.fieldErrors)
+        } else {
+          setErro(error.message)
+        }
       }
-
-      const payload = {
-        nome: form.nome
-      }
-
-      if (editing) {
-        await put('/api/categorias-eventos/' + editing, payload)
-      } else {
-        await post('/api/categorias-eventos', payload)
-      }
-
-      setFormOpen(false)
-      setEditing(null)
-      setForm(initialForm)
-      load(filtroNome)
-    } catch (error) {
-      setErro(error.message)
     }
   }
 
@@ -98,12 +136,27 @@ export default function CategoriasEventos() {
     if (confirmed) {
       try {
         await del('/api/categorias-eventos/' + item.id)
-        setItems(prev => prev.filter(current => current.id !== item.id))
+
+        setItems(prev =>
+          prev.filter(current => current.id !== item.id)
+        )
+
+        setSuccess('Categoria excluída com sucesso.')
       } catch (error) {
         alert(error.message)
       }
     }
   }
+
+  useEffect(() => {
+    if (!success) return
+
+    const timer = setTimeout(() => {
+      setSuccess('')
+    }, 4000)
+
+    return () => clearTimeout(timer)
+  }, [success])
 
   return (
     <>
@@ -122,33 +175,69 @@ export default function CategoriasEventos() {
         />
       </section>
 
+      {success && (
+        <div className="message success">
+          {success}
+        </div>
+      )}
+
       {formOpen && (
         <section className="editor-card">
           <div className="editor-title">
-            <h2>{editing ? 'Editar Categoria' : 'Nova Categoria De Evento'}</h2>
-            <button className="ghost-icon" onClick={() => setFormOpen(false)}>
+            <h2>
+              {editing ? 'Editar Categoria' : 'Nova Categoria De Evento'}
+            </h2>
+
+            <button
+              className="ghost-icon"
+              onClick={() => setFormOpen(false)}
+            >
               <Icon name="close" size={16} />
             </button>
           </div>
 
-          {erro && <div className="message inline">{erro}</div>}
+          {erro && (
+            <div className="message inline">
+              {erro}
+            </div>
+          )}
 
-          <form className="inline-form" onSubmit={save}>
-            <label>
-              <span>Nome</span>
+          <form
+            className="inline-form"
+            onSubmit={save}
+            noValidate
+          >
+            <div className="field-container">
+              <label className="field-label">
+                <span>
+                  Nome <span className="required-star">*</span>
+                </span>
+              </label>
+
               <input
-                className={erro && !form.nome ? 'is-invalid' : ''}
+                className={
+                  'field-control' +
+                  (fieldErrors.nome ? ' is-invalid' : '')
+                }
                 value={form.nome}
                 onChange={e =>
-                  setForm(prev => ({ ...prev, nome: e.target.value }))
+                  handleFieldChange('nome', e.target.value)
                 }
                 placeholder="Nome da categoria"
               />
-            </label>
+
+              {fieldErrors.nome && (
+                <span className="field-error">
+                  {fieldErrors.nome}
+                </span>
+              )}
+            </div>
 
             <div className="form-submit">
               <button className="primary-action">
-                {editing ? 'Salvar Alterações' : 'Salvar Categoria'}
+                {editing
+                  ? 'Salvar Alterações'
+                  : 'Salvar Categoria'}
               </button>
             </div>
           </form>
@@ -158,11 +247,15 @@ export default function CategoriasEventos() {
       <div className="cards-list">
         {items.map((item, index) => (
           <article
-            className={'finance-card ' + (index % 2 ? 'accent-red' : '')}
+            className={
+              'finance-card ' +
+              (index % 2 ? 'accent-red' : '')
+            }
             key={item.id}
           >
             <div>
               <h3>{item.nome}</h3>
+
               <div className="meta-row">
               </div>
             </div>

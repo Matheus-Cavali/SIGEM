@@ -1,9 +1,9 @@
 package org.example.model;
 
+import com.google.gson.Gson;
 import org.example.dao.CategoriaEventoDao;
 
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +12,15 @@ public class CategoriaEvento {
 
     private Integer id;
     private String nome;
+
+    private static CategoriaEventoDao dao;
+
+    public static synchronized CategoriaEventoDao getDao(){
+        if(dao == null)
+            dao = new CategoriaEventoDao();
+
+        return dao;
+    }
 
     public CategoriaEvento() {}
 
@@ -24,57 +33,80 @@ public class CategoriaEvento {
         this(null, nome);
     }
 
-    public Map<String, String> validar() {
-
+    public static Map<String, String> validarCategoriaEvento(CategoriaEvento ce){
         Map<String, String> erros = new LinkedHashMap<>();
 
-        if (nome == null || nome.trim().isEmpty()) {
-            erros.put("nome", "Nome obrigatório");
-        }
+        if(ce.getNome() == null || ce.getNome().trim().isEmpty())
+            erros.put("nome", "Nome da categoria é obrigatório");
 
         return erros;
     }
 
-    public static int salvar(Connection conn, CategoriaEvento categoria) throws SQLException {
+    public static String validarNomeDuplicado(Connection conn, String nome, Integer idAtual){
+        CategoriaEvento existente = getDao().buscarPorNomeExato(conn, nome);
 
-        CategoriaEventoDao dao = new CategoriaEventoDao();
+        if(existente != null && (idAtual == null || !existente.getId().equals(idAtual))){
+            return "Categoria de evento já cadastrada anteriormente.";
+        }
 
-        return dao.inserir(conn, categoria);
+        return null;
     }
 
-    public static CategoriaEvento buscarPorId(Connection conn, int id) throws SQLException {
+    public void cadastrar(Connection conn, CategoriaEvento ce){
 
-        CategoriaEventoDao dao = new CategoriaEventoDao();
+        Map<String, String> erros = validarCategoriaEvento(ce);
 
-        return dao.buscarPorId(conn, id);
+        String nomeDuplicado = validarNomeDuplicado(conn, ce.getNome(), null);
+
+        if(nomeDuplicado != null)
+            erros.put("nome", nomeDuplicado);
+
+        if(!erros.isEmpty())
+            throw new RuntimeException(new Gson().toJson(Map.of("erros", erros)));
+
+        getDao().cadastrar(conn, ce);
     }
 
-    public static CategoriaEvento buscarPorNome(Connection conn, String nome) throws SQLException {
+    public void alterar(Connection conn, CategoriaEvento ce){
 
-        CategoriaEventoDao dao = new CategoriaEventoDao();
+        if(ce.getId() == null || ce.getId() <= 0)
+            throw new IllegalArgumentException("ID inválido.");
 
-        return dao.buscarPorNomeExato(conn, nome);
+        Map<String, String> erros = validarCategoriaEvento(ce);
+
+        String nomeDuplicado = validarNomeDuplicado(conn, ce.getNome(), ce.getId());
+
+        if(nomeDuplicado != null)
+            erros.put("nome", nomeDuplicado);
+
+        if(!erros.isEmpty())
+            throw new RuntimeException(new Gson().toJson(Map.of("erros", erros)));
+
+        getDao().atualizar(conn, ce);
     }
 
-    public static List<CategoriaEvento> listar(Connection conn, String nome) throws SQLException {
+    public void excluir(Connection conn, Integer id){
 
-        CategoriaEventoDao dao = new CategoriaEventoDao();
+        if(id == null || id <= 0)
+            throw new IllegalArgumentException("ID inválido.");
 
-        return dao.listar(conn, nome);
+        getDao().excluir(conn, id);
     }
 
-    public static boolean atualizar(Connection conn, CategoriaEvento categoria) throws SQLException {
+    public CategoriaEvento buscarPorId(Connection conn, Integer id){
 
-        CategoriaEventoDao dao = new CategoriaEventoDao();
+        if(id == null || id <= 0)
+            throw new IllegalArgumentException("ID inválido.");
 
-        return dao.atualizar(conn, categoria);
+        return getDao().buscarPorId(conn, id);
     }
 
-    public static boolean deletar(Connection conn, int id) throws SQLException {
+    public List<CategoriaEvento> listarTodos(Connection conn){
+        return getDao().listarTodos(conn);
+    }
 
-        CategoriaEventoDao dao = new CategoriaEventoDao();
-
-        return dao.deletar(conn, id);
+    public List<CategoriaEvento> filtrar(Connection conn, String nome){
+        return getDao().listar(conn, nome);
     }
 
     public Integer getId() {

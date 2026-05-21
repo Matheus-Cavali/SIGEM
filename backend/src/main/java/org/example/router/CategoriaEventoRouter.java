@@ -10,176 +10,75 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
 public class CategoriaEventoRouter implements HttpHandler {
+    private static CategoriaEventoControl control;
 
-    private static CategoriaEventoRouter instancia;
+    public static synchronized CategoriaEventoControl getControl() {
+        if (control == null)
+            control = new CategoriaEventoControl();
 
-    private CategoriaEventoRouter() {}
-
-    public static CategoriaEventoRouter getInstancia() {
-
-        if (instancia == null) {
-            instancia = new CategoriaEventoRouter();
-        }
-
-        return instancia;
+        return control;
     }
 
-    private CategoriaEventoControl controller =
-            CategoriaEventoControl.getInstancia();
+    public CategoriaEventoRouter(){}
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
+        exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
-        exchange.getResponseHeaders().add(
-                "Access-Control-Allow-Origin",
-                "*"
-        );
+        String metodo = exchange.getRequestMethod();
+        String path = exchange.getRequestURI().getPath();
+        String auth = exchange.getRequestHeaders().getFirst("Authorization");
 
-        exchange.getResponseHeaders().add(
-                "Access-Control-Allow-Methods",
-                "POST, GET, PUT, DELETE, OPTIONS"
-        );
-
-        exchange.getResponseHeaders().add(
-                "Access-Control-Allow-Headers",
-                "Content-Type, Authorization"
-        );
-
-        if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
-
+        if("OPTIONS".equalsIgnoreCase(metodo)){
             exchange.sendResponseHeaders(204, -1);
-
             return;
         }
 
-        String path = exchange.getRequestURI().getPath();
+        try{
+            Resposta r;
 
-        String metodo = exchange.getRequestMethod();
-
-        String auth =
-                exchange.getRequestHeaders().getFirst("Authorization");
-
-        try {
-
-            if (
-                    "POST".equalsIgnoreCase(metodo) &&
-                            "/api/categorias-eventos".equals(path)
-            ) {
-
-                String json = new String(
-                        exchange.getRequestBody().readAllBytes(),
-                        StandardCharsets.UTF_8
-                );
-
-                Resposta r =
-                        controller.cadastrar(auth, json);
-
-                enviarResposta(exchange, r.body, r.status);
+            if("POST".equalsIgnoreCase(metodo) && "/api/categorias-eventos".equals(path)){
+                String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+                r = getControl().cadastrar(auth, json);
+            }
+            else if("GET".equalsIgnoreCase(metodo) && "/api/categorias-eventos".equals(path)){
+                r = getControl().listar(exchange.getRequestURI().getQuery());
+            }
+            else if("PUT".equalsIgnoreCase(metodo) && path.matches("/api/categorias-eventos/\\d+")){
+                int id = Integer.parseInt(path.substring(path.lastIndexOf("/") + 1));
+                String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+                r = getControl().atualizar(auth, id, json);
+            }
+            else if("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/categorias-eventos/\\d+")){
+                int id = Integer.parseInt(path.substring(path.lastIndexOf("/") + 1));
+                r = getControl().excluir(auth, id);
+            }
+            else{
+                r = new Resposta(404, "{\"erro\":\"Rota não encontrada\"}");
             }
 
-            else if (
-                    "GET".equalsIgnoreCase(metodo) &&
-                            "/api/categorias-eventos".equals(path)
-            ) {
-
-                Resposta r =
-                        controller.listar(
-                                auth,
-                                exchange.getRequestURI().getQuery()
-                        );
-
-                enviarResposta(exchange, r.body, r.status);
-            }
-
-            else if (
-                    "PUT".equalsIgnoreCase(metodo) &&
-                            path.matches("/api/categorias-eventos/\\d+")
-            ) {
-
-                int id = extrairId(path);
-
-                String json = new String(
-                        exchange.getRequestBody().readAllBytes(),
-                        StandardCharsets.UTF_8
-                );
-
-                Resposta r =
-                        controller.atualizar(auth, id, json);
-
-                enviarResposta(exchange, r.body, r.status);
-            }
-
-            else if (
-                    "DELETE".equalsIgnoreCase(metodo) &&
-                            path.matches("/api/categorias-eventos/\\d+")
-            ) {
-
-                int id = extrairId(path);
-
-                Resposta r =
-                        controller.excluir(auth, id);
-
-                enviarResposta(exchange, r.body, r.status);
-            }
-
-            else {
-
-                enviarResposta(
-                        exchange,
-                        "{\"erro\":\"Rota não encontrada\"}",
-                        404
-                );
-            }
-
-        } catch (Exception e) {
-
+            enviarResposta(exchange, r.body, r.status);
+        }
+        catch (Exception e){
             System.err.println("ERRO: " + e.getMessage());
-
-            enviarResposta(
-                    exchange,
-                    "{\"erro\":\"Erro interno\"}",
-                    500
-            );
+            enviarResposta(exchange, "{\"erro\":\"Erro interno do servidor\"}", 500);
         }
     }
 
-    private int extrairId(String path) {
+    private void enviarResposta(HttpExchange exchange, String json, int status){
+        try{
+            byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(status, bytes.length);
 
-        String[] partes = path.split("/");
-
-        for (int i = 0; i < partes.length; i++) {
-
-            if (partes[i].matches("\\d+")) {
-
-                return Integer.parseInt(partes[i]);
+            try(OutputStream os = exchange.getResponseBody()){
+                os.write(bytes);
             }
         }
-
-        return -1;
-    }
-
-    private void enviarResposta(
-            HttpExchange exchange,
-            String json,
-            int status
-    ) throws IOException {
-
-        exchange.getResponseHeaders().set(
-                "Content-Type",
-                "application/json"
-        );
-
-        byte[] respostaBytes =
-                json.getBytes(StandardCharsets.UTF_8);
-
-        exchange.sendResponseHeaders(
-                status,
-                respostaBytes.length
-        );
-
-        try (OutputStream os = exchange.getResponseBody()) {
-
-            os.write(respostaBytes);
+        catch (IOException e){
+            System.err.println("Erro crítico de I/O: " + e.getMessage());
         }
     }
 }

@@ -1,152 +1,149 @@
 package org.example.dao;
 
+import org.example.exception.DatabaseException;
 import org.example.model.CategoriaEvento;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
 public class CategoriaEventoDao {
 
-    public int inserir(Connection conn, CategoriaEvento categoria) throws SQLException {
-
+    public boolean cadastrar(Connection conn, CategoriaEvento ce){
         String sql = "INSERT INTO categoria_evento (nome) VALUES (?)";
 
-        int id = -1;
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
 
-        try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            stmt.setString(1, ce.getNome());
 
-            stmt.setString(1, categoria.getNome());
-
-            stmt.executeUpdate();
-
-            try (ResultSet rs = stmt.getGeneratedKeys()) {
-
-                if (rs.next()) {
-                    id = rs.getInt(1);
-                }
-            }
+            return stmt.executeUpdate() == 1;
         }
-
-        return id;
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao cadastrar categoria de evento", e);
+        }
     }
 
-    public CategoriaEvento buscarPorId(Connection conn, int id) throws SQLException {
+    public boolean atualizar(Connection conn, CategoriaEvento ce){
+        String sql = "UPDATE categoria_evento SET nome = ? WHERE id = ?";
 
-        String sql = "SELECT * FROM categoria_evento WHERE id = ?";
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
 
-        CategoriaEvento categoria = null;
+            stmt.setString(1, ce.getNome());
+            stmt.setInt(2, ce.getId());
 
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            return stmt.executeUpdate() == 1;
+        }
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao atualizar categoria de evento", e);
+        }
+    }
+
+    public boolean excluir(Connection conn, Integer id){
+        String sql = "DELETE FROM categoria_evento WHERE id = ?";
+
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
 
             stmt.setInt(1, id);
 
-            try (ResultSet rs = stmt.executeQuery()) {
-
-                if (rs.next()) {
-                    categoria = extrair(rs);
-                }
-            }
+            return stmt.executeUpdate() == 1;
         }
+        catch (SQLException e){
+            if("23503".equals(e.getSQLState()))
+                throw new DatabaseException("Erro ao excluir categoria de evento: há registros vinculados.", e);
 
-        return categoria;
+            throw new DatabaseException("Erro ao excluir categoria de evento", e);
+        }
     }
 
-    public CategoriaEvento buscarPorNomeExato(Connection conn, String nome) throws SQLException {
+    public CategoriaEvento buscarPorId(Connection conn, Integer id){
+        String sql = "SELECT * FROM categoria_evento WHERE id = ?";
 
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
+
+            stmt.setInt(1, id);
+
+            try(ResultSet rs = stmt.executeQuery()){
+                if(rs.next())
+                    return extrair(rs);
+            }
+        }
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao buscar categoria de evento", e);
+        }
+
+        return null;
+    }
+
+    public CategoriaEvento buscarPorNomeExato(Connection conn, String nome){
         String sql = "SELECT * FROM categoria_evento WHERE UPPER(nome) = UPPER(?)";
 
-        CategoriaEvento categoria = null;
-
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
 
             stmt.setString(1, nome.trim());
 
-            try (ResultSet rs = stmt.executeQuery()) {
-
-                if (rs.next()) {
-                    categoria = extrair(rs);
-                }
+            try(ResultSet rs = stmt.executeQuery()){
+                if(rs.next())
+                    return extrair(rs);
             }
         }
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao validar existência de categoria de evento", e);
+        }
 
-        return categoria;
+        return null;
     }
 
-    public List<CategoriaEvento> listar(Connection conn, String nome) throws SQLException {
-
-        StringBuilder sql = new StringBuilder(
-                "SELECT * FROM categoria_evento WHERE 1=1"
-        );
-
-        List<String> params = new ArrayList<>();
-
-        if (nome != null && !nome.trim().isEmpty()) {
-
-            sql.append(" AND nome ILIKE ?");
-
-            params.add("%" + nome.trim() + "%");
-        }
-
-        sql.append(" ORDER BY nome");
-
+    public List<CategoriaEvento> listarTodos(Connection conn){
+        String sql = "SELECT * FROM categoria_evento ORDER BY nome";
         List<CategoriaEvento> lista = new ArrayList<>();
 
-        try (PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
+        try(PreparedStatement stmt = conn.prepareStatement(sql);
+            ResultSet rs = stmt.executeQuery()){
 
-            for (int i = 0; i < params.size(); i++) {
-
-                stmt.setString(i + 1, params.get(i));
-            }
-
-            try (ResultSet rs = stmt.executeQuery()) {
-
-                while (rs.next()) {
-
-                    lista.add(extrair(rs));
-                }
-            }
+            while(rs.next())
+                lista.add(extrair(rs));
+        }
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao listar categorias de evento", e);
         }
 
         return lista;
     }
 
-    public boolean atualizar(Connection conn, CategoriaEvento categoria) throws SQLException {
+    public List<CategoriaEvento> listar(Connection conn, String nome){
+        StringBuilder sql = new StringBuilder("SELECT * FROM categoria_evento WHERE 1=1");
 
-        String sql = "UPDATE categoria_evento SET nome = ? WHERE id = ?";
+        if(nome != null && !nome.trim().isEmpty())
+            sql.append(" AND nome ILIKE ?");
 
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        sql.append(" ORDER BY nome");
 
-            stmt.setString(1, categoria.getNome());
-            stmt.setInt(2, categoria.getId());
+        List<CategoriaEvento> lista = new ArrayList<>();
 
-            return stmt.executeUpdate() == 1;
+        try(PreparedStatement stmt = conn.prepareStatement(sql.toString())){
+
+            if(nome != null && !nome.trim().isEmpty())
+                stmt.setString(1, "%" + nome.trim() + "%");
+
+            try(ResultSet rs = stmt.executeQuery()){
+                while(rs.next())
+                    lista.add(extrair(rs));
+            }
         }
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao filtrar categorias de evento", e);
+        }
+
+        return lista;
     }
 
-    public boolean deletar(Connection conn, int id) throws SQLException {
-
-        String sql = "DELETE FROM categoria_evento WHERE id = ?";
-
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setInt(1, id);
-
-            return stmt.executeUpdate() == 1;
-        }
-    }
-
-    private CategoriaEvento extrair(ResultSet rs) throws SQLException {
-
-        CategoriaEvento categoria = new CategoriaEvento();
-
-        categoria.setId(rs.getInt("id"));
-        categoria.setNome(rs.getString("nome"));
-
-        return categoria;
+    private CategoriaEvento extrair(ResultSet rs) throws SQLException{
+        return new CategoriaEvento(
+                rs.getInt("id"),
+                rs.getString("nome")
+        );
     }
 }
