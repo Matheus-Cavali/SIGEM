@@ -1,7 +1,9 @@
 package org.example.dao;
 
+import org.example.exception.DatabaseException;
 import org.example.model.Despesa;
 
+import java.math.BigDecimal;
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -27,6 +29,8 @@ public class DespesaDao {
             try (ResultSet rs = stmt.getGeneratedKeys()) {
                 if (rs.next()) return rs.getInt(1);
             }
+        } catch (SQLException e) {
+            throw new DatabaseException("Erro ao cadastrar despesa", e);
         }
         return -1;
     }
@@ -39,6 +43,8 @@ public class DespesaDao {
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) return extrair(rs);
             }
+        } catch (SQLException e) {
+            throw new DatabaseException("Erro ao buscar despesa", e);
         }
         return null;
     }
@@ -48,18 +54,24 @@ public class DespesaDao {
                 "SELECT d.*, t.nome AS tipo_nome FROM despesa d " +
                         "LEFT JOIN categoria_despesa t ON t.id = d.categoria_despesa_id WHERE 1=1"
         );
-        if (filtroDescricao != null && !filtroDescricao.isEmpty()) sql.append(" AND d.descricao ILIKE ?");
-        if (filtroTipoId != null) sql.append(" AND d.categoria_despesa_id = ?");
+        if (filtroDescricao != null && !filtroDescricao.trim().isEmpty())
+            sql.append(" AND d.descricao ILIKE ?");
+        if (filtroTipoId != null)
+            sql.append(" AND d.categoria_despesa_id = ?");
         sql.append(" ORDER BY d.data_vencimento, d.id");
 
         List<Despesa> lista = new ArrayList<>();
         try (PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
             int idx = 1;
-            if (filtroDescricao != null && !filtroDescricao.isEmpty()) stmt.setString(idx++, "%" + filtroDescricao + "%");
-            if (filtroTipoId != null) stmt.setInt(idx++, filtroTipoId);
+            if (filtroDescricao != null && !filtroDescricao.trim().isEmpty())
+                stmt.setString(idx++, "%" + filtroDescricao.trim() + "%");
+            if (filtroTipoId != null)
+                stmt.setInt(idx++, filtroTipoId);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) lista.add(extrair(rs));
             }
+        } catch (SQLException e) {
+            throw new DatabaseException("Erro ao listar despesas", e);
         }
         return lista;
     }
@@ -73,6 +85,8 @@ public class DespesaDao {
             stmt.setInt(4, despesa.getCategoriaDespesaId());
             stmt.setInt(5, despesa.getId());
             return stmt.executeUpdate() == 1;
+        } catch (SQLException e) {
+            throw new DatabaseException("Erro ao atualizar despesa", e);
         }
     }
 
@@ -81,7 +95,35 @@ public class DespesaDao {
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, id);
             return stmt.executeUpdate() == 1;
+        } catch (SQLException e) {
+            if ("23503".equals(e.getSQLState()))
+                throw new DatabaseException("Erro ao excluir despesa: há registros vinculados.", e);
+            throw new DatabaseException("Erro ao excluir despesa", e);
         }
+    }
+
+    public boolean quitar(Connection conn, int id, LocalDate dataPagamento) throws SQLException {
+        String sql = "UPDATE despesa SET data_pagamento = ? WHERE id = ? AND data_pagamento IS NULL";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, dataPagamento);
+            stmt.setInt(2, id);
+            return stmt.executeUpdate() == 1;
+        } catch (SQLException e) {
+            throw new DatabaseException("Erro ao quitar despesa", e);
+        }
+    }
+
+    public BigDecimal calcularSaldo(Connection conn) throws SQLException {
+        String sql = "SELECT " +
+                "(SELECT COALESCE(SUM(valor_aporte), 0) FROM aporte_investimento) - " +
+                "(SELECT COALESCE(SUM(valor), 0) FROM despesa WHERE data_pagamento IS NOT NULL) AS saldo";
+        try (PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            if (rs.next()) return rs.getBigDecimal("saldo");
+        } catch (SQLException e) {
+            throw new DatabaseException("Erro ao calcular saldo", e);
+        }
+        return BigDecimal.ZERO;
     }
 
     private Despesa extrair(ResultSet rs) throws SQLException {

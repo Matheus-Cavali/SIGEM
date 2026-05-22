@@ -18,7 +18,7 @@ public class DespesaControl {
 
     private static DespesaControl instancia;
     private DespesaControl() {}
-    public static DespesaControl getInstancia() {
+    public static synchronized DespesaControl getInstancia() {
         if (instancia == null) instancia = new DespesaControl();
         return instancia;
     }
@@ -43,7 +43,7 @@ public class DespesaControl {
                         if (r.getNome().equals(recursoNome)) return true;
                     }
                 }
-            } catch (SQLException e) {
+            } catch (Exception e) {
                 System.err.println("Erro ao verificar permissao: " + e.getMessage());
             }
         }
@@ -56,12 +56,14 @@ public class DespesaControl {
             try (Connection conn = Conexao.getConexao()) {
                 Usuario u = new UsuarioDao().buscarPorEmail(conn, email);
                 if (u != null) return u.getNivelAcesso() == 1 || usuarioTemPermissao(auth, "GERENCIAR_DESPESA");
-            } catch (SQLException e) {
+            } catch (Exception e) {
                 System.err.println("Erro ao verificar permissao: " + e.getMessage());
             }
         }
         return false;
     }
+
+    // ── Categorias de Despesa ─────────────────────────────────────────────────
 
     public Resposta criarCategoriaDespesa(String auth, String json) {
         if (!usuarioPodeGerenciar(auth)) {
@@ -71,14 +73,14 @@ public class DespesaControl {
         JsonObject body = gson.fromJson(json, JsonObject.class);
 
         if (!body.has("nome") || body.get("nome").getAsString().trim().isEmpty()) {
-            return new Resposta(400, "{\"erro\":\"Nome da categoria de despesa Ã© obrigatÃ³rio\"}");
+            return new Resposta(400, "{\"erro\":\"Nome da categoria de despesa é obrigatório\"}");
         }
 
         String nome = body.get("nome").getAsString().trim();
 
         try (Connection conn = Conexao.getConexao()) {
             if (CategoriaDespesa.buscarPorNome(conn, nome) != null) {
-                return new Resposta(409, "{\"erro\":\"JÃ¡ existe uma categoria de despesa com este nome\"}");
+                return new Resposta(409, "{\"erro\":\"Já existe uma categoria de despesa com este nome\"}");
             }
 
             CategoriaDespesa categoria = new CategoriaDespesa();
@@ -87,19 +89,23 @@ public class DespesaControl {
             int id = CategoriaDespesa.inserir(conn, categoria);
             if (id > 0) return new Resposta(201, "{\"mensagem\":\"Categoria de despesa criada com sucesso\",\"id\":" + id + "}");
             return new Resposta(500, "{\"erro\":\"Erro ao criar categoria de despesa\"}");
-        } catch (SQLException e) {
+        } catch (Exception e) {
             System.err.println("Erro ao criar categoria de despesa: " + e.getMessage());
             return new Resposta(500, "{\"erro\":\"Erro ao criar categoria de despesa\"}");
         }
     }
 
-    public Resposta listarCategoriasDespesa(String query) {
+    public Resposta listarCategoriasDespesa(String auth, String query) {
+        if (!usuarioPodeGerenciar(auth)) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
         String nome = null;
         if (query != null) {
             for (String p : query.split("&")) {
                 String[] kv = p.split("=", 2);
                 if (kv.length == 2) {
-                    if ("nome".equalsIgnoreCase(kv[0])) nome = java.net.URLDecoder.decode(kv[1], java.nio.charset.StandardCharsets.UTF_8);
+                    if ("nome".equalsIgnoreCase(kv[0]))
+                        nome = java.net.URLDecoder.decode(kv[1], java.nio.charset.StandardCharsets.UTF_8);
                 }
             }
         }
@@ -114,7 +120,7 @@ public class DespesaControl {
             }
             sb.append("]");
             return new Resposta(200, sb.toString());
-        } catch (SQLException e) {
+        } catch (Exception e) {
             System.err.println("Erro ao listar categorias de despesa: " + e.getMessage());
             return new Resposta(500, "{\"erro\":\"Erro ao listar categorias de despesa\"}");
         }
@@ -126,7 +132,7 @@ public class DespesaControl {
         }
         try (Connection conn = Conexao.getConexao()) {
             CategoriaDespesa categoria = CategoriaDespesa.buscarPorId(conn, id);
-            if (categoria == null) return new Resposta(404, "{\"erro\":\"Categoria de despesa nÃ£o encontrada\"}");
+            if (categoria == null) return new Resposta(404, "{\"erro\":\"Categoria de despesa não encontrada\"}");
 
             Gson gson = new Gson();
             JsonObject body = gson.fromJson(json, JsonObject.class);
@@ -134,13 +140,14 @@ public class DespesaControl {
                 String novoNome = body.get("nome").getAsString().trim();
                 CategoriaDespesa existente = CategoriaDespesa.buscarPorNome(conn, novoNome);
                 if (existente != null && existente.getId() != id) {
-                    return new Resposta(409, "{\"erro\":\"JÃ¡ existe outra categoria de despesa com este nome\"}");
+                    return new Resposta(409, "{\"erro\":\"Já existe outra categoria de despesa com este nome\"}");
                 }
                 categoria.setNome(novoNome);
             }
-            if (CategoriaDespesa.atualizar(conn, categoria)) return new Resposta(200, "{\"mensagem\":\"Categoria de despesa atualizada\"}");
+            if (CategoriaDespesa.atualizar(conn, categoria))
+                return new Resposta(200, "{\"mensagem\":\"Categoria de despesa atualizada\"}");
             return new Resposta(500, "{\"erro\":\"Erro ao atualizar categoria de despesa\"}");
-        } catch (SQLException e) {
+        } catch (Exception e) {
             System.err.println("Erro ao atualizar categoria de despesa: " + e.getMessage());
             return new Resposta(500, "{\"erro\":\"Erro ao atualizar categoria de despesa\"}");
         }
@@ -151,67 +158,65 @@ public class DespesaControl {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
         try (Connection conn = Conexao.getConexao()) {
-            if (CategoriaDespesa.buscarPorId(conn, id) == null) return new Resposta(404, "{\"erro\":\"Categoria de despesa nÃ£o encontrada\"}");
-            if (CategoriaDespesa.deletar(conn, id)) return new Resposta(200, "{\"mensagem\":\"Categoria de despesa removida\"}");
+            if (CategoriaDespesa.buscarPorId(conn, id) == null)
+                return new Resposta(404, "{\"erro\":\"Categoria de despesa não encontrada\"}");
+            if (CategoriaDespesa.deletar(conn, id))
+                return new Resposta(200, "{\"mensagem\":\"Categoria de despesa removida\"}");
             return new Resposta(500, "{\"erro\":\"Erro ao remover categoria de despesa. Pode haver despesas vinculadas.\"}");
-        } catch (SQLException e) {
+        } catch (Exception e) {
             System.err.println("Erro ao deletar categoria de despesa: " + e.getMessage());
             return new Resposta(500, "{\"erro\":\"Erro ao remover categoria de despesa\"}");
         }
     }
 
+    // ── Despesas ──────────────────────────────────────────────────────────────
+
     public Resposta lancarDespesa(String auth, String json) {
-        if (!usuarioTemPermissao(auth, "LANCAR_DESPESA")) {
+        if (!usuarioTemPermissao(auth, "LANCAR_DESPESA") && !usuarioPodeGerenciar(auth)) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
-        Gson gson = new Gson();
-        JsonObject body = gson.fromJson(json, JsonObject.class);
 
-        if (!body.has("descricao") || body.get("descricao").getAsString().trim().isEmpty()) {
-            return new Resposta(400, "{\"erro\":\"DescriÃ§Ã£o da despesa Ã© obrigatÃ³ria\"}");
-        }
-        if (!body.has("valor") || body.get("valor").getAsBigDecimal().compareTo(BigDecimal.ZERO) <= 0) {
-            return new Resposta(400, "{\"erro\":\"Valor da despesa deve ser maior que zero\"}");
-        }
-        if (!body.has("categoriaDespesaId")) {
-            return new Resposta(400, "{\"erro\":\"Categoria de despesa Ã© obrigatÃ³ria\"}");
-        }
-        if (!body.has("dataVencimento") || body.get("dataVencimento").getAsString().trim().isEmpty()) {
-            return new Resposta(400, "{\"erro\":\"Data de vencimento Ã© obrigatÃ³ria\"}");
-        }
-
-        int categoriaDespesaId = body.get("categoriaDespesaId").getAsInt();
         try (Connection conn = Conexao.getConexao()) {
-            if (CategoriaDespesa.buscarPorId(conn, categoriaDespesaId) == null) {
-                return new Resposta(404, "{\"erro\":\"Categoria de despesa nÃ£o encontrada\"}");
-            }
-
-            String dataVencStr = body.get("dataVencimento").getAsString();
-            if (Data.parseFlexivel(dataVencStr) == null) {
-                return new Resposta(400, "{\"erro\":\"Data de vencimento invÃ¡lida. Use o formato dd/mm/aaaa\"}");
-            }
+            Gson gson = new Gson();
+            JsonObject body = gson.fromJson(json, JsonObject.class);
 
             Despesa despesa = new Despesa();
-            despesa.setDescricao(body.get("descricao").getAsString().trim());
-            despesa.setValor(body.get("valor").getAsBigDecimal());
-            despesa.setCategoriaDespesaId(categoriaDespesaId);
-            despesa.setDataVencimento(Data.parseFlexivel(dataVencStr));
-            despesa.setDataLancamento(java.time.LocalDate.now());
 
-            if (body.has("colaboradorLancouId") && !body.get("colaboradorLancouId").isJsonNull()) {
-                despesa.setColaboradorLancouId(body.get("colaboradorLancouId").getAsInt());
+            if (body.has("descricao") && !body.get("descricao").isJsonNull())
+                despesa.setDescricao(body.get("descricao").getAsString().trim());
+            if (body.has("valor") && !body.get("valor").isJsonNull())
+                despesa.setValor(body.get("valor").getAsBigDecimal());
+            if (body.has("categoriaDespesaId") && !body.get("categoriaDespesaId").isJsonNull())
+                despesa.setCategoriaDespesaId(body.get("categoriaDespesaId").getAsInt());
+            if (body.has("dataVencimento") && !body.get("dataVencimento").isJsonNull()) {
+                despesa.setDataVencimento(Data.parseFlexivel(body.get("dataVencimento").getAsString().trim()));
             }
+            if (body.has("colaboradorLancouId") && !body.get("colaboradorLancouId").isJsonNull())
+                despesa.setColaboradorLancouId(body.get("colaboradorLancouId").getAsInt());
 
-            int id = Despesa.inserir(conn, despesa);
-            if (id > 0) return new Resposta(201, "{\"mensagem\":\"Despesa lanÃ§ada com sucesso\",\"id\":" + id + "}");
-            return new Resposta(500, "{\"erro\":\"Erro ao lanÃ§ar despesa\"}");
-        } catch (SQLException e) {
-            System.err.println("Erro ao lanÃ§ar despesa: " + e.getMessage());
-            return new Resposta(500, "{\"erro\":\"Erro ao lanÃ§ar despesa\"}");
+            // Usa método de instância com validação completa (padrão Material)
+            Despesa instancia = new Despesa();
+            instancia.cadastrar(conn, despesa);
+
+            return new Resposta(201, "{\"mensagem\":\"Despesa lançada com sucesso\"}");
+
+        } catch (RuntimeException e) {
+            // Propaga mapa de erros por campo para o frontend (padrão Material)
+            String msg = e.getMessage();
+            if (msg != null && msg.contains("\"erros\"")) {
+                return new Resposta(400, msg);
+            }
+            return new Resposta(400, "{\"erro\":\"" + escaparJson(e.getMessage()) + "\"}");
+        } catch (Exception e) {
+            System.err.println("Erro ao lançar despesa: " + e.getMessage());
+            return new Resposta(500, "{\"erro\":\"Erro ao lançar despesa\"}");
         }
     }
 
-    public Resposta listarDespesas(String query) {
+    public Resposta listarDespesas(String auth, String query) {
+        if (!usuarioTemPermissao(auth, "LANCAR_DESPESA") && !usuarioPodeGerenciar(auth)) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
         String descricao = null;
         Integer tipoId = null;
         if (query != null) {
@@ -244,16 +249,19 @@ public class DespesaControl {
             }
             sb.append("]");
             return new Resposta(200, sb.toString());
-        } catch (SQLException e) {
+        } catch (Exception e) {
             System.err.println("Erro ao listar despesas: " + e.getMessage());
             return new Resposta(500, "{\"erro\":\"Erro ao listar despesas\"}");
         }
     }
 
-    public Resposta buscarDespesa(int id) {
+    public Resposta buscarDespesa(String auth, int id) {
+        if (!usuarioTemPermissao(auth, "LANCAR_DESPESA") && !usuarioPodeGerenciar(auth)) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
         try (Connection conn = Conexao.getConexao()) {
             Despesa d = Despesa.buscarPorId(conn, id);
-            if (d == null) return new Resposta(404, "{\"erro\":\"Despesa nÃ£o encontrada\"}");
+            if (d == null) return new Resposta(404, "{\"erro\":\"Despesa não encontrada\"}");
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
             String json = "{\"id\":" + d.getId()
                     + ",\"descricao\":\"" + escaparJson(d.getDescricao()) + "\""
@@ -265,7 +273,7 @@ public class DespesaControl {
                     + ",\"categoriaDespesaNome\":\"" + escaparJson(d.getCategoriaDespesaNome()) + "\""
                     + "}";
             return new Resposta(200, json);
-        } catch (SQLException e) {
+        } catch (Exception e) {
             System.err.println("Erro ao buscar despesa: " + e.getMessage());
             return new Resposta(500, "{\"erro\":\"Erro ao buscar despesa\"}");
         }
@@ -277,7 +285,7 @@ public class DespesaControl {
         }
         try (Connection conn = Conexao.getConexao()) {
             Despesa despesa = Despesa.buscarPorId(conn, id);
-            if (despesa == null) return new Resposta(404, "{\"erro\":\"Despesa nÃ£o encontrada\"}");
+            if (despesa == null) return new Resposta(404, "{\"erro\":\"Despesa não encontrada\"}");
 
             Gson gson = new Gson();
             JsonObject body = gson.fromJson(json, JsonObject.class);
@@ -286,9 +294,19 @@ public class DespesaControl {
             if (body.has("dataVencimento")) despesa.setDataVencimento(Data.parseFlexivel(body.get("dataVencimento").getAsString()));
             if (body.has("categoriaDespesaId")) despesa.setCategoriaDespesaId(body.get("categoriaDespesaId").getAsInt());
 
-            if (Despesa.atualizar(conn, despesa)) return new Resposta(200, "{\"mensagem\":\"Despesa atualizada\"}");
-            return new Resposta(500, "{\"erro\":\"Erro ao atualizar despesa\"}");
-        } catch (SQLException e) {
+            // Usa método de instância com validação (padrão Material)
+            Despesa inst = new Despesa();
+            inst.alterar(conn, despesa);
+
+            return new Resposta(200, "{\"mensagem\":\"Despesa atualizada com sucesso\"}");
+
+        } catch (RuntimeException e) {
+            String msg = e.getMessage();
+            if (msg != null && msg.contains("\"erros\"")) {
+                return new Resposta(400, msg);
+            }
+            return new Resposta(400, "{\"erro\":\"" + escaparJson(e.getMessage()) + "\"}");
+        } catch (Exception e) {
             System.err.println("Erro ao atualizar despesa: " + e.getMessage());
             return new Resposta(500, "{\"erro\":\"Erro ao atualizar despesa\"}");
         }
@@ -299,12 +317,62 @@ public class DespesaControl {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
         try (Connection conn = Conexao.getConexao()) {
-            if (Despesa.buscarPorId(conn, id) == null) return new Resposta(404, "{\"erro\":\"Despesa nÃ£o encontrada\"}");
-            if (Despesa.deletar(conn, id)) return new Resposta(200, "{\"mensagem\":\"Despesa removida\"}");
-            return new Resposta(500, "{\"erro\":\"Erro ao remover despesa\"}");
-        } catch (SQLException e) {
+            Despesa despesa = Despesa.buscarPorId(conn, id);
+            if (despesa == null) return new Resposta(404, "{\"erro\":\"Despesa não encontrada\"}");
+            // Usa método de instância com validação de ID (padrão Material)
+            Despesa inst = new Despesa();
+            inst.excluir(conn, id);
+            return new Resposta(200, "{\"mensagem\":\"Despesa excluída com sucesso\"}");
+        } catch (RuntimeException e) {
+            return new Resposta(400, "{\"erro\":\"" + escaparJson(e.getMessage()) + "\"}");
+        } catch (Exception e) {
             System.err.println("Erro ao deletar despesa: " + e.getMessage());
             return new Resposta(500, "{\"erro\":\"Erro ao remover despesa\"}");
+        }
+    }
+
+    public Resposta quitarDespesa(String auth, int id, String json) {
+        if (!usuarioTemPermissao(auth, "LANCAR_DESPESA") && !usuarioPodeGerenciar(auth)) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
+        try (Connection conn = Conexao.getConexao()) {
+            Despesa despesa = Despesa.buscarPorId(conn, id);
+            if (despesa == null) return new Resposta(404, "{\"erro\":\"Despesa não encontrada\"}");
+            if (despesa.getDataPagamento() != null) return new Resposta(409, "{\"erro\":\"Despesa já foi quitada\"}");
+
+            java.time.LocalDate dataPagamento = java.time.LocalDate.now();
+            if (json != null && !json.isBlank()) {
+                Gson gson = new Gson();
+                JsonObject body = gson.fromJson(json, JsonObject.class);
+                if (body.has("dataPagamento") && !body.get("dataPagamento").isJsonNull()) {
+                    String dp = body.get("dataPagamento").getAsString().trim();
+                    if (!dp.isEmpty()) {
+                        dataPagamento = Data.parseFlexivel(dp);
+                        if (dataPagamento == null)
+                            return new Resposta(400, "{\"erro\":\"Data de pagamento inválida\"}");
+                    }
+                }
+            }
+
+            if (Despesa.quitar(conn, id, dataPagamento))
+                return new Resposta(200, "{\"mensagem\":\"Despesa quitada com sucesso\"}");
+            return new Resposta(500, "{\"erro\":\"Erro ao quitar despesa\"}");
+        } catch (Exception e) {
+            System.err.println("Erro ao quitar despesa: " + e.getMessage());
+            return new Resposta(500, "{\"erro\":\"Erro ao quitar despesa\"}");
+        }
+    }
+
+    public Resposta consultarSaldo(String auth) {
+        if (!usuarioTemPermissao(auth, "LANCAR_DESPESA") && !usuarioPodeGerenciar(auth)) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
+        try (Connection conn = Conexao.getConexao()) {
+            BigDecimal saldo = Despesa.calcularSaldo(conn);
+            return new Resposta(200, "{\"saldo\":" + saldo + "}");
+        } catch (Exception e) {
+            System.err.println("Erro ao consultar saldo: " + e.getMessage());
+            return new Resposta(500, "{\"erro\":\"Erro ao consultar saldo\"}");
         }
     }
 
