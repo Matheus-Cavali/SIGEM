@@ -1,7 +1,6 @@
 package org.example;
 
 import com.sun.net.httpserver.HttpServer;
-import org.example.dao.InvestimentoFuturoDao;
 import org.example.dao.UsuarioDao;
 import org.example.router.*;
 
@@ -27,13 +26,13 @@ public class Main {
             server.createContext("/api/categorias-materiais", new CategoriaMaterialRouter());
             server.createContext("/api/materiais", new MaterialRouter());
             server.createContext("/api/recurso", UsuarioRouter.getInstancia());
-            server.createContext("/api/parameters", ParametersRouter.getInstancia());
+            server.createContext("/api/parameters", new ParametrizacaoIgrejaRouter());
             server.createContext("/uploads", UploadRouter.getInstancia());
             server.createContext("/api/categorias-eventos", CategoriaEventoRouter.getInstancia());
             server.createContext("/api/categorias-despesa", DespesaRouter.getInstancia());
             server.createContext("/api/despesas", DespesaRouter.getInstancia());
-            server.createContext("/api/documentos", DocumentoRouter.getInstancia());
-            server.createContext("/api/categorias-documentos", DocumentoRouter.getInstancia());
+            server.createContext("/api/documentos", new DocumentoRouter());
+            server.createContext("/api/categorias-documentos", new CategoriaDocumentoRouter());
 
             server.setExecutor(null);
             server.start();

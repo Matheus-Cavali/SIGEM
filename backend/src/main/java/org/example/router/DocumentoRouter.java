@@ -13,15 +13,15 @@ import java.nio.file.Path;
 import java.util.Locale;
 
 public class DocumentoRouter implements HttpHandler {
+    private static DocumentoControl control;
 
-    private static DocumentoRouter instancia;
-    private DocumentoRouter() {}
-    public static DocumentoRouter getInstancia() {
-        if (instancia == null) instancia = new DocumentoRouter();
-        return instancia;
+    public static synchronized DocumentoControl getControl() {
+        if (control == null)
+            control = new DocumentoControl();
+        return control;
     }
 
-    private DocumentoControl controller = DocumentoControl.getInstancia();
+    public DocumentoRouter() {}
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
@@ -29,86 +29,58 @@ public class DocumentoRouter implements HttpHandler {
         exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS");
         exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
-        if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+        String metodo = exchange.getRequestMethod();
+        String path = exchange.getRequestURI().getPath();
+        String auth = exchange.getRequestHeaders().getFirst("Authorization");
+
+        if("OPTIONS".equalsIgnoreCase(metodo)){
             exchange.sendResponseHeaders(204, -1);
             return;
         }
 
-        String path = exchange.getRequestURI().getPath();
-        String metodo = exchange.getRequestMethod();
-        String auth = exchange.getRequestHeaders().getFirst("Authorization");
+        try{
+            Resposta r;
 
-        try {
-            if ("POST".equalsIgnoreCase(metodo) && "/api/categorias-documentos".equals(path)) {
-                String json = lerBody(exchange);
-                Resposta r = controller.criarCategoria(auth, json);
-                enviarResposta(exchange, r.body, r.status);
-
-            } else if ("GET".equalsIgnoreCase(metodo) && "/api/categorias-documentos".equals(path)) {
-                Resposta r = controller.listarCategorias(exchange.getRequestURI().getQuery());
-                enviarResposta(exchange, r.body, r.status);
-
-            } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/categorias-documentos/\\d+")) {
-                int id = extrairUltimoId(path);
-                Resposta r = controller.buscarCategoria(id);
-                enviarResposta(exchange, r.body, r.status);
-
-            } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/categorias-documentos/\\d+")) {
-                int id = extrairUltimoId(path);
-                String json = lerBody(exchange);
-                Resposta r = controller.atualizarCategoria(auth, id, json);
-                enviarResposta(exchange, r.body, r.status);
-
-            } else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/categorias-documentos/\\d+")) {
-                int id = extrairUltimoId(path);
-                Resposta r = controller.deletarCategoria(auth, id);
-                enviarResposta(exchange, r.body, r.status);
-
-            } else if ("POST".equalsIgnoreCase(metodo) && "/api/documentos/upload".equals(path)) {
-                Resposta autorizado = controller.autorizarUpload(auth);
+            if("POST".equalsIgnoreCase(metodo) && "/api/documentos/upload".equals(path)){
+                Resposta autorizado = getControl().autorizarUpload(auth);
                 if (autorizado.status != 200) {
-                    enviarResposta(exchange, autorizado.body, autorizado.status);
-                } else {
-                    String caminhoArquivo = salvarUpload(exchange);
-                    enviarResposta(exchange, "{\"caminhoArquivo\":\"" + escaparJson(caminhoArquivo) + "\"}", 201);
+                    r = autorizado;
                 }
-
-            } else if ("POST".equalsIgnoreCase(metodo) && "/api/documentos".equals(path)) {
-                String json = lerBody(exchange);
-                Resposta r = controller.cadastrar(auth, json);
-                enviarResposta(exchange, r.body, r.status);
-
-            } else if ("GET".equalsIgnoreCase(metodo) && "/api/documentos".equals(path)) {
-                Resposta r = controller.listar(exchange.getRequestURI().getQuery());
-                enviarResposta(exchange, r.body, r.status);
-
-            } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/documentos/\\d+")) {
-                int id = extrairUltimoId(path);
-                Resposta r = controller.buscar(id);
-                enviarResposta(exchange, r.body, r.status);
-
-            } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/documentos/\\d+")) {
-                int id = extrairUltimoId(path);
-                String json = lerBody(exchange);
-                Resposta r = controller.atualizar(auth, id, json);
-                enviarResposta(exchange, r.body, r.status);
-
-            } else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/documentos/\\d+")) {
-                int id = extrairUltimoId(path);
-                Resposta r = controller.deletar(auth, id);
-                enviarResposta(exchange, r.body, r.status);
-
-            } else {
-                enviarResposta(exchange, "{\"erro\":\"Rota não encontrada\"}", 404);
+                else {
+                    String caminhoArquivo = salvarUpload(exchange);
+                    r = new Resposta(201, "{\"caminhoArquivo\":\"" + escaparJson(caminhoArquivo) + "\"}");
+                }
             }
-        } catch (Exception e) {
-            System.err.println("ERRO DocumentoRouter: " + e.getMessage());
-            enviarResposta(exchange, "{\"erro\":\"Erro interno\"}", 500);
-        }
-    }
+            else if("POST".equalsIgnoreCase(metodo) && "/api/documentos".equals(path)){
+                String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+                r = getControl().cadastrar(auth, json);
+            }
+            else if("GET".equalsIgnoreCase(metodo) && "/api/documentos".equals(path)){
+                r = getControl().listar(exchange.getRequestURI().getQuery());
+            }
+            else if("GET".equalsIgnoreCase(metodo) && path.matches("/api/documentos/\\d+")){
+                int id = Integer.parseInt(path.substring(path.lastIndexOf("/") + 1));
+                r = getControl().buscarPorId(id);
+            }
+            else if("PUT".equalsIgnoreCase(metodo) && path.matches("/api/documentos/\\d+")){
+                int id = Integer.parseInt(path.substring(path.lastIndexOf("/") + 1));
+                String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+                r = getControl().atualizar(auth, id, json);
+            }
+            else if("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/documentos/\\d+")){
+                int id = Integer.parseInt(path.substring(path.lastIndexOf("/") + 1));
+                r = getControl().excluir(auth, id);
+            }
+            else{
+                r = new Resposta(404, "{\"erro\":\"Rota não encontrada\"}");
+            }
 
-    private String lerBody(HttpExchange exchange) throws IOException {
-        return new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            enviarResposta(exchange, r.body, r.status);
+        }
+        catch (Exception e){
+            System.err.println("ERRO: " + e.getMessage());
+            enviarResposta(exchange, "{\"erro\":\"Erro interno do servidor\"}", 500);
+        }
     }
 
     private String salvarUpload(HttpExchange exchange) throws IOException {
@@ -183,23 +155,22 @@ public class DocumentoRouter implements HttpHandler {
         return extension;
     }
 
-    private int extrairUltimoId(String path) {
-        String[] partes = path.split("/");
-        for (int i = partes.length - 1; i >= 0; i--) {
-            if (partes[i].matches("\\d+")) return Integer.parseInt(partes[i]);
-        }
-        return -1;
-    }
-
     private String escaparJson(String s) {
         if (s == null) return "";
         return s.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
-    private void enviarResposta(HttpExchange exchange, String json, int status) throws IOException {
-        exchange.getResponseHeaders().set("Content-Type", "application/json");
-        byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
-        exchange.sendResponseHeaders(status, bytes.length);
-        try (OutputStream os = exchange.getResponseBody()) { os.write(bytes); }
+    private void enviarResposta(HttpExchange exchange, String json, int status){
+        try{
+            byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(status, bytes.length);
+            try(OutputStream os = exchange.getResponseBody()){
+                os.write(bytes);
+            }
+        }
+        catch (IOException e){
+            System.err.println("Erro crítico de I/O: " + e.getMessage());
+        }
     }
 }

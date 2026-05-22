@@ -1,5 +1,6 @@
 package org.example.dao;
 
+import org.example.exception.DatabaseException;
 import org.example.model.CategoriaDocumento;
 
 import java.sql.*;
@@ -8,76 +9,130 @@ import java.util.List;
 
 public class CategoriaDocumentoDao {
 
-    public int inserir(Connection conn, CategoriaDocumento categoria) throws SQLException {
+    public boolean cadastrar(Connection conn, CategoriaDocumento cd){
         String sql = "INSERT INTO categoria_documento (nome) VALUES (?)";
-        try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            stmt.setString(1, categoria.getNome());
-            stmt.executeUpdate();
-            try (ResultSet rs = stmt.getGeneratedKeys()) {
-                if (rs.next()) return rs.getInt(1);
-            }
+
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
+            preencherStatement(stmt, cd);
+            return stmt.executeUpdate() == 1;
         }
-        return -1;
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao cadastrar categoria de documento", e);
+        }
     }
 
-    public CategoriaDocumento buscarPorId(Connection conn, int id) throws SQLException {
-        String sql = "SELECT * FROM categoria_documento WHERE id = ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+    public boolean atualizar(Connection conn, CategoriaDocumento cd){
+        String sql = "UPDATE categoria_documento SET nome = ? WHERE id = ?";
+
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
+            stmt.setString(1, cd.getNome());
+            stmt.setInt(2, cd.getId());
+            return stmt.executeUpdate() == 1;
+        }
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao atualizar categoria de documento", e);
+        }
+    }
+
+    public boolean excluir(Connection conn, Integer id){
+        String sql = "DELETE FROM categoria_documento WHERE id = ?";
+
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
             stmt.setInt(1, id);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) return extrair(rs);
+            return stmt.executeUpdate() == 1;
+        }
+        catch (SQLException e){
+            if("23503".equals(e.getSQLState()))
+                throw new DatabaseException("Não é possível excluir esta categoria porque existem documentos vinculados a ela.", e);
+
+            throw new DatabaseException("Erro ao excluir categoria de documento", e);
+        }
+    }
+
+    public CategoriaDocumento buscarPorId(Connection conn, Integer id){
+        String sql = "SELECT * FROM categoria_documento WHERE id = ?";
+
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
+            stmt.setInt(1, id);
+
+            try(ResultSet rs = stmt.executeQuery()){
+                if (rs.next())
+                    return extrair(rs);
             }
         }
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao buscar categoria de documento", e);
+        }
+
         return null;
     }
 
-    public CategoriaDocumento buscarPorNome(Connection conn, String nome) throws SQLException {
-        String sql = "SELECT * FROM categoria_documento WHERE LOWER(nome) = LOWER(?)";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, nome);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) return extrair(rs);
+    public CategoriaDocumento buscarPorNomeExato(Connection conn, String nome){
+        String sql = "SELECT * FROM categoria_documento WHERE UPPER(nome) = UPPER(?)";
+
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
+            stmt.setString(1, nome.trim());
+
+            try(ResultSet rs = stmt.executeQuery()){
+                if(rs.next())
+                    return extrair(rs);
             }
         }
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao validar existencia de categoria de documento", e);
+        }
+
         return null;
     }
 
-    public List<CategoriaDocumento> listar(Connection conn, String filtroNome) throws SQLException {
-        StringBuilder sql = new StringBuilder("SELECT * FROM categoria_documento WHERE 1=1");
-        if (filtroNome != null && !filtroNome.isEmpty()) sql.append(" AND nome ILIKE ?");
-        sql.append(" ORDER BY nome");
-
+    public List<CategoriaDocumento> listarTodos(Connection conn){
+        String sql = "SELECT * FROM categoria_documento ORDER BY nome";
         List<CategoriaDocumento> lista = new ArrayList<>();
-        try (PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
-            if (filtroNome != null && !filtroNome.isEmpty()) stmt.setString(1, "%" + filtroNome + "%");
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) lista.add(extrair(rs));
-            }
+
+        try(PreparedStatement stmt = conn.prepareStatement(sql);
+            ResultSet rs = stmt.executeQuery()){
+
+            while(rs.next())
+                lista.add(extrair(rs));
         }
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao listar categorias de documento", e);
+        }
+
         return lista;
     }
 
-    public boolean atualizar(Connection conn, CategoriaDocumento categoria) throws SQLException {
-        String sql = "UPDATE categoria_documento SET nome = ? WHERE id = ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, categoria.getNome());
-            stmt.setInt(2, categoria.getId());
-            return stmt.executeUpdate() == 1;
+    public List<CategoriaDocumento> listar(Connection conn, String nome){
+        StringBuilder sql = new StringBuilder("SELECT * FROM categoria_documento WHERE 1=1");
+
+        if(nome != null && !nome.trim().isEmpty())
+            sql.append(" AND nome ILIKE ?");
+        sql.append(" ORDER BY nome");
+
+        List<CategoriaDocumento> lista = new ArrayList<>();
+        try(PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
+
+            if(nome != null && !nome.trim().isEmpty())
+                stmt.setString(1, "%" + nome.trim() + "%");
+
+            try(ResultSet rs = stmt.executeQuery()){
+                while (rs.next())
+                    lista.add(extrair(rs));
+            }
         }
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao filtrar categorias de documento", e);
+        }
+
+        return lista;
     }
 
-    public boolean deletar(Connection conn, int id) throws SQLException {
-        String sql = "DELETE FROM categoria_documento WHERE id = ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, id);
-            return stmt.executeUpdate() == 1;
-        }
+    private CategoriaDocumento extrair(ResultSet rs) throws SQLException{
+        return new CategoriaDocumento(rs.getInt("id"),
+                rs.getString("nome"));
     }
 
-    private CategoriaDocumento extrair(ResultSet rs) throws SQLException {
-        CategoriaDocumento categoria = new CategoriaDocumento();
-        categoria.setId(rs.getInt("id"));
-        categoria.setNome(rs.getString("nome"));
-        return categoria;
+    private void preencherStatement(PreparedStatement stmt, CategoriaDocumento cd) throws SQLException{
+        stmt.setString(1, cd.getNome());
     }
 }

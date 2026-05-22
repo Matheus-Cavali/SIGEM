@@ -2,7 +2,7 @@ package org.example.router;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
-import org.example.controller.ParametersControl;
+import org.example.controller.ParametrizacaoIgrejaControl;
 import org.example.model.Resposta;
 
 import java.io.IOException;
@@ -12,44 +12,55 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
 
-public class ParametersRouter implements HttpHandler {
-    private static ParametersRouter instancia;
-    private final ParametersControl controller = ParametersControl.getInstancia();
+public class ParametrizacaoIgrejaRouter implements HttpHandler {
+    private static ParametrizacaoIgrejaControl control;
 
-    private ParametersRouter() {}
-
-    public static ParametersRouter getInstancia() {
-        if (instancia == null) instancia = new ParametersRouter();
-        return instancia;
+    public static synchronized ParametrizacaoIgrejaControl getControl() {
+        if (control == null)
+            control = new ParametrizacaoIgrejaControl();
+        return control;
     }
+
+    public ParametrizacaoIgrejaRouter() {}
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
-        aplicarCors(exchange);
+        exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
-        if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+        String metodo = exchange.getRequestMethod();
+        String path = exchange.getRequestURI().getPath();
+        String auth = exchange.getRequestHeaders().getFirst("Authorization");
+
+        if("OPTIONS".equalsIgnoreCase(metodo)){
             exchange.sendResponseHeaders(204, -1);
             return;
         }
 
-        String path = exchange.getRequestURI().getPath();
-        String metodo = exchange.getRequestMethod();
-        String auth = exchange.getRequestHeaders().getFirst("Authorization");
+        try{
+            Resposta r;
 
-        try {
-            if ("GET".equalsIgnoreCase(metodo) && "/api/parameters".equals(path)) {
-                enviarResposta(exchange, controller.buscar());
-            } else if ("PUT".equalsIgnoreCase(metodo) && "/api/parameters".equals(path)) {
-                String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-                enviarResposta(exchange, controller.salvar(auth, json));
-            } else if ("POST".equalsIgnoreCase(metodo) && "/api/parameters/logo".equals(path)) {
-                String caminhoLogo = salvarUpload(exchange);
-                enviarResposta(exchange, controller.salvarLogo(auth, caminhoLogo));
-            } else {
-                enviarJson(exchange, "{\"erro\":\"Rota não encontrada\"}", 404);
+            if("GET".equalsIgnoreCase(metodo) && "/api/parameters".equals(path)){
+                r = getControl().buscar();
             }
-        } catch (Exception e) {
-            enviarJson(exchange, "{\"erro\":\"Erro interno\"}", 500);
+            else if("PUT".equalsIgnoreCase(metodo) && "/api/parameters".equals(path)){
+                String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+                r = getControl().salvar(auth, json);
+            }
+            else if("POST".equalsIgnoreCase(metodo) && "/api/parameters/logo".equals(path)){
+                String caminhoLogo = salvarUpload(exchange);
+                r = getControl().salvarLogo(auth, caminhoLogo);
+            }
+            else{
+                r = new Resposta(404, "{\"erro\":\"Rota não encontrada\"}");
+            }
+
+            enviarResposta(exchange, r.body, r.status);
+        }
+        catch (Exception e){
+            System.err.println("ERRO: " + e.getMessage());
+            enviarResposta(exchange, "{\"erro\":\"Erro interno do servidor\"}", 500);
         }
     }
 
@@ -125,22 +136,17 @@ public class ParametersRouter implements HttpHandler {
         return extension;
     }
 
-    private void aplicarCors(HttpExchange exchange) {
-        exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
-        exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, GET, PUT, OPTIONS");
-        exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    }
-
-    private void enviarResposta(HttpExchange exchange, Resposta resposta) throws IOException {
-        enviarJson(exchange, resposta.body, resposta.status);
-    }
-
-    private void enviarJson(HttpExchange exchange, String json, int status) throws IOException {
-        exchange.getResponseHeaders().set("Content-Type", "application/json");
-        byte[] respostaBytes = json.getBytes(StandardCharsets.UTF_8);
-        exchange.sendResponseHeaders(status, respostaBytes.length);
-        try (OutputStream os = exchange.getResponseBody()) {
-            os.write(respostaBytes);
+    private void enviarResposta(HttpExchange exchange, String json, int status){
+        try{
+            byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(status, bytes.length);
+            try(OutputStream os = exchange.getResponseBody()){
+                os.write(bytes);
+            }
+        }
+        catch (IOException e){
+            System.err.println("Erro crítico de I/O: " + e.getMessage());
         }
     }
 }
