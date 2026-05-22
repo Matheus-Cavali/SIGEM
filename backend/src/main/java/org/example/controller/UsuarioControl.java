@@ -6,6 +6,7 @@ import org.example.dao.ColaboradorDao;
 import org.example.dao.RecursoSistemaDao;
 import org.example.dao.UsuarioDao;
 import org.example.dao.VoluntarioDao;
+import org.example.exception.DatabaseException;
 import org.example.model.*;
 import org.example.util.Criptografia;
 import org.example.util.Data;
@@ -67,6 +68,29 @@ public class UsuarioControl {
         return false;
     }
 
+    private String mensagemErroUsuario(Exception e) {
+        SQLException sqlCause = null;
+        if (e instanceof DatabaseException && e.getCause() instanceof SQLException) {
+            sqlCause = (SQLException) e.getCause();
+        } else if (e instanceof SQLException) {
+            sqlCause = (SQLException) e;
+        }
+        if (sqlCause != null) {
+            String state = sqlCause.getSQLState();
+            if ("23505".equals(state))
+                return "Já existe um registro com estes mesmos dados no sistema.";
+            if ("23503".equals(state))
+                return "Não é possível remover pois existem registros vinculados a este item. Exclua os vínculos primeiro.";
+            if ("08001".equals(state) || "08S01".equals(state))
+                return "Erro de conexão com o banco de dados. Verifique se o servidor está ativo.";
+        }
+        if (e instanceof DatabaseException) {
+            String msg = e.getMessage();
+            if (msg != null && !msg.isEmpty()) return msg;
+        }
+        return e.getMessage() != null ? e.getMessage() : "Erro interno inesperado. Tente novamente.";
+    }
+
     public Resposta processarLogin(String jsonRecebido) {
         try {
             if (jsonRecebido == null || jsonRecebido.trim().isEmpty()) return new Resposta(400, "{\"erro\":\"Corpo da requisição vazio\"}");
@@ -125,7 +149,7 @@ public class UsuarioControl {
                 }
             }
         } catch (Exception e) {
-            return new Resposta(500, "{\"erro\":\"Falha ao processar login.\"}");
+            return new Resposta(500, "{\"erro\":\"Falha ao processar login. " + mensagemErroUsuario(e) + "\"}");
         }
     }
 
@@ -153,7 +177,7 @@ public class UsuarioControl {
                 }
             }
         } catch (Exception e) {
-            return new Resposta(500, "{\"erro\":\"Falha ao alterar senha. Tente novamente.\"}");
+            return new Resposta(500, "{\"erro\":\"Falha ao alterar senha. " + mensagemErroUsuario(e) + "\"}");
         }
     }
 
@@ -212,7 +236,7 @@ public class UsuarioControl {
             return new Resposta(201, "{\"mensagem\":\"Cadastro realizado!\"}");
         } catch (Exception e) {
             if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
-            return new Resposta(500, "{\"erro\":\"Falha ao cadastrar usuário.\"}");
+            return new Resposta(500, "{\"erro\":\"Falha ao cadastrar usuário. " + mensagemErroUsuario(e) + "\"}");
         } finally {
             if (conn != null) try { conn.close(); } catch (SQLException ex) {}
         }
@@ -235,7 +259,7 @@ public class UsuarioControl {
             usuarios.forEach(u -> u.setSenha(null)); // Removendo hash de senhas da resposta
             return new Resposta(200, gson.toJson(usuarios));
         } catch (Exception e) {
-            return new Resposta(500, "{\"erro\":\"Falha ao listar usuários.\"}");
+            return new Resposta(500, "{\"erro\":\"Falha ao listar usuários. " + mensagemErroUsuario(e) + "\"}");
         }
     }
 
@@ -248,7 +272,7 @@ public class UsuarioControl {
             u.setSenha(null); // Removendo hash da resposta
             return new Resposta(200, gson.toJson(u));
         } catch (Exception e) {
-            return new Resposta(500, "{\"erro\":\"Falha ao buscar usuário.\"}");
+            return new Resposta(500, "{\"erro\":\"Falha ao buscar usuário. " + mensagemErroUsuario(e) + "\"}");
         }
     }
 
@@ -289,7 +313,7 @@ public class UsuarioControl {
             }
         } catch (Exception e) {
             if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
-            return new Resposta(500, "{\"erro\":\"Falha ao atualizar usuário.\"}");
+            return new Resposta(500, "{\"erro\":\"Falha ao atualizar usuário. " + mensagemErroUsuario(e) + "\"}");
         } finally {
             if (conn != null) try { conn.close(); } catch (SQLException ex) {}
         }
@@ -321,7 +345,7 @@ public class UsuarioControl {
             return processarAlteracaoStatus(conn, dao, id, usuario, ativo, body);
         } catch (Exception e) {
             if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
-            return new Resposta(500, "{\"erro\":\"Falha ao alterar status do usuário.\"}");
+            return new Resposta(500, "{\"erro\":\"Falha ao alterar status do usuário. " + mensagemErroUsuario(e) + "\"}");
         } finally {
             if (conn != null) try { conn.close(); } catch (SQLException ex) {}
         }
@@ -381,7 +405,7 @@ public class UsuarioControl {
             if (e instanceof SQLException && "23503".equals(((SQLException) e).getSQLState())) {
                 return new Resposta(500, "{\"erro\":\"Não é possível remover este usuário pois existem registros vinculados a ele (investimentos, lançamentos etc.). Exclua os vínculos primeiro.\"}");
             }
-            return new Resposta(500, "{\"erro\":\"Falha ao remover usuário.\"}");
+            return new Resposta(500, "{\"erro\":\"Falha ao remover usuário. " + mensagemErroUsuario(e) + "\"}");
         } finally {
             if (conn != null) try { conn.close(); } catch (SQLException ex) {}
         }
@@ -393,7 +417,7 @@ public class UsuarioControl {
             List<RecursoSistema> lista = new RecursoSistemaDao().listarTodos(conn);
             return new Resposta(200, gson.toJson(lista));
         } catch (SQLException e) {
-            return new Resposta(500, "{\"erro\":\"Falha ao listar recursos: " + e.getMessage() + "\"}");
+            return new Resposta(500, "{\"erro\":\"Falha ao listar recursos. " + mensagemErroUsuario(e) + "\"}");
         }
     }
 
@@ -408,7 +432,7 @@ public class UsuarioControl {
             resp.add("permissoes", arr);
             return new Resposta(200, resp.toString());
         } catch (SQLException e) {
-            return new Resposta(500, "{\"erro\":\"Falha ao listar permissões: " + e.getMessage() + "\"}");
+            return new Resposta(500, "{\"erro\":\"Falha ao listar permissões. " + mensagemErroUsuario(e) + "\"}");
         }
     }
 
@@ -433,7 +457,7 @@ public class UsuarioControl {
             }
         } catch (Exception e) {
             if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
-            return new Resposta(500, "{\"erro\":\"Falha ao atualizar permissões: " + e.getMessage() + "\"}");
+            return new Resposta(500, "{\"erro\":\"Falha ao atualizar permissões. " + mensagemErroUsuario(e) + "\"}");
         } finally {
             if (conn != null) try { conn.close(); } catch (SQLException ex) {}
         }

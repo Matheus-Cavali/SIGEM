@@ -226,7 +226,7 @@ export default function Usuarios() {
                 {fieldErrors.senha && <span className="field-error">{fieldErrors.senha}</span>}
               </div>
             )}
-            <CpfField label="CPF" value={form.cpf} setValue={handleCpfChange} error={fieldErrors.cpf} />
+            <CpfField label="CPF" value={form.cpf} setValue={handleCpfChange} error={fieldErrors.cpf} required placeholder="000.000.000-00" />
             <div className="field-container">
               <label className="field-label">RG</label>
               <input className="field-control" value={form.rg} onChange={e => handleFieldChange('rg', e.target.value)} placeholder="RG" />

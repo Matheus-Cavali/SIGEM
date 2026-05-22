@@ -9,9 +9,9 @@ function formatCpf(value) {
     .slice(0, 14)
 }
 
-export default function CpfField({ value, setValue, label, placeholder, disabled, error }) {
+export default function CpfField({ value, setValue, label, placeholder, disabled, error, required }) {
   return (
-    <BaseField label={label} error={error}>
+    <BaseField label={label} error={error} required={required}>
       <input
         className="field-control"
         value={value || ''}
