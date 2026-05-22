@@ -13,6 +13,8 @@ import Permissoes from './pages/Permissoes'
 import CategoriasEventos from './pages/CategoriasEventos'
 import CategoriasDespesa from './pages/CategoriasDespesa'
 import Despesas from './pages/Despesas'
+import Documentos from './pages/Documentos'
+import CategoriasDocumentos from './pages/CategoriasDocumentos'
 
 export default function App() {
   return (
@@ -29,6 +31,8 @@ export default function App() {
         <Route path="categorias-materiais" element={<CategoriasMateriais />} />
         <Route path="despesas" element={<Despesas />} />
         <Route path="categorias-despesa" element={<CategoriasDespesa />} />
+        <Route path="documentos" element={<Documentos />} />
+        <Route path="categorias-documentos" element={<CategoriasDocumentos />} />
         <Route path="usuarios" element={<Usuarios />} />
         <Route path="permissoes" element={<Permissoes />} />
       </Route>
