@@ -134,6 +134,20 @@ public class MaterialDao {
         return lista;
     }
 
+    public boolean atualizarQuantidade(Connection conn, int materialId, int quantidade){
+        String sql = "UPDATE material SET quantidade_estoque = quantidade_estoque + ? WHERE id = ?";
+
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
+            stmt.setInt(1, quantidade);
+            stmt.setInt(2, materialId);
+
+            return stmt.executeUpdate() == 1;
+        }
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao atualizar quantidade do material", e);
+        }
+    }
+
     private Material extrair(ResultSet rs) throws SQLException{
         return new Material(rs.getInt("id"),
                 rs.getString("nome"),

@@ -176,6 +176,9 @@ export default function CategoriasMateriais() {
             </div>
           </article>
         ))}
+        {items.length === 0 && (
+          <p className="empty-state">Nenhuma categoria encontrada.</p>
+        )}
       </div>
     </>
   )

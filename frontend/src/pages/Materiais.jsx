@@ -238,6 +238,9 @@ export default function Materiais() {
             </div>
           </article>
         ))}
+        {items.length === 0 && (
+          <p className="empty-state">Nenhum material encontrado.</p>
+        )}
       </div>
     </>
   )
