@@ -32,6 +32,8 @@ public class Main {
             server.createContext("/api/categorias-eventos", CategoriaEventoRouter.getInstancia());
             server.createContext("/api/categorias-despesa", DespesaRouter.getInstancia());
             server.createContext("/api/despesas", DespesaRouter.getInstancia());
+            server.createContext("/api/documentos", DocumentoRouter.getInstancia());
+            server.createContext("/api/categorias-documentos", DocumentoRouter.getInstancia());
 
             server.setExecutor(null);
             server.start();
