@@ -61,8 +61,10 @@ public class Material {
     public void cadastrar(Connection conn, Material m){
         Map<String, String> erros = validarMaterial(m);
         String nomeDuplicado = validarNomeDuplicado(conn, m.getNome(), null);
-        if(nomeDuplicado != null) erros.put("nome", nomeDuplicado);
-        if(!erros.isEmpty()) throw new RuntimeException(new Gson().toJson(Map.of("erros", erros)));
+        if(nomeDuplicado != null)
+            erros.put("nome", nomeDuplicado);
+        if(!erros.isEmpty())
+            throw new RuntimeException(new Gson().toJson(Map.of("erros", erros)));
         getDao().cadastrar(conn, m);
     }
 
@@ -73,8 +75,10 @@ public class Material {
 
         Map<String, String> erros = validarMaterial(m);
         String nomeDuplicado = validarNomeDuplicado(conn, m.getNome(), m.getId());
-        if(nomeDuplicado != null) erros.put("nome", nomeDuplicado);
-        if(!erros.isEmpty()) throw new RuntimeException(new Gson().toJson(Map.of("erros", erros)));
+        if(nomeDuplicado != null)
+            erros.put("nome", nomeDuplicado);
+        if(!erros.isEmpty())
+            throw new RuntimeException(new Gson().toJson(Map.of("erros", erros)));
         getDao().atualizar(conn, m);
     }
 

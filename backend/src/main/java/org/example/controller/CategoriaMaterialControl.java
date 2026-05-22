@@ -38,14 +38,15 @@ public class CategoriaMaterialControl {
         String email = emailDoToken(auth);
         if (email != null) {
             try{
-                UsuarioDao uDao = new UsuarioDao();
                 Connection conn = Conexao.getConexao();
-                Usuario u = uDao.buscarPorEmail(conn, email);
+                Usuario u = Usuario.buscarPorEmail(conn, email);
                 if (u != null) {
-                    if (u.getNivelAcesso() == 1) return true;
+                    if (u.getNivelAcesso() == 1)
+                        return true;
                     RecursoSistemaDao rDao = new RecursoSistemaDao();
                     for (RecursoSistema r : rDao.listarPorUsuario(conn, u.getId())) {
-                        if (r.getNome().equals(recursoNome)) return true;
+                        if (r.getNome().equals(recursoNome))
+                            return true;
                     }
                 }
             }

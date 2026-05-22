@@ -33,6 +33,7 @@ public class Main {
             server.createContext("/api/despesas", DespesaRouter.getInstancia());
             server.createContext("/api/documentos", new DocumentoRouter());
             server.createContext("/api/categorias-documentos", new CategoriaDocumentoRouter());
+            server.createContext("/api/doacoes-materiais", new DoacaoMaterialRouter());
 
             server.setExecutor(null);
             server.start();
