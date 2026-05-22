@@ -10,6 +10,8 @@ const mainItems = [
   { label: 'Cat Eventos', path: '/categorias-eventos', icon: 'calendar' },
   { label: 'Despesas', path: '/despesas', icon: 'dollar' },
   { label: 'Cat Despesa', path: '/categorias-despesa', icon: 'target' },
+  { label: 'Documentos', path: '/documentos', icon: 'box' },
+  { label: 'Cat Documentos', path: '/categorias-documentos', icon: 'plus' },
   { label: 'Usuarios', path: '/usuarios', icon: 'users' }
 ]
 

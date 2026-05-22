@@ -9,6 +9,7 @@
   color: #12172a;
   font-size: 12px;
   font-weight: 600;
+  flex-direction: row;
 }
 
 .required-star {
@@ -48,6 +49,11 @@ textarea.field-control {
 
 .field-error {
   color: var(--red);
+  font-size: 12px;
+}
+
+.field-help {
+  color: var(--muted);
   font-size: 12px;
 }
 
