@@ -343,7 +343,6 @@ select:focus {
   border-left: 4px solid var(--blue-dark);
 }
 
-
 .finance-card h3 {
   margin: 0 0 10px;
   display: flex;
@@ -381,16 +380,26 @@ select:focus {
   font-size: 14px;
 }
 
-.status-badge {
+.status,
+.status-ativo,
+.status-inativo,
+.status-pendente,
+.status.closed {
   display: inline-flex;
   align-items: center;
-  min-height: 20px;
+  justify-content: center;
+  min-height: 22px;
+  padding: 0 12px;
   border-radius: 999px;
-  padding: 0 10px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: .4px;
+}
+
+.status {
+  background: #e9eef3;
+  color: var(--blue-dark);
 }
 
 .status-ativo {
@@ -406,17 +415,6 @@ select:focus {
 .status-pendente {
   background: #fff3cd;
   color: #856404;
-}
-
-.status {
-  display: inline-flex;
-  align-items: center;
-  min-height: 22px;
-  border-radius: 999px;
-  background: #e9eef3;
-  color: var(--blue-dark);
-  padding: 0 12px;
-  font-size: 12px;
 }
 
 .status.closed {
@@ -511,7 +509,7 @@ input.is-invalid,
 select.is-invalid {
   border-color: var(--red);
   box-shadow: 0 0 0 3px rgba(125, 10, 30, 0.12);
-   background: #fff5f6;
+  background: #fff5f6;
 }
 
 .form-grid {

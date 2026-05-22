@@ -15,6 +15,8 @@ import CategoriasDespesa from './pages/CategoriasDespesa'
 import Despesas from './pages/Despesas'
 import Documentos from './pages/Documentos'
 import CategoriasDocumentos from './pages/CategoriasDocumentos'
+import Eventos from './pages/Eventos'
+import LocaisEvento from './pages/LocaisEvento'
 
 export default function App() {
   return (
@@ -27,8 +29,10 @@ export default function App() {
         <Route path="doacoes" element={<SimplePage title="Doacoes" subtitle="Acompanhe doacoes financeiras e campanhas da igreja" />} />
         <Route path="configuracoes" element={<Configuracoes />} />
         <Route path="materiais" element={<Materiais />} />
-        <Route path="categorias-eventos" element={<CategoriasEventos />} />
         <Route path="categorias-materiais" element={<CategoriasMateriais />} />
+        <Route path="eventos" element={<Eventos />} />
+        <Route path="categorias-eventos" element={<CategoriasEventos />} />
+        <Route path="locais-evento" element={<LocaisEvento />} />
         <Route path="despesas" element={<Despesas />} />
         <Route path="categorias-despesa" element={<CategoriasDespesa />} />
         <Route path="documentos" element={<Documentos />} />
