@@ -1,5 +1,6 @@
 package org.example.dao;
 
+import org.example.exception.DatabaseException;
 import org.example.model.Colaborador;
 
 import java.sql.*;
@@ -10,7 +11,7 @@ import java.util.List;
 
 public class ColaboradorDao {
 
-    public void inserir(Connection conn, int usuarioId, String data) throws SQLException {
+    public void inserir(Connection conn, int usuarioId, String data) {
         String sql = "INSERT INTO colaborador (usuario_id, data_admissao) VALUES (?, ?)";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             LocalDate dataConvertida;
@@ -23,24 +24,27 @@ public class ColaboradorDao {
             stmt.setInt(1, usuarioId);
             stmt.setObject(2, dataConvertida);
             stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new DatabaseException("Erro ao inserir colaborador", e);
         }
     }
 
-    public Colaborador buscarPorId(Connection conn, int usuarioId) throws SQLException {
+    public Colaborador buscarPorId(Connection conn, int usuarioId) {
         String sql = "SELECT u.*, c.data_admissao, c.data_demissao FROM usuario u JOIN colaborador c ON u.id = c.usuario_id WHERE u.id = ?";
-        Colaborador c = null;
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, usuarioId);
             try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) c = extrair(rs);
+                if (rs.next()) return extrair(rs);
             }
+        } catch (SQLException e) {
+            throw new DatabaseException("Erro ao buscar colaborador por ID", e);
         }
-        return c;
+        return null;
     }
 
-    public List<Colaborador> listar(Connection conn, String filtroNome, String filtroEmail) throws SQLException {
+    public List<Colaborador> listar(Connection conn, String filtroNome, String filtroEmail) {
         StringBuilder sql = new StringBuilder(
-            "SELECT u.*, c.data_admissao, c.data_demissao FROM usuario u JOIN colaborador c ON u.id = c.usuario_id WHERE 1=1"
+                "SELECT u.*, c.data_admissao, c.data_demissao FROM usuario u JOIN colaborador c ON u.id = c.usuario_id WHERE 1=1"
         );
         List<String> params = new ArrayList<>();
         if (filtroNome != null && !filtroNome.isEmpty()) { sql.append(" AND u.nome ILIKE ?"); params.add("%" + filtroNome + "%"); }
@@ -55,11 +59,13 @@ public class ColaboradorDao {
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) lista.add(extrair(rs));
             }
+        } catch (SQLException e) {
+            throw new DatabaseException("Erro ao listar colaboradores", e);
         }
         return lista;
     }
 
-    public boolean atualizarDataDemissao(Connection conn, int id, LocalDate data) throws SQLException {
+    public boolean atualizarDataDemissao(Connection conn, int id, LocalDate data) {
         String sql = "UPDATE colaborador SET data_demissao = ? WHERE usuario_id = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             if (data != null) {
@@ -69,22 +75,28 @@ public class ColaboradorDao {
             }
             stmt.setInt(2, id);
             return stmt.executeUpdate() == 1;
+        } catch (SQLException e) {
+            throw new DatabaseException("Erro ao atualizar data de demissão do colaborador", e);
         }
     }
 
-    public boolean atualizar(Connection conn, Colaborador colab) throws SQLException {
-        try (PreparedStatement stmt = conn.prepareStatement("UPDATE colaborador SET data_admissao = ?, data_demissao = ? WHERE usuario_id = ?")) {
-            stmt.setObject(1, colab.getDataAdmissao());
-            stmt.setObject(2, colab.getDataDemissao());
-            stmt.setInt(3, colab.getId());
-            stmt.executeUpdate();
-        }
-        try (PreparedStatement stmt = conn.prepareStatement("UPDATE usuario SET nome = ?, email = ?, celular = ? WHERE id = ?")) {
-            stmt.setString(1, colab.getNome());
-            stmt.setString(2, colab.getEmail());
-            stmt.setString(3, colab.getCelular());
-            stmt.setInt(4, colab.getId());
-            return stmt.executeUpdate() == 1;
+    public boolean atualizar(Connection conn, Colaborador colab) {
+        try {
+            try (PreparedStatement stmt = conn.prepareStatement("UPDATE colaborador SET data_admissao = ?, data_demissao = ? WHERE usuario_id = ?")) {
+                stmt.setObject(1, colab.getDataAdmissao());
+                stmt.setObject(2, colab.getDataDemissao());
+                stmt.setInt(3, colab.getId());
+                stmt.executeUpdate();
+            }
+            try (PreparedStatement stmt = conn.prepareStatement("UPDATE usuario SET nome = ?, email = ?, celular = ? WHERE id = ?")) {
+                stmt.setString(1, colab.getNome());
+                stmt.setString(2, colab.getEmail());
+                stmt.setString(3, colab.getCelular());
+                stmt.setInt(4, colab.getId());
+                return stmt.executeUpdate() == 1;
+            }
+        } catch (SQLException e) {
+            throw new DatabaseException("Erro ao atualizar colaborador", e);
         }
     }
 

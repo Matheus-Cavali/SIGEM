@@ -7,7 +7,7 @@ import CurrencyField from '../components/form/CurrencyField'
 import DateField from '../components/form/DateField'
 import { useAuth } from '../state/AuthContext'
 
-const initialForm = { investimentoId: '', valorAporte: '', dataAporte: '' }
+const initialForm = { investimentoId: '', valorAporte: '0,00', dataAporte: '' }
 
 export default function Aportes() {
   const [investimentos, setInvestimentos] = useState([])
@@ -17,8 +17,16 @@ export default function Aportes() {
   const [editing, setEditing] = useState(null)
   const [erro, setErro] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
+  const [filtroNome, setFiltroNome] = useState('')
+  const [filtroColaborador, setFiltroColaborador] = useState('')
   const { user, can } = useAuth()
   const canManage = can(['LANCAR_APORTE', 'REGISTRAR_INVESTIMENTO'])
+
+  const filtered = aportes.filter(a => {
+    const matchNome = !filtroNome || (a.investimentoNome || '').toLowerCase().includes(filtroNome.toLowerCase())
+    const matchColab = !filtroColaborador || (a.colaboradorNome || '').toLowerCase().includes(filtroColaborador.toLowerCase())
+    return matchNome && matchColab
+  })
 
   const load = async () => {
     try {
@@ -128,6 +136,13 @@ export default function Aportes() {
     <>
       <PageHeader title="Aportes" subtitle="Registre os aportes realizados para cada investimento" actionLabel={canManage ? 'Adicionar Aporte' : ''} onAction={openNew} />
 
+      <section className="filter-bar">
+        <input placeholder="Filtrar por investimento..." value={filtroNome}
+               onChange={e => setFiltroNome(e.target.value)} />
+        <input placeholder="Filtrar por quem lançou..." value={filtroColaborador}
+               onChange={e => setFiltroColaborador(e.target.value)} />
+      </section>
+
       {formOpen && (
         <section className="editor-card">
           <div className="editor-title">
@@ -150,7 +165,7 @@ export default function Aportes() {
               {fieldErrors.investimentoId && <span className="field-error">{fieldErrors.investimentoId}</span>}
             </div>
             <CurrencyField label="Valor (R$)" value={form.valorAporte}
-              setValue={v => handleFieldChange('valorAporte', v)} error={fieldErrors.valorAporte} />
+              setValue={v => handleFieldChange('valorAporte', v)} error={fieldErrors.valorAporte} required />
             <DateField label="Data" value={form.dataAporte} setValue={v => handleFieldChange('dataAporte', v)} error={fieldErrors.dataAporte} required />
             <div className="form-submit">
               <button className="primary-action">{editing ? 'Salvar Alteracoes' : 'Salvar Aporte'}</button>
@@ -160,7 +175,7 @@ export default function Aportes() {
       )}
 
       <div className="cards-list">
-        {aportes.map(item => (
+        {filtered.map(item => (
           <article className="finance-card" key={item.investimentoId + '-' + item.id}>
             <div>
               <h3><Icon name="trend" size={15} /> {item.investimentoNome}</h3>

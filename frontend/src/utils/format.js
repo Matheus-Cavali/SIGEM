@@ -41,7 +41,12 @@ export function moeda(value) {
   }).format(Number(value || 0))
 }
 
-export function valorParaNumero(value) {
-  const clean = (value || '').toString().replace(/[^0-9,.-]/g, '').replace(',', '.')
-  return Number(clean)
+export const valorParaNumero = (valor) => {
+  if (!valor) return 0;
+  if (typeof valor === 'number') return valor;
+
+  // Remove todos os pontos de milhar e troca a vírgula decimal por ponto
+  const valorLimpo = String(valor).replace(/\./g, '').replace(',', '.');
+
+  return parseFloat(valorLimpo) || 0;
 }

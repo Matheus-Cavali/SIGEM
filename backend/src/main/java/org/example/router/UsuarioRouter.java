@@ -1,7 +1,5 @@
 package org.example.router;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import org.example.controller.UsuarioControl;
@@ -62,10 +60,12 @@ public class UsuarioRouter implements HttpHandler {
                 listarTodosRecursos(exchange, auth);
             } else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+")) {
                 removerUsuario(exchange);
+            } else {
+                enviarResposta(exchange, "{\"erro\":\"Rota não encontrada\"}", 404);
             }
         } catch (Exception e) {
             System.err.println("ERRO: " + e.getMessage());
-            enviarResposta(exchange, "{\"erro\":\"Erro interno\"}", 500);
+            enviarResposta(exchange, "{\"erro\":\"Erro interno do servidor\"}", 500);
         }
     }
 
@@ -103,8 +103,7 @@ public class UsuarioRouter implements HttpHandler {
 
     private void alterarStatusUsuario(HttpExchange exchange) throws IOException {
         String auth = exchange.getRequestHeaders().getFirst("Authorization");
-        String path = exchange.getRequestURI().getPath();
-        String[] p = path.split("/");
+        String[] p = exchange.getRequestURI().getPath().split("/");
         int id = Integer.parseInt(p[3]);
         String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
         Resposta r = controller.alterarStatusUsuario(auth, id, json);
@@ -148,12 +147,16 @@ public class UsuarioRouter implements HttpHandler {
         enviarResposta(exchange, r.body, r.status);
     }
 
-    private void enviarResposta(HttpExchange exchange, String json, int status) throws IOException {
-        exchange.getResponseHeaders().set("Content-Type", "application/json");
-        byte[] respostaBytes = json.getBytes(StandardCharsets.UTF_8);
-        exchange.sendResponseHeaders(status, respostaBytes.length);
-        try (OutputStream os = exchange.getResponseBody()) {
-            os.write(respostaBytes);
+    private void enviarResposta(HttpExchange exchange, String json, int status) {
+        try {
+            byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(status, bytes.length);
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(bytes);
+            }
+        } catch (IOException e) {
+            System.err.println("Erro crítico de I/O: " + e.getMessage());
         }
     }
 }

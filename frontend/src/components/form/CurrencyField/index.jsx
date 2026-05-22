@@ -10,9 +10,9 @@ function formatCurrency(value) {
   })
 }
 
-export default function CurrencyField({ value, setValue, label, placeholder, disabled, error }) {
+export default function CurrencyField({ value, setValue, label, placeholder, disabled, error, required }) {
   return (
-    <BaseField label={label} error={error}>
+    <BaseField label={label} error={error} required={required}>
       <input
         className="field-control"
         value={value || ''}

@@ -27,6 +27,13 @@ public class Usuario {
     private String data;
     private boolean primeiroAcesso;
 
+    private static UsuarioDao dao;
+
+    public static synchronized UsuarioDao getUsuarioDao() {
+        if (dao == null) dao = new UsuarioDao();
+        return dao;
+    }
+
     public Usuario() {}
 
     public Map<String, String> validar() {
@@ -43,31 +50,26 @@ public class Usuario {
     }
 
     public static int cadastrar(Connection conn, String nome, String email, String senhaHash, String cpf, int nivelAcesso, String tipoUsuario) throws SQLException {
-        UsuarioDao dao = new UsuarioDao();
-        return dao.inserir(conn, nome, email, senhaHash, cpf, nivelAcesso, tipoUsuario);
+        return getUsuarioDao().inserir(conn, nome, email, senhaHash, cpf, nivelAcesso, tipoUsuario);
     }
 
     public static Usuario buscarPorEmail(Connection conn, String email) throws SQLException {
-        UsuarioDao dao = new UsuarioDao();
-        return dao.buscarPorEmail(conn, email);
+        return getUsuarioDao().buscarPorEmail(conn, email);
     }
 
     public static Usuario buscarPorCPF(Connection conn, String cpf) throws SQLException {
-        UsuarioDao dao = new UsuarioDao();
-        return dao.buscarPorCPF(conn, cpf);
+        return getUsuarioDao().buscarPorCPF(conn, cpf);
     }
 
     public static Usuario buscarPorId(Connection conn, int id) throws SQLException {
-        UsuarioDao dao = new UsuarioDao();
-        return dao.buscarPorId(conn, id);
+        return getUsuarioDao().buscarPorId(conn, id);
     }
 
     public static boolean mudarSenha(Connection conn, String cpf, String novaSenha) throws SQLException {
-        UsuarioDao dao = new UsuarioDao();
-        return dao.mudarSenha(conn, cpf, novaSenha);
+        return getUsuarioDao().mudarSenha(conn, cpf, novaSenha);
     }
 
-    // Getters e Setters
+    // --- GETTERS E SETTERS ---
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
     public String getNome() { return nome; }

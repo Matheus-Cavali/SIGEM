@@ -18,6 +18,13 @@ public class AporteInvestimento {
     private Integer colaboradorId;
     private String colaboradorNome;
 
+    private static AporteInvestimentoDao dao;
+
+    public static synchronized AporteInvestimentoDao getAporteInvestimentoDao() {
+        if (dao == null) dao = new AporteInvestimentoDao();
+        return dao;
+    }
+
     public AporteInvestimento() {}
 
     public Map<String, String> validar() {
@@ -30,18 +37,15 @@ public class AporteInvestimento {
     }
 
     public static int salvar(Connection conn, AporteInvestimento aporte) throws SQLException {
-        AporteInvestimentoDao dao = new AporteInvestimentoDao();
-        return dao.inserir(conn, aporte);
+        return getAporteInvestimentoDao().inserir(conn, aporte);
     }
 
     public static boolean atualizar(Connection conn, int id, AporteInvestimento aporte) throws SQLException {
-        AporteInvestimentoDao dao = new AporteInvestimentoDao();
-        return dao.atualizar(conn, id, aporte);
+        return getAporteInvestimentoDao().atualizar(conn, id, aporte);
     }
 
     public static boolean deletar(Connection conn, int id) throws SQLException {
-        AporteInvestimentoDao dao = new AporteInvestimentoDao();
-        return dao.deletar(conn, id);
+        return getAporteInvestimentoDao().deletar(conn, id);
     }
 
     public int getId() { return id; }

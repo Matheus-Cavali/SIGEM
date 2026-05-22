@@ -19,6 +19,13 @@ public class InvestimentoFuturo {
     private String colaboradorNome;
     private BigDecimal saldoAtual;
 
+    private static InvestimentoFuturoDao dao;
+
+    public static synchronized InvestimentoFuturoDao getInvestimentoFuturoDao() {
+        if (dao == null) dao = new InvestimentoFuturoDao();
+        return dao;
+    }
+
     public InvestimentoFuturo() {}
 
     public Map<String, String> validar() {
@@ -33,33 +40,27 @@ public class InvestimentoFuturo {
     }
 
     public static int salvar(Connection conn, InvestimentoFuturo inv) throws SQLException {
-        InvestimentoFuturoDao dao = new InvestimentoFuturoDao();
-        return dao.inserir(conn, inv);
+        return getInvestimentoFuturoDao().inserir(conn, inv);
     }
 
     public static InvestimentoFuturo buscarPorId(Connection conn, int id) throws SQLException {
-        InvestimentoFuturoDao dao = new InvestimentoFuturoDao();
-        return dao.buscarPorId(conn, id);
+        return getInvestimentoFuturoDao().buscarPorId(conn, id);
     }
 
     public static InvestimentoFuturo buscarPorNome(Connection conn, String nome) throws SQLException {
-        InvestimentoFuturoDao dao = new InvestimentoFuturoDao();
-        return dao.buscarPorNome(conn, nome);
+        return getInvestimentoFuturoDao().buscarPorNome(conn, nome);
     }
 
     public static boolean atualizar(Connection conn, InvestimentoFuturo inv) throws SQLException {
-        InvestimentoFuturoDao dao = new InvestimentoFuturoDao();
-        return dao.atualizar(conn, inv);
+        return getInvestimentoFuturoDao().atualizar(conn, inv);
     }
 
     public static boolean deletar(Connection conn, int id) throws SQLException {
-        InvestimentoFuturoDao dao = new InvestimentoFuturoDao();
-        return dao.deletar(conn, id);
+        return getInvestimentoFuturoDao().deletar(conn, id);
     }
 
     public static BigDecimal calcularSaldo(Connection conn, int investimentoId) throws SQLException {
-        InvestimentoFuturoDao dao = new InvestimentoFuturoDao();
-        return dao.calcularSaldo(conn, investimentoId);
+        return getInvestimentoFuturoDao().calcularSaldo(conn, investimentoId);
     }
 
     public int getId() { return id; }

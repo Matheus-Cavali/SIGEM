@@ -36,30 +36,39 @@ public class VoluntarioRouter implements HttpHandler {
         String auth = exchange.getRequestHeaders().getFirst("Authorization");
 
         try {
+            Resposta r;
+
             if ("GET".equalsIgnoreCase(metodo) && "/api/voluntarios".equals(path)) {
-                Resposta r = controller.listar(auth, exchange.getRequestURI().getQuery());
-                enviarResposta(exchange, r.body, r.status);
+                r = controller.listar(auth, exchange.getRequestURI().getQuery());
             } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/voluntarios/\\d+")) {
                 int id = Integer.parseInt(path.split("/")[3]);
-                Resposta r = controller.buscarPorId(auth, id);
-                enviarResposta(exchange, r.body, r.status);
+                r = controller.buscarPorId(auth, id);
             } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/voluntarios/\\d+")) {
                 int id = Integer.parseInt(path.split("/")[3]);
                 String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-                Resposta r = controller.atualizar(auth, id, json);
-                enviarResposta(exchange, r.body, r.status);
+                r = controller.atualizar(auth, id, json);
             } else {
-                enviarResposta(exchange, "{\"erro\":\"Rota não encontrada\"}", 404);
+                r = new Resposta(404, "{\"erro\":\"Rota não encontrada\"}");
             }
+
+            enviarResposta(exchange, r.body, r.status);
+
         } catch (Exception e) {
-            enviarResposta(exchange, "{\"erro\":\"Erro interno\"}", 500);
+            System.err.println("ERRO: " + e.getMessage());
+            enviarResposta(exchange, "{\"erro\":\"Erro interno do servidor\"}", 500);
         }
     }
 
-    private void enviarResposta(HttpExchange exchange, String json, int status) throws IOException {
-        exchange.getResponseHeaders().set("Content-Type", "application/json");
-        byte[] b = json.getBytes(StandardCharsets.UTF_8);
-        exchange.sendResponseHeaders(status, b.length);
-        try (OutputStream os = exchange.getResponseBody()) { os.write(b); }
+    private void enviarResposta(HttpExchange exchange, String json, int status) {
+        try {
+            byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(status, bytes.length);
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(bytes);
+            }
+        } catch (IOException e) {
+            System.err.println("Erro crítico de I/O: " + e.getMessage());
+        }
     }
 }

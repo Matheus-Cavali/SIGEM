@@ -10,18 +10,23 @@ public class Voluntario extends Usuario {
     private LocalDate dataInicio;
     private LocalDate dataDesligamento;
 
+    private static VoluntarioDao dao;
+
+    public static synchronized VoluntarioDao getVoluntarioDao() {
+        if (dao == null) dao = new VoluntarioDao();
+        return dao;
+    }
+
     public Voluntario() {
         super();
     }
 
     public static void cadastrar(Connection conn, int usuarioId, String data) throws SQLException {
-        VoluntarioDao dao = new VoluntarioDao();
-        dao.inserir(conn, usuarioId, data);
+        getVoluntarioDao().inserir(conn, usuarioId, data);
     }
 
     public static Voluntario buscarPorId(Connection conn, int usuarioId) throws SQLException {
-        VoluntarioDao dao = new VoluntarioDao();
-        return dao.buscarPorId(conn, usuarioId);
+        return getVoluntarioDao().buscarPorId(conn, usuarioId);
     }
 
     public LocalDate getDataInicio() { return dataInicio; }

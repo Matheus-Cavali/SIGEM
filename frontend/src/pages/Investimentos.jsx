@@ -7,7 +7,7 @@ import CurrencyField from '../components/form/CurrencyField'
 import DateField from '../components/form/DateField'
 import { useAuth } from '../state/AuthContext'
 
-const initialForm = { nome: '', valorMeta: '', dataAbertura: '', status: 'ABERTO' }
+const initialForm = { nome: '', valorMeta: '0,00', dataAbertura: '', status: 'ABERTO' }
 
 export default function Investimentos() {
   const [items, setItems] = useState([])
@@ -16,12 +16,19 @@ export default function Investimentos() {
   const [editing, setEditing] = useState(null)
   const [erro, setErro] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
+  const [filtroNome, setFiltroNome] = useState('')
+  const [filtroStatus, setFiltroStatus] = useState('')
   const { user, can } = useAuth()
   const canManage = can('REGISTRAR_INVESTIMENTO')
 
-  const load = async () => {
+  const load = async (nome, status) => {
     try {
-      const data = await get('/api/investimentos')
+      let path = '/api/investimentos'
+      const params = []
+      if (nome) params.push('nome=' + encodeURIComponent(nome))
+      if (status) params.push('status=' + status)
+      if (params.length) path += '?' + params.join('&')
+      const data = await get(path)
       setItems(Array.isArray(data) ? data : [])
     } catch (error) {
       if (!error.fieldErrors) setErro(error.message)
@@ -29,6 +36,11 @@ export default function Investimentos() {
   }
 
   useEffect(() => { load() }, [])
+
+  useEffect(() => {
+    const timer = setTimeout(() => load(filtroNome, filtroStatus || null), 300)
+    return () => clearTimeout(timer)
+  }, [filtroNome, filtroStatus])
 
   const openNew = () => {
     setForm(initialForm)
@@ -121,6 +133,16 @@ export default function Investimentos() {
     <>
       <PageHeader title="Investimentos" subtitle="Gerencie os investimentos e metas financeiras da igreja" actionLabel={canManage ? 'Adicionar Investimento' : ''} onAction={openNew} />
 
+      <section className="filter-bar">
+        <input placeholder="Filtrar por nome..." value={filtroNome}
+               onChange={e => setFiltroNome(e.target.value)} />
+        <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}>
+          <option value="">Todos os status</option>
+          <option value="ABERTO">Em andamento</option>
+          <option value="ENCERRADO">Encerrado</option>
+        </select>
+      </section>
+
       {formOpen && (
         <section className="editor-card">
           <div className="editor-title">
@@ -136,7 +158,7 @@ export default function Investimentos() {
               {fieldErrors.nome && <span className="field-error">{fieldErrors.nome}</span>}
             </div>
             <CurrencyField label="Meta de Valor (R$)" value={form.valorMeta}
-              setValue={v => handleFieldChange('valorMeta', v)} error={fieldErrors.valorMeta} />
+              setValue={v => handleFieldChange('valorMeta', v)} error={fieldErrors.valorMeta} required />
             {!editing && (
               <DateField label="Data Meta" value={form.dataAbertura} setValue={v => handleFieldChange('dataAbertura', v)} error={fieldErrors.dataAbertura} required />
             )}

@@ -10,18 +10,23 @@ public class Colaborador extends Usuario {
     private LocalDate dataAdmissao;
     private LocalDate dataDemissao;
 
+    private static ColaboradorDao dao;
+
+    public static synchronized ColaboradorDao getColaboradorDao() {
+        if (dao == null) dao = new ColaboradorDao();
+        return dao;
+    }
+
     public Colaborador() {
         super();
     }
 
     public static void cadastrar(Connection conn, int usuarioId, String data) throws SQLException {
-        ColaboradorDao dao = new ColaboradorDao();
-        dao.inserir(conn, usuarioId, data);
+        getColaboradorDao().inserir(conn, usuarioId, data);
     }
 
     public static Colaborador buscarPorId(Connection conn, int usuarioId) throws SQLException {
-        ColaboradorDao dao = new ColaboradorDao();
-        return dao.buscarPorId(conn, usuarioId);
+        return getColaboradorDao().buscarPorId(conn, usuarioId);
     }
 
     public LocalDate getDataAdmissao() { return dataAdmissao; }
