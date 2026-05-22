@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { del, get, post, put } from '../api/http'
+import { useAuth } from '../state/AuthContext'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
 import { moeda, valorParaNumero } from '../utils/format'
 import DateField from '../components/form/DateField'
-import { useAuth } from '../state/AuthContext'
+import '../components/form/BaseField/BaseField.scss'
 
 const initialForm = { descricao: '', valor: '', dataVencimento: '', categoriaDespesaId: '' }
 
@@ -16,15 +17,28 @@ export default function Despesas() {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [erro, setErro] = useState('')
+  const [success, setSuccess] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
   const [filtroDescricao, setFiltroDescricao] = useState('')
+  const [filtroCategoria, setFiltroCategoria] = useState('')
   const { can } = useAuth()
   const canLancar = can('LANCAR_DESPESA')
   const canManage = can('GERENCIAR_DESPESA')
 
-  const load = async (descricao) => {
+  const loadTipos = async () => {
+    try {
+      const data = await get('/api/categorias-despesa')
+      setTipos(Array.isArray(data) ? data : [])
+    } catch (_) {}
+  }
+
+  const load = async (descricao, categoriaId) => {
     try {
       let path = '/api/despesas'
-      if (descricao) path += '?descricao=' + encodeURIComponent(descricao)
+      const params = []
+      if (descricao) params.push('descricao=' + encodeURIComponent(descricao))
+      if (categoriaId) params.push('categoriaDespesaId=' + categoriaId)
+      if (params.length) path += '?' + params.join('&')
       const data = await get(path)
       setItems(Array.isArray(data) ? data : [])
     } catch (error) {
@@ -32,71 +46,76 @@ export default function Despesas() {
     }
   }
 
-  const loadTipos = async () => {
-    try {
-      const data = await get('/api/categorias-despesa')
-      setTipos(Array.isArray(data) ? data : [])
-    } catch (error) {
-      console.error('Erro ao carregar categorias de despesa', error)
-    }
-  }
-
   const loadSaldo = async () => {
     try {
       const data = await get('/api/despesas/saldo')
       setSaldo(data?.saldo ?? null)
-    } catch (error) {
-      console.error('Erro ao carregar saldo', error)
-    }
+    } catch (_) {}
   }
 
   useEffect(() => { load(); loadTipos(); loadSaldo() }, [])
 
   useEffect(() => {
-    const timer = setTimeout(() => { load(filtroDescricao) }, 300)
+    const timer = setTimeout(() => {
+      load(filtroDescricao, filtroCategoria || null)
+    }, 300)
     return () => clearTimeout(timer)
-  }, [filtroDescricao])
+  }, [filtroDescricao, filtroCategoria])
 
   const openNew = () => {
     setForm(initialForm)
     setEditing(null)
     setErro('')
+    setFieldErrors({})
+    setSuccess('')
     setFormOpen(true)
   }
 
-  const openEdit = async (item) => {
+  const openEdit = (item) => {
+    setForm({
+      descricao: item.descricao || '',
+      valor: String(item.valor || '').replace('.', ','),
+      dataVencimento: item.dataVencimento || '',
+      categoriaDespesaId: String(item.categoriaDespesaId ?? ''),
+    })
+    setEditing(item.id)
     setErro('')
-    try {
-      const data = await get('/api/despesas/' + item.id)
-      setForm({
-        descricao: data.descricao || '',
-        valor: String(data.valor || '').replace('.', ','),
-        dataVencimento: data.dataVencimento || '',
-        categoriaDespesaId: String(data.categoriaDespesaId || ''),
-      })
-      setEditing(item.id)
-      setFormOpen(true)
-    } catch (error) {
-      setErro(error.message)
-    }
+    setFieldErrors({})
+    setSuccess('')
+    setFormOpen(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleFieldChange = (field, value) => {
+    setForm(prev => ({ ...prev, [field]: value }))
+    setFieldErrors(prev => ({ ...prev, [field]: '' }))
+  }
+
+  const validarCampos = () => {
+    const erros = {}
+    if (!form.descricao.trim()) erros.descricao = 'Descrição da despesa é obrigatória'
+    const valor = valorParaNumero(form.valor)
+    if (!form.valor || !valor || Number(valor) <= 0) erros.valor = 'Valor da despesa é obrigatório e deve ser maior que zero'
+    if (!form.dataVencimento) erros.dataVencimento = 'Data de vencimento é obrigatória'
+    if (!form.categoriaDespesaId) erros.categoriaDespesaId = 'Categoria é obrigatória'
+    return erros
   }
 
   const save = async (event) => {
     event.preventDefault()
     setErro('')
+    setSuccess('')
+    setFieldErrors({})
+
+    const campos = validarCampos()
+    const temErros = Object.keys(campos).length > 0
+    if (temErros) {
+      setFieldErrors(campos)
+      return
+    }
 
     try {
       const value = valorParaNumero(form.valor)
-
-      if (!form.descricao || !value) {
-        throw new Error('Descricao e valor sao obrigatorios')
-      }
-      if (!form.categoriaDespesaId) {
-        throw new Error('Selecione uma categoria de despesa')
-      }
-      if (!form.dataVencimento) {
-        throw new Error('Data de vencimento é obrigatoria')
-      }
 
       const payload = {
         descricao: form.descricao,
@@ -107,17 +126,23 @@ export default function Despesas() {
 
       if (editing) {
         await put('/api/despesas/' + editing, payload)
+        setSuccess('Despesa alterada com sucesso.')
+        setFormOpen(false)
       } else {
         await post('/api/despesas', payload)
+        setSuccess('Despesa cadastrada com sucesso.')
       }
 
-      setFormOpen(false)
       setEditing(null)
       setForm(initialForm)
-      load(filtroDescricao)
+      load(filtroDescricao, filtroCategoria || null)
       loadSaldo()
     } catch (error) {
-      setErro(error.message)
+      if (error.fieldErrors) {
+        setFieldErrors(error.fieldErrors)
+      } else {
+        setErro(error.message)
+      }
     }
   }
 
@@ -128,6 +153,7 @@ export default function Despesas() {
       try {
         await del('/api/despesas/' + item.id)
         setItems(prev => prev.filter(current => current.id !== item.id))
+        setSuccess('Despesa excluída com sucesso.')
         loadSaldo()
       } catch (error) {
         alert(error.message)
@@ -141,19 +167,31 @@ export default function Despesas() {
 
     try {
       await post('/api/despesas/' + item.id + '/quitar', {})
-      load(filtroDescricao)
+      setSuccess('Despesa quitada com sucesso.')
+      load(filtroDescricao, filtroCategoria || null)
       loadSaldo()
     } catch (error) {
       alert(error.message)
     }
   }
 
+  useEffect(() => {
+    if (!success) return
+    const timer = setTimeout(() => setSuccess(''), 4000)
+    return () => clearTimeout(timer)
+  }, [success])
+
   const pendentes = items.filter(i => !i.dataPagamento)
   const pagas = items.filter(i => i.dataPagamento)
 
   return (
     <>
-      <PageHeader title="Despesas" subtitle="Gerencie as despesas da igreja" actionLabel={canLancar || canManage ? 'Adicionar Despesa' : ''} onAction={openNew} />
+      <PageHeader
+        title="Despesas"
+        subtitle="Gerencie as despesas da igreja"
+        actionLabel={canLancar || canManage ? 'Adicionar Despesa' : ''}
+        onAction={canLancar || canManage ? openNew : null}
+      />
 
       {saldo !== null && (
         <section className="editor-card" style={{ marginBottom: '1rem' }}>
@@ -168,8 +206,21 @@ export default function Despesas() {
       )}
 
       <section className="filter-bar">
-        <input placeholder="Filtrar por descricao..." value={filtroDescricao} onChange={e => setFiltroDescricao(e.target.value)} />
+        <input
+          placeholder="Filtrar por descrição..."
+          value={filtroDescricao}
+          onChange={e => setFiltroDescricao(e.target.value)}
+        />
+        <select
+          value={filtroCategoria}
+          onChange={e => setFiltroCategoria(e.target.value)}
+        >
+          <option value="">Todas as categorias</option>
+          {tipos.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
+        </select>
       </section>
+
+      {success && <div className="message success">{success}</div>}
 
       {formOpen && (
         <section className="editor-card">
@@ -178,27 +229,50 @@ export default function Despesas() {
             <button className="ghost-icon" onClick={() => setFormOpen(false)}><Icon name="close" size={16} /></button>
           </div>
           {erro && <div className="message inline">{erro}</div>}
-          <form className="inline-form" onSubmit={save}>
-            <label>
-              <span>Descricao</span>
-              <input value={form.descricao} onChange={e => setForm(prev => ({ ...prev, descricao: e.target.value }))} placeholder="Descricao da despesa" />
-            </label>
-            <label>
-              <span>Valor (R$)</span>
-              <input value={form.valor} onChange={e => setForm(prev => ({ ...prev, valor: e.target.value }))} placeholder="0,00" />
-            </label>
-            <label>
-              <span>Categoria de Despesa</span>
-              <select value={form.categoriaDespesaId} onChange={e => setForm(prev => ({ ...prev, categoriaDespesaId: e.target.value }))}>
+          <form className="inline-form" onSubmit={save} noValidate>
+            <div className="field-container">
+              <label className="field-label"><span>Descrição <span className="required-star">*</span></span></label>
+              <input
+                className={'field-control' + (fieldErrors.descricao ? ' is-invalid' : '')}
+                value={form.descricao}
+                onChange={e => handleFieldChange('descricao', e.target.value)}
+                placeholder="Descrição da despesa"
+              />
+              {fieldErrors.descricao && <span className="field-error">{fieldErrors.descricao}</span>}
+            </div>
+            <div className="field-container">
+              <label className="field-label"><span>Valor (R$) <span className="required-star">*</span></span></label>
+              <input
+                className={'field-control' + (fieldErrors.valor ? ' is-invalid' : '')}
+                value={form.valor}
+                onChange={e => handleFieldChange('valor', e.target.value)}
+                placeholder="0,00"
+              />
+              {fieldErrors.valor && <span className="field-error">{fieldErrors.valor}</span>}
+            </div>
+            <div className="field-container">
+              <label className="field-label"><span>Categoria de Despesa <span className="required-star">*</span></span></label>
+              <select
+                className={'field-control' + (fieldErrors.categoriaDespesaId ? ' is-invalid' : '')}
+                value={form.categoriaDespesaId}
+                onChange={e => handleFieldChange('categoriaDespesaId', e.target.value)}
+              >
                 <option value="">Selecione...</option>
-                {tipos.map(t => (
-                  <option key={t.id} value={t.id}>{t.nome}</option>
-                ))}
+                {tipos.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
               </select>
-            </label>
-            <DateField label="Data Vencimento" value={form.dataVencimento} setValue={v => setForm(prev => ({ ...prev, dataVencimento: v }))} />
+              {fieldErrors.categoriaDespesaId && <span className="field-error">{fieldErrors.categoriaDespesaId}</span>}
+            </div>
+            <div className="field-container">
+              <label className="field-label"><span>Data de Vencimento <span className="required-star">*</span></span></label>
+              <DateField
+                value={form.dataVencimento}
+                setValue={v => handleFieldChange('dataVencimento', v)}
+                className={'field-control' + (fieldErrors.dataVencimento ? ' is-invalid' : '')}
+              />
+              {fieldErrors.dataVencimento && <span className="field-error">{fieldErrors.dataVencimento}</span>}
+            </div>
             <div className="form-submit">
-              <button className="primary-action">{editing ? 'Salvar Alteracoes' : 'Salvar Despesa'}</button>
+              <button className="primary-action">{editing ? 'Salvar Alterações' : 'Salvar Despesa'}</button>
             </div>
           </form>
         </section>
@@ -217,7 +291,7 @@ export default function Despesas() {
                   <div className="meta-row">
                     <span><Icon name="dollar" size={15} /> {moeda(item.valor)}</span>
                     <span><Icon name="calendar" size={15} /> Vence: {item.dataVencimento}</span>
-                    <span className="tag">{item.categoriaDespesaNome}</span>
+                    <span className="tag">{item.categoriaDespesaNome || tipos.find(t => t.id === item.categoriaDespesaId)?.nome}</span>
                   </div>
                 </div>
                 <div className="card-actions">
@@ -248,7 +322,7 @@ export default function Despesas() {
                   <div className="meta-row">
                     <span><Icon name="dollar" size={15} /> {moeda(item.valor)}</span>
                     <span><Icon name="calendar" size={15} /> Pago em: {item.dataPagamento}</span>
-                    <span className="tag">{item.categoriaDespesaNome}</span>
+                    <span className="tag">{item.categoriaDespesaNome || tipos.find(t => t.id === item.categoriaDespesaId)?.nome}</span>
                   </div>
                 </div>
                 <div className="card-actions">

@@ -13,12 +13,12 @@ public class DespesaRouter implements HttpHandler {
 
     private static DespesaRouter instancia;
     private DespesaRouter() {}
-    public static DespesaRouter getInstancia() {
+    public static synchronized DespesaRouter getInstancia() {
         if (instancia == null) instancia = new DespesaRouter();
         return instancia;
     }
 
-    private DespesaControl controller = DespesaControl.getInstancia();
+    private final DespesaControl controller = DespesaControl.getInstancia();
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
@@ -37,11 +37,10 @@ public class DespesaRouter implements HttpHandler {
 
         try {
 
-            // ── Categorias de Despesa: /api/categorias-despesa ────────────────
+            // ── Categorias de Despesa ─────────────────────────────────────────
 
             if ("POST".equalsIgnoreCase(metodo) && "/api/categorias-despesa".equals(path)) {
-                String json = lerBody(exchange);
-                Resposta r = controller.criarCategoriaDespesa(auth, json);
+                Resposta r = controller.criarCategoriaDespesa(auth, lerBody(exchange));
                 enviarResposta(exchange, r.body, r.status);
 
             } else if ("GET".equalsIgnoreCase(metodo) && "/api/categorias-despesa".equals(path)) {
@@ -49,21 +48,23 @@ public class DespesaRouter implements HttpHandler {
                 enviarResposta(exchange, r.body, r.status);
 
             } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/categorias-despesa/\\d+")) {
-                int id = extrairUltimoId(path);
-                String json = lerBody(exchange);
-                Resposta r = controller.atualizarCategoriaDespesa(auth, id, json);
+                Resposta r = controller.atualizarCategoriaDespesa(auth, extrairUltimoId(path), lerBody(exchange));
                 enviarResposta(exchange, r.body, r.status);
 
             } else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/categorias-despesa/\\d+")) {
-                int id = extrairUltimoId(path);
-                Resposta r = controller.deletarCategoriaDespesa(auth, id);
+                Resposta r = controller.deletarCategoriaDespesa(auth, extrairUltimoId(path));
                 enviarResposta(exchange, r.body, r.status);
 
-                // ── Despesas: /api/despesas ────────────────────────────────────────
+            // ── Saldo (deve vir antes de /api/despesas/\d+ para não ser capturado) ──
+
+            } else if ("GET".equalsIgnoreCase(metodo) && "/api/despesas/saldo".equals(path)) {
+                Resposta r = controller.consultarSaldo();
+                enviarResposta(exchange, r.body, r.status);
+
+            // ── Despesas ──────────────────────────────────────────────────────
 
             } else if ("POST".equalsIgnoreCase(metodo) && "/api/despesas".equals(path)) {
-                String json = lerBody(exchange);
-                Resposta r = controller.lancarDespesa(auth, json);
+                Resposta r = controller.lancarDespesa(auth, lerBody(exchange));
                 enviarResposta(exchange, r.body, r.status);
 
             } else if ("GET".equalsIgnoreCase(metodo) && "/api/despesas".equals(path)) {
@@ -71,29 +72,19 @@ public class DespesaRouter implements HttpHandler {
                 enviarResposta(exchange, r.body, r.status);
 
             } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/despesas/\\d+")) {
-                int id = extrairUltimoId(path);
-                Resposta r = controller.buscarDespesa(id);
+                Resposta r = controller.buscarDespesa(extrairUltimoId(path));
                 enviarResposta(exchange, r.body, r.status);
 
             } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/despesas/\\d+")) {
-                int id = extrairUltimoId(path);
-                String json = lerBody(exchange);
-                Resposta r = controller.atualizarDespesa(auth, id, json);
+                Resposta r = controller.atualizarDespesa(auth, extrairUltimoId(path), lerBody(exchange));
                 enviarResposta(exchange, r.body, r.status);
 
             } else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/despesas/\\d+")) {
-                int id = extrairUltimoId(path);
-                Resposta r = controller.deletarDespesa(auth, id);
+                Resposta r = controller.deletarDespesa(auth, extrairUltimoId(path));
                 enviarResposta(exchange, r.body, r.status);
 
             } else if ("POST".equalsIgnoreCase(metodo) && path.matches("/api/despesas/\\d+/quitar")) {
-                int id = extrairUltimoId(path);
-                String json = lerBody(exchange);
-                Resposta r = controller.quitarDespesa(auth, id, json);
-                enviarResposta(exchange, r.body, r.status);
-
-            } else if ("GET".equalsIgnoreCase(metodo) && "/api/despesas/saldo".equals(path)) {
-                Resposta r = controller.consultarSaldo();
+                Resposta r = controller.quitarDespesa(auth, extrairUltimoId(path), lerBody(exchange));
                 enviarResposta(exchange, r.body, r.status);
 
             } else {
@@ -111,7 +102,6 @@ public class DespesaRouter implements HttpHandler {
         return new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
     }
 
-    /** Extrai o último número do path (útil para sub-recursos). */
     private int extrairUltimoId(String path) {
         String[] partes = path.split("/");
         for (int i = partes.length - 1; i >= 0; i--) {
@@ -120,10 +110,16 @@ public class DespesaRouter implements HttpHandler {
         return -1;
     }
 
-    private void enviarResposta(HttpExchange exchange, String json, int status) throws IOException {
-        exchange.getResponseHeaders().set("Content-Type", "application/json");
-        byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
-        exchange.sendResponseHeaders(status, bytes.length);
-        try (OutputStream os = exchange.getResponseBody()) { os.write(bytes); }
+    private void enviarResposta(HttpExchange exchange, String json, int status) {
+        try {
+            byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(status, bytes.length);
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(bytes);
+            }
+        } catch (IOException e) {
+            System.err.println("Erro crítico de I/O: " + e.getMessage());
+        }
     }
 }
