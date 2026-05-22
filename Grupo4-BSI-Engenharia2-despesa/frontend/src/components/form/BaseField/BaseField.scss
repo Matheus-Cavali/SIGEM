@@ -1,0 +1,57 @@
+.field-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  color: #12172a;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.required-star {
+  color: var(--red);
+}
+
+.field-control {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #fff;
+  color: #1c2740;
+  padding: 0 12px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+.field-control:focus {
+  border-color: var(--blue-dark);
+  box-shadow: 0 0 0 3px rgba(31, 79, 130, 0.12);
+}
+
+.field-control:disabled,
+.field-control[readonly] {
+  background: #f9fbfd;
+  color: #697386;
+  cursor: default;
+}
+
+textarea.field-control {
+  min-height: 82px;
+  resize: vertical;
+  padding-top: 10px;
+}
+
+.field-error {
+  color: var(--red);
+  font-size: 12px;
+}
+
+.has-error .field-control {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(125, 10, 30, 0.12);
+}
