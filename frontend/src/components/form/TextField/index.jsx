@@ -1,8 +1,8 @@
 import BaseField from '../BaseField'
 
-export default function TextField({ value, setValue, label, placeholder, disabled, error }) {
+export default function TextField({ value, setValue, label, placeholder, disabled, required, error }) {
   return (
-    <BaseField label={label} error={error}>
+    <BaseField label={label} required={required} error={error}>
       <input
         className="field-control"
         type="text"
