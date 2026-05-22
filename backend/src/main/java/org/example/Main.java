@@ -30,6 +30,8 @@ public class Main {
             server.createContext("/api/parameters", ParametersRouter.getInstancia());
             server.createContext("/uploads", UploadRouter.getInstancia());
             server.createContext("/api/categorias-eventos", new CategoriaEventoRouter());
+            server.createContext("/api/eventos", new EventoRouter());
+            server.createContext("/api/locais-evento", new LocalEventoRouter());
             server.createContext("/api/categorias-despesa", DespesaRouter.getInstancia());
             server.createContext("/api/despesas", DespesaRouter.getInstancia());
 

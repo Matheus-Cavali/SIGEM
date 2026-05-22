@@ -74,3 +74,10 @@ export function postForm(path, formData) {
 export function del(path) {
   return request(path, { method: 'DELETE' })
 }
+
+export async function patch(path, body) {
+  return request(path, {
+    method: 'PATCH',
+    body: JSON.stringify(body)
+  })
+}
