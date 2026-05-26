@@ -15,6 +15,19 @@ function safeDate(year, month, day) {
   return new Date(Date.UTC(year, month - 1, day))
 }
 
+function parseDMY(dmy) {
+  if (!dmy) return null
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(dmy)
+  if (!m) return null
+  const d = +m[1], mo = +m[2], y = +m[3]
+  if (!isValidDate(y, mo, d)) return null
+  return { year: y, month: mo, day: d }
+}
+
+function toDMY({ year, month, day }) {
+  return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`
+}
+
 function parseISO(iso) {
   if (!iso) return null
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
@@ -22,14 +35,6 @@ function parseISO(iso) {
   const y = +m[1], mo = +m[2], d = +m[3]
   if (!isValidDate(y, mo, d)) return null
   return { year: y, month: mo, day: d }
-}
-
-function toISO({ year, month, day }) {
-  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-}
-
-function toDMY({ year, month, day }) {
-  return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`
 }
 
 function isLeapYear(y) {
@@ -46,7 +51,6 @@ function isValidDate(year, month, day) {
   if (day < 1 || day > daysInMonth(year, month)) return false
   return true
 }
-
 function weeksOfMonth(year, month) {
   const firstDay = safeDate(year, month, 1).getUTCDay() // 0=Dom
   const total = daysInMonth(year, month)
@@ -72,18 +76,17 @@ const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 const MIN_DATE_DEFAULT = { year: 1920, month: 1, day: 1 }
 
 export default function DateField({
-  value,
-  setValue, 
+  value,      // dd/mm/yyyy ou "" — mesmo formato que a API entrega e consome
+  setValue,   // (dd/mm/yyyy | "")
   label,
   placeholder,
   disabled,
   required,
   error,
-  minDate,      // padrão: "1920-01-01"
-  maxDate,      // padrão: data de hoje no fusu-horário UTC-3
+  minDate,    // padrão: "1920-01-01"
+  maxDate,    // padrão: hoje UTC-3
 }) {
   const [open, setOpen] = useState(false)
-  const [inputValue, setInputValue] = useState('')
   const [viewYear, setViewYear] = useState(null)
   const [viewMonth, setViewMonth] = useState(null)
   const [yearSelectOpen, setYearSelectOpen] = useState(false)
@@ -94,19 +97,10 @@ export default function DateField({
   const minParsed = useMemo(() => parseISO(minDate) ?? MIN_DATE_DEFAULT, [minDate])
   const maxParsed = useMemo(() => {
     if (maxDate) return parseISO(maxDate)
-    const t = nowUTC3()
-    return t
+    return nowUTC3()
   }, [maxDate])
 
-  const selected = useMemo(() => parseISO(value), [value])
-
-  useEffect(() => {
-    if (selected) {
-      setInputValue(toDMY(selected))
-    } else {
-      setInputValue('')
-    }
-  }, [value])
+  const selected = useMemo(() => parseDMY(value), [value])
 
   useEffect(() => {
     if (open) {
@@ -162,8 +156,7 @@ export default function DateField({
 
   function selectDay(day) {
     if (isDayDisabled(day)) return
-    const candidate = { year: viewYear, month: viewMonth, day }
-    setValue(toISO(candidate))
+    setValue(toDMY({ year: viewYear, month: viewMonth, day }))
     setOpen(false)
   }
 
@@ -199,7 +192,6 @@ export default function DateField({
     return weeksOfMonth(viewYear, viewMonth)
   }, [viewYear, viewMonth])
 
-
   return (
     <BaseField label={label} error={error} required={required}>
       <div className={`date-field${disabled ? ' date-field--disabled' : ''}`} ref={containerRef}>
@@ -208,12 +200,9 @@ export default function DateField({
             ref={inputRef}
             className="field-control date-field__input"
             type="text"
-            value={inputValue}
+            value={value || ''}
             disabled={disabled}
             placeholder={placeholder || 'dd/mm/aaaa'}
-            inputMode="numeric"
-            maxLength={10}
-            autoComplete="off"
             readOnly
             style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}
             onFocus={() => { if (!disabled) setOpen(true) }}
@@ -283,7 +272,6 @@ export default function DateField({
               </button>
             </div>
 
-            {/* Year selector dropdown */}
             {yearSelectOpen && (
               <div className="date-field__year-list" role="listbox" aria-label="Anos">
                 {availableYears.map(y => (
@@ -295,7 +283,6 @@ export default function DateField({
                     className={`date-field__year-option${y === viewYear ? ' date-field__year-option--selected' : ''}`}
                     onClick={() => {
                       setViewYear(y)
-                      // Ajusta mês se necessário nos limites
                       if (maxParsed && y === maxParsed.year && viewMonth > maxParsed.month) {
                         setViewMonth(maxParsed.month)
                       }
@@ -356,7 +343,7 @@ export default function DateField({
                       Limpar
                     </button>
                     <span className="date-field__selected-label">
-                      {toDMY(selected)}
+                      {value}
                     </span>
                   </div>
                 )}
