@@ -590,6 +590,14 @@ select.is-invalid {
     width: 72px;
   }
 
+  .filter-bar {
+    flex-direction: column;
+
+    input, select {
+      width: 100%;
+    }
+  }
+
   .brand span:last-child,
   .nav-label,
   .nav-item span {
