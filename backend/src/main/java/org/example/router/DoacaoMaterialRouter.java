@@ -45,6 +45,10 @@ public class DoacaoMaterialRouter implements HttpHandler {
             else if("GET".equalsIgnoreCase(metodo) && "/api/doacoes-materiais".equals(path)){
                 r = getControl().listar(exchange.getRequestURI().getQuery());
             }
+            else if("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/doacoes-materiais/\\d+")){
+                int id = Integer.parseInt(path.substring(path.lastIndexOf("/") + 1));
+                r = getControl().excluir(auth, id);
+            }
             else{
                 r = new Resposta(404, "{\"erro\":\"Rota não encontrada\"}");
             }

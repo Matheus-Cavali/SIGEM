@@ -55,28 +55,31 @@ public class DoacaoMaterial extends Doacao {
         if(!erros.isEmpty())
             throw new RuntimeException(new Gson().toJson(Map.of("erros", erros)));
 
-        try {
-            conn.setAutoCommit(false);
+        int id = getDao().inserirDoacao(conn, dm);
+        dm.setId(id);
 
-            int id = getDao().inserirDoacao(conn, dm);
-            dm.setId(id);
+        getDao().inserirDoacaoMaterial(conn, dm);
 
-            getDao().inserirDoacaoMaterial(conn, dm);
+        new MaterialDao().atualizarQuantidade(conn, dm.getMaterialId(), dm.getQuantidade());
+    }
 
-            new MaterialDao().atualizarQuantidade(conn, dm.getMaterialId(), dm.getQuantidade());
+    public void excluir(Connection conn, int doacaoId){
+        DoacaoMaterial dm = getDao().buscarPorDoacaoId(conn, doacaoId);
+        if(dm == null)
+            throw new RuntimeException("Doação de material não encontrada");
 
-            conn.commit();
-        }
-        catch (Exception e){
-            try { conn.rollback(); } catch (Exception ignored) {}
-            String msg = e.getMessage();
-            if(msg != null && (msg.contains("\"erros\"") || msg.contains("DatabaseException")))
-                throw new RuntimeException(msg);
-            throw new RuntimeException("Falha ao cadastrar doacao de material: " + e.getMessage());
-        }
-        finally {
-            try { conn.setAutoCommit(true); } catch (Exception ignored) {}
-        }
+        Material material = new MaterialDao().buscarPorId(conn, dm.getMaterialId());
+        if(material == null)
+            throw new RuntimeException("Material não encontrado");
+
+        int novoEstoque = material.getQuantidadeEstoque() - dm.getQuantidade();
+        if(novoEstoque < 0)
+            throw new RuntimeException("Quantidade de materiais em estoque insuficientes para realizar a exclusão");
+
+        getDao().excluirDoacaoMaterial(conn, doacaoId);
+        getDao().excluirDoacao(conn, doacaoId);
+
+        new MaterialDao().atualizarQuantidade(conn, dm.getMaterialId(), -dm.getQuantidade());
     }
 
     public List<DoacaoMaterial> filtrar(Connection conn, String materialNome, Integer categoriaId, LocalDate dataInicio, LocalDate dataFim){

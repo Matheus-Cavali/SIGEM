@@ -104,6 +104,58 @@ public class DoacaoMaterialDao {
         return lista;
     }
 
+    public DoacaoMaterial buscarPorDoacaoId(Connection conn, int doacaoId){
+        String sql = "SELECT d.id, d.data_doacao, d.colaborador_id, dm.material_id, dm.quantidade " +
+                     "FROM doacao d " +
+                     "JOIN doacao_material dm ON d.id = dm.doacao_id " +
+                     "WHERE d.id = ?";
+
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
+            stmt.setInt(1, doacaoId);
+
+            try(ResultSet rs = stmt.executeQuery()){
+                if(rs.next()){
+                    DoacaoMaterial dm = new DoacaoMaterial();
+                    dm.setId(rs.getInt("id"));
+                    dm.setData(rs.getObject("data_doacao", LocalDate.class));
+                    dm.setColaboradorId(rs.getInt("colaborador_id"));
+                    dm.setMaterialId(rs.getInt("material_id"));
+                    dm.setQuantidade(rs.getInt("quantidade"));
+                    return dm;
+                }
+            }
+        }
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao buscar doacao de material", e);
+        }
+
+        return null;
+    }
+
+    public void excluirDoacaoMaterial(Connection conn, int doacaoId){
+        String sql = "DELETE FROM doacao_material WHERE doacao_id = ?";
+
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
+            stmt.setInt(1, doacaoId);
+            stmt.executeUpdate();
+        }
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao excluir doacao de material", e);
+        }
+    }
+
+    public void excluirDoacao(Connection conn, int doacaoId){
+        String sql = "DELETE FROM doacao WHERE id = ?";
+
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
+            stmt.setInt(1, doacaoId);
+            stmt.executeUpdate();
+        }
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao excluir doacao", e);
+        }
+    }
+
     private DoacaoMaterial extrair(ResultSet rs) throws SQLException{
         DoacaoMaterial dm = new DoacaoMaterial();
         dm.setId(rs.getInt("id"));

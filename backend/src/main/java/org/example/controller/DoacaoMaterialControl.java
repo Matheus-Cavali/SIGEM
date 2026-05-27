@@ -93,6 +93,19 @@ public class DoacaoMaterialControl {
         }
     }
 
+    public Resposta excluir(String auth, int id){
+        if (!usuarioTemPermissao(auth, "GESTAO_DOACOES")) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
+        try{
+            getDoacaoMaterial().excluir(Conexao.getConexao(), id);
+            return new Resposta(200, "{\"mensagem\":\"Doação de material excluída com sucesso\"}");
+        }
+        catch (Exception e){
+            return new Resposta(400, "{\"erro\":\"" + e.getMessage() + "\"}");
+        }
+    }
+
     public Resposta listar(String query){
         try{
             String materialNome = null;

@@ -227,9 +227,9 @@ export default function Materiais() {
             <div>
               <h3>{item.nome}</h3>
               <div className="meta-row">
-                {item.descricao && <span><Icon name="box" size={14} /> {item.descricao}</span>}
-                <span>Estoque: {item.quantidadeEstoque}</span>
-                {item.categoriaMaterialId && <span>Cat: {categorias.find(c => c.id === item.categoriaMaterialId)?.nome || item.categoriaMaterialId}</span>}
+                {item.descricao && <span><Icon name="box" size={14} /> <strong>Descrição:</strong> {item.descricao}</span>}
+                <span><strong>Estoque:</strong> {item.quantidadeEstoque}</span>
+                {item.categoriaMaterialId && <span><strong>Categoria:</strong> {categorias.find(c => c.id === item.categoriaMaterialId)?.nome || item.categoriaMaterialId}</span>}
               </div>
             </div>
             <div className="card-actions">
