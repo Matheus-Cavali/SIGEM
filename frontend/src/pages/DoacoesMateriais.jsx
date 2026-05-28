@@ -6,8 +6,10 @@ import Icon from '../components/Icon'
 import DateField from '../components/form/DateField'
 import TextField from '../components/form/TextField'
 import BaseField from '../components/form/BaseField'
+import Modal from '../components/Modal'
 import { dmyToISO } from '../utils/date'
 import '../components/form/BaseField/BaseField.scss'
+import '../components/Modal/Modal.scss'
 
 const initialForm = { materialId: '', quantidade: '' }
 
@@ -30,6 +32,8 @@ export default function DoacoesMateriais() {
   const [novoMaterialErro, setNovoMaterialErro] = useState('')
   const [novoMaterialFieldErrors, setNovoMaterialFieldErrors] = useState({})
   const [salvandoMaterial, setSalvandoMaterial] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(null)
+  const [errorModal, setErrorModal] = useState({ open: false, message: '' })
   const { user, can } = useAuth()
   const canManage = can('GESTAO_DOACOES')
 
@@ -200,18 +204,21 @@ export default function DoacoesMateriais() {
     }
   }
 
-  const remove = async (item) => {
-    const confirmed = window.confirm('Excluir doação de "' + item.materialNome + '"?')
+  const remove = (item) => {
+    setConfirmDelete(item)
+  }
 
-    if (confirmed) {
-      try {
-        await del('/api/doacoes-materiais/' + item.id)
-        setItems(prev => prev.filter(current => current.id !== item.id))
-        setSuccess('Doação de material excluída com sucesso.')
-        loadMateriais()
-      } catch (error) {
-        alert(error.message)
-      }
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return
+    try {
+      await del('/api/doacoes-materiais/' + confirmDelete.id)
+      setItems(prev => prev.filter(current => current.id !== confirmDelete.id))
+      setSuccess('Doação de material excluída com sucesso.')
+      loadMateriais()
+    } catch (error) {
+      setErrorModal({ open: true, message: error.message })
+    } finally {
+      setConfirmDelete(null)
     }
   }
 
@@ -255,6 +262,30 @@ export default function DoacoesMateriais() {
       </section>
 
       {success && <div className="message success">{success}</div>}
+
+      <Modal
+        open={!!confirmDelete}
+        title="Confirmar exclusão"
+        variant="warning"
+        onClose={() => setConfirmDelete(null)}
+        footer={
+          <button className="danger-action" onClick={handleConfirmDelete}>Excluir</button>
+        }
+      >
+        <p>Excluir doação de "{confirmDelete?.materialNome}"?</p>
+      </Modal>
+
+      <Modal
+        open={errorModal.open}
+        title="Erro"
+        variant="error"
+        onClose={() => setErrorModal({ open: false, message: '' })}
+        footer={
+          <button className="primary-action" onClick={() => setErrorModal({ open: false, message: '' })}>Fechar</button>
+        }
+      >
+        <p>{errorModal.message}</p>
+      </Modal>
 
       {formOpen && (
         <section className="editor-card">
