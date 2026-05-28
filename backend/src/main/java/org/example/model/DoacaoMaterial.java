@@ -63,6 +63,47 @@ public class DoacaoMaterial extends Doacao {
         new MaterialDao().atualizarQuantidade(conn, dm.getMaterialId(), dm.getQuantidade());
     }
 
+    public void alterar(Connection conn, DoacaoMaterial novosDados){
+        Map<String, String> erros = validarDoacaoMaterial(novosDados);
+        if(!erros.isEmpty())
+            throw new RuntimeException(new Gson().toJson(Map.of("erros", erros)));
+
+        DoacaoMaterial original = getDao().buscarPorDoacaoId(conn, novosDados.getId());
+        if(original == null)
+            throw new RuntimeException("Doação de material não encontrada");
+
+        novosDados.setColaboradorId(original.getColaboradorId());
+        if(novosDados.getData() == null)
+            novosDados.setData(original.getData());
+
+        MaterialDao materialDao = new MaterialDao();
+
+        if(original.getMaterialId().equals(novosDados.getMaterialId())){
+            int diff = novosDados.getQuantidade() - original.getQuantidade();
+            if(diff < 0){
+                Material material = materialDao.buscarPorId(conn, original.getMaterialId());
+                if(material == null)
+                    throw new RuntimeException("Material não encontrado");
+                int novoEstoque = material.getQuantidadeEstoque() + diff;
+                if(novoEstoque < 0)
+                    throw new RuntimeException("Quantidade de materiais em estoque insuficientes para realizar a alteração");
+            }
+            if(diff != 0)
+                materialDao.atualizarQuantidade(conn, original.getMaterialId(), diff);
+        } else {
+            Material oldMaterial = materialDao.buscarPorId(conn, original.getMaterialId());
+            if(oldMaterial == null)
+                throw new RuntimeException("Material original não encontrado");
+            int novoEstoqueAntigo = oldMaterial.getQuantidadeEstoque() - original.getQuantidade();
+            if(novoEstoqueAntigo < 0)
+                throw new RuntimeException("Quantidade de materiais em estoque insuficientes para realizar a alteração");
+            materialDao.atualizarQuantidade(conn, original.getMaterialId(), -original.getQuantidade());
+            materialDao.atualizarQuantidade(conn, novosDados.getMaterialId(), novosDados.getQuantidade());
+        }
+
+        getDao().atualizar(conn, novosDados);
+    }
+
     public void excluir(Connection conn, int doacaoId){
         DoacaoMaterial dm = getDao().buscarPorDoacaoId(conn, doacaoId);
         if(dm == null)

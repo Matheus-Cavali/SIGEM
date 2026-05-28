@@ -93,6 +93,39 @@ public class DoacaoMaterialControl {
         }
     }
 
+    public Resposta atualizar(String auth, int id, String json){
+        if (!usuarioTemPermissao(auth, "GESTAO_DOACOES")) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
+        try{
+            JsonObject jsonObj = gson.fromJson(json, JsonObject.class);
+
+            String email = emailDoToken(auth);
+            Connection conn = Conexao.getConexao();
+            Usuario u = Usuario.buscarPorEmail(conn, email);
+            if(u == null)
+                return new Resposta(400, "{\"erro\":\"Usuário não encontrado\"}");
+
+            DoacaoMaterial dm = new DoacaoMaterial();
+            dm.setId(id);
+            dm.setMaterialId(jsonObj.get("materialId").getAsInt());
+            dm.setQuantidade(jsonObj.get("quantidade").getAsInt());
+            if(jsonObj.has("data") && !jsonObj.get("data").getAsString().isEmpty())
+                dm.setData(Data.parseFlexivel(jsonObj.get("data").getAsString()));
+            dm.setColaboradorId(u.getId());
+
+            getDoacaoMaterial().alterar(conn, dm);
+            return new Resposta(200, "{\"mensagem\":\"Doação de material atualizada com sucesso\"}");
+        }
+        catch (Exception e){
+            String msg = e.getMessage();
+            if(msg != null && msg.contains("\"erros\"")){
+                return new Resposta(400, msg);
+            }
+            return new Resposta(400, "{\"erro\":\"" + e.getMessage() + "\"}");
+        }
+    }
+
     public Resposta excluir(String auth, int id){
         if (!usuarioTemPermissao(auth, "GESTAO_DOACOES")) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");

@@ -132,6 +132,32 @@ public class DoacaoMaterialDao {
         return null;
     }
 
+    public boolean atualizar(Connection conn, DoacaoMaterial dm){
+        String sqlDoacao = "UPDATE doacao SET data_doacao = ?, colaborador_id = ? WHERE id = ?";
+        String sqlDoacaoMaterial = "UPDATE doacao_material SET material_id = ?, quantidade = ? WHERE doacao_id = ?";
+
+        try{
+            try(PreparedStatement stmt = conn.prepareStatement(sqlDoacao)){
+                stmt.setObject(1, dm.getData());
+                stmt.setInt(2, dm.getColaboradorId());
+                stmt.setInt(3, dm.getId());
+                stmt.executeUpdate();
+            }
+
+            try(PreparedStatement stmt = conn.prepareStatement(sqlDoacaoMaterial)){
+                stmt.setInt(1, dm.getMaterialId());
+                stmt.setInt(2, dm.getQuantidade());
+                stmt.setInt(3, dm.getId());
+                stmt.executeUpdate();
+            }
+
+            return true;
+        }
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao atualizar doacao de material", e);
+        }
+    }
+
     public void excluirDoacaoMaterial(Connection conn, int doacaoId){
         String sql = "DELETE FROM doacao_material WHERE doacao_id = ?";
 

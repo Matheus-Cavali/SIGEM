@@ -45,6 +45,11 @@ public class DoacaoMaterialRouter implements HttpHandler {
             else if("GET".equalsIgnoreCase(metodo) && "/api/doacoes-materiais".equals(path)){
                 r = getControl().listar(exchange.getRequestURI().getQuery());
             }
+            else if("PUT".equalsIgnoreCase(metodo) && path.matches("/api/doacoes-materiais/\\d+")){
+                int id = Integer.parseInt(path.substring(path.lastIndexOf("/") + 1));
+                String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+                r = getControl().atualizar(auth, id, json);
+            }
             else if("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/doacoes-materiais/\\d+")){
                 int id = Integer.parseInt(path.substring(path.lastIndexOf("/") + 1));
                 r = getControl().excluir(auth, id);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { del, get, post } from '../api/http'
+import { del, get, post, put } from '../api/http'
 import { useAuth } from '../state/AuthContext'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
@@ -11,7 +11,7 @@ import { dmyToISO } from '../utils/date'
 import '../components/form/BaseField/BaseField.scss'
 import '../components/Modal/Modal.scss'
 
-const initialForm = { materialId: '', quantidade: '' }
+const initialForm = { materialId: '', quantidade: '', data: '' }
 
 export default function DoacoesMateriais() {
   const [items, setItems] = useState([])
@@ -32,6 +32,7 @@ export default function DoacoesMateriais() {
   const [novoMaterialErro, setNovoMaterialErro] = useState('')
   const [novoMaterialFieldErrors, setNovoMaterialFieldErrors] = useState({})
   const [salvandoMaterial, setSalvandoMaterial] = useState(false)
+  const [editing, setEditing] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [errorModal, setErrorModal] = useState({ open: false, message: '' })
   const { user, can } = useAuth()
@@ -95,7 +96,22 @@ export default function DoacoesMateriais() {
   }, [filtroMaterial, filtroCategoria, filtroDataInicio, filtroDataFim])
 
   const openNew = () => {
-    setForm(initialForm)
+    setForm({ ...initialForm, data: new Date().toLocaleDateString('pt-BR') })
+    setEditing(null)
+    setErro('')
+    setFieldErrors({})
+    setSuccess('')
+    setFormOpen(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const openEdit = (item) => {
+    setForm({
+      materialId: String(item.materialId),
+      quantidade: String(item.quantidade),
+      data: item.data || '',
+    })
+    setEditing(item.id)
     setErro('')
     setFieldErrors({})
     setSuccess('')
@@ -116,6 +132,9 @@ export default function DoacoesMateriais() {
     } else if (parseInt(form.quantidade, 10) <= 0) {
       erros.quantidade = 'Quantidade deve ser maior que zero'
     }
+    if (!form.data) {
+      erros.data = 'Data é obrigatória'
+    }
     return erros
   }
 
@@ -135,11 +154,20 @@ export default function DoacoesMateriais() {
       try {
         const payload = {
           materialId: parseInt(form.materialId, 10),
-          quantidade: parseInt(form.quantidade, 10)
+          quantidade: parseInt(form.quantidade, 10),
+          data: dmyToISO(form.data),
         }
 
-        await post('/api/doacoes-materiais', payload)
-        setSuccess('Doação cadastrada com sucesso.')
+        if (editing) {
+          await put('/api/doacoes-materiais/' + editing, payload)
+          setSuccess('Doação alterada com sucesso.')
+          setFormOpen(false)
+        } else {
+          await post('/api/doacoes-materiais', payload)
+          setSuccess('Doação cadastrada com sucesso.')
+        }
+
+        setEditing(null)
         setForm(initialForm)
         load(filtroMaterial, filtroCategoria || null, filtroDataInicio, filtroDataFim)
         loadMateriais()
@@ -290,7 +318,7 @@ export default function DoacoesMateriais() {
       {formOpen && (
         <section className="editor-card">
           <div className="editor-title">
-            <h2>Nova Doação de Material</h2>
+            <h2>{editing ? 'Editar Doação de Material' : 'Nova Doação de Material'}</h2>
             <button className="ghost-icon" onClick={() => setFormOpen(false)}><Icon name="close" size={16} /></button>
           </div>
           {erro && <div className="message inline">{erro}</div>}
@@ -318,6 +346,14 @@ export default function DoacoesMateriais() {
                      value={form.quantidade} onChange={e => handleFieldChange('quantidade', e.target.value)} placeholder="0" type="number" min="1" />
               {fieldErrors.quantidade && <span className="field-error">{fieldErrors.quantidade}</span>}
             </div>
+
+            <DateField
+              label="Data"
+              required
+              value={form.data}
+              setValue={v => handleFieldChange('data', v)}
+              error={fieldErrors.data}
+            />
 
             {showNovoMaterial && (
               <div style={{
@@ -366,7 +402,7 @@ export default function DoacoesMateriais() {
               </div>
             )}
             <div className="form-submit">
-              <button className="primary-action">Salvar Doação</button>
+              <button className="primary-action">{editing ? 'Salvar Alterações' : 'Salvar Doação'}</button>
             </div>
           </form>
         </section>
@@ -385,6 +421,7 @@ export default function DoacoesMateriais() {
               </div>
             </div>
             <div className="card-actions">
+              {canManage && <button className="icon-button" onClick={() => openEdit(item)} title="Editar"><Icon name="edit" size={16} /></button>}
               {canManage && <button className="icon-button icon-button--danger" onClick={() => remove(item)} title="Excluir"><Icon name="trash" size={16} /></button>}
             </div>
           </article>
