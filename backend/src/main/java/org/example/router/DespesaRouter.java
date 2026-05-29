@@ -23,7 +23,7 @@ public class DespesaRouter implements HttpHandler {
     @Override
     public void handle(HttpExchange exchange) throws IOException {
         exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
-        exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, GET, PUT, PATCH, DELETE, OPTIONS");
         exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
         if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
@@ -85,6 +85,14 @@ public class DespesaRouter implements HttpHandler {
 
             } else if ("POST".equalsIgnoreCase(metodo) && path.matches("/api/despesas/\\d+/quitar")) {
                 Resposta r = controller.quitarDespesa(auth, extrairUltimoId(path), lerBody(exchange));
+                enviarResposta(exchange, r.body, r.status);
+
+            } else if ("POST".equalsIgnoreCase(metodo) && path.matches("/api/despesas/\\d+/estornar")) {
+                Resposta r = controller.estornarDespesa(auth, extrairUltimoId(path));
+                enviarResposta(exchange, r.body, r.status);
+
+            } else if ("POST".equalsIgnoreCase(metodo) && "/api/despesas/ajustar-saldo".equals(path)) {
+                Resposta r = controller.ajustarSaldo(auth, lerBody(exchange));
                 enviarResposta(exchange, r.body, r.status);
 
             } else {

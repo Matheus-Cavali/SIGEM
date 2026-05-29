@@ -3,7 +3,8 @@ package org.example.controller;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import org.example.conexao.Conexao;
-
+import org.example.dao.RecursoSistemaDao;
+import org.example.dao.UsuarioDao;
 import org.example.model.*;
 import org.example.util.Data;
 
@@ -33,10 +34,12 @@ public class DespesaControl {
         String email = emailDoToken(auth);
         if (email != null) {
             try (Connection conn = Conexao.getConexao()) {
-                Usuario u = Usuario.buscarPorEmail(conn, email);
+                UsuarioDao uDao = new UsuarioDao();
+                Usuario u = uDao.buscarPorEmail(conn, email);
                 if (u != null) {
                     if (u.getNivelAcesso() == 1) return true;
-                    for (RecursoSistema r : RecursoSistema.listarPorUsuario(conn, u.getId())) {
+                    RecursoSistemaDao rDao = new RecursoSistemaDao();
+                    for (RecursoSistema r : rDao.listarPorUsuario(conn, u.getId())) {
                         if (r.getNome().equals(recursoNome)) return true;
                     }
                 }
@@ -51,7 +54,7 @@ public class DespesaControl {
         String email = emailDoToken(auth);
         if (email != null) {
             try (Connection conn = Conexao.getConexao()) {
-                Usuario u = Usuario.buscarPorEmail(conn, email);
+                Usuario u = new UsuarioDao().buscarPorEmail(conn, email);
                 if (u != null) return u.getNivelAcesso() == 1 || usuarioTemPermissao(auth, "GERENCIAR_DESPESA");
             } catch (Exception e) {
                 System.err.println("Erro ao verificar permissao: " + e.getMessage());
@@ -188,6 +191,10 @@ public class DespesaControl {
             if (body.has("dataVencimento") && !body.get("dataVencimento").isJsonNull()) {
                 despesa.setDataVencimento(Data.parseFlexivel(body.get("dataVencimento").getAsString().trim()));
             }
+            if (body.has("dataPrazo") && !body.get("dataPrazo").isJsonNull()) {
+                String dp = body.get("dataPrazo").getAsString().trim();
+                if (!dp.isEmpty()) despesa.setDataPrazo(Data.parseFlexivel(dp));
+            }
             if (body.has("colaboradorLancouId") && !body.get("colaboradorLancouId").isJsonNull())
                 despesa.setColaboradorLancouId(body.get("colaboradorLancouId").getAsInt());
 
@@ -241,14 +248,19 @@ public class DespesaControl {
                         .append(",\"dataPagamento\":").append(d.getDataPagamento() != null ? "\"" + d.getDataPagamento().format(fmt) + "\"" : "null")
                         .append(",\"categoriaDespesaId\":").append(d.getCategoriaDespesaId())
                         .append(",\"categoriaDespesaNome\":\"").append(escaparJson(d.getCategoriaDespesaNome())).append("\"")
+                        .append(",\"dataPrazo\":").append(d.getDataPrazo() != null ? "\"" + d.getDataPrazo().format(fmt) + "\"" : "null")
+                        .append(",\"valorPago\":").append(d.getValorPago() != null ? d.getValorPago() : "null")
+                        .append(",\"emAtraso\":").append(d.isEmAtraso())
+                        .append(",\"valorComJuros\":").append(d.calcularValorComJuros())
                         .append("}");
                 if (i < lista.size() - 1) sb.append(",");
             }
             sb.append("]");
             return new Resposta(200, sb.toString());
         } catch (Exception e) {
-            System.err.println("Erro ao listar despesas: " + e.getMessage());
-            return new Resposta(500, "{\"erro\":\"Erro ao listar despesas\"}");
+            System.err.println("Erro ao listar despesas:");
+            e.printStackTrace();
+            return new Resposta(500, "{\"erro\":\"" + e.getMessage() + "\"}");
         }
     }
 
@@ -289,6 +301,10 @@ public class DespesaControl {
             if (body.has("descricao")) despesa.setDescricao(body.get("descricao").getAsString().trim());
             if (body.has("valor")) despesa.setValor(body.get("valor").getAsBigDecimal());
             if (body.has("dataVencimento")) despesa.setDataVencimento(Data.parseFlexivel(body.get("dataVencimento").getAsString()));
+            if (body.has("dataPrazo")) {
+                String dp = body.get("dataPrazo").isJsonNull() ? "" : body.get("dataPrazo").getAsString().trim();
+                despesa.setDataPrazo(dp.isEmpty() ? null : Data.parseFlexivel(dp));
+            }
             if (body.has("categoriaDespesaId")) despesa.setCategoriaDespesaId(body.get("categoriaDespesaId").getAsInt());
 
             // Usa método de instância com validação (padrão Material)
@@ -351,8 +367,16 @@ public class DespesaControl {
                 }
             }
 
-            if (Despesa.quitar(conn, id, dataPagamento))
-                return new Resposta(200, "{\"mensagem\":\"Despesa quitada com sucesso\"}");
+            // Calcula se incide juros baseado na data de pagamento vs prazo da despesa
+            java.math.BigDecimal valorFinal = despesa.calcularValorComJuros(dataPagamento);
+            boolean comJuros = valorFinal.compareTo(despesa.getValor()) > 0;
+
+            if (Despesa.quitar(conn, id, dataPagamento, valorFinal)) {
+                String msg = comJuros
+                    ? "Despesa quitada com juros compostos de 2% ao dia. Valor cobrado: " + valorFinal
+                    : "Despesa quitada com sucesso";
+                return new Resposta(200, "{\"mensagem\":\"" + escaparJson(msg) + "\",\"valorPago\":" + valorFinal + ",\"comJuros\":" + comJuros + "}");
+            }
             return new Resposta(500, "{\"erro\":\"Erro ao quitar despesa\"}");
         } catch (Exception e) {
             System.err.println("Erro ao quitar despesa: " + e.getMessage());
@@ -373,7 +397,45 @@ public class DespesaControl {
         }
     }
 
-    private String escaparJson(String s) {
+    public Resposta estornarDespesa(String auth, int id) {
+        if (!usuarioPodeGerenciar(auth)) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
+        try (Connection conn = Conexao.getConexao()) {
+            Despesa despesa = Despesa.buscarPorId(conn, id);
+            if (despesa == null) return new Resposta(404, "{\"erro\":\"Despesa não encontrada\"}");
+            if (despesa.getDataPagamento() == null) return new Resposta(409, "{\"erro\":\"Despesa ainda não foi paga\"}");
+            if (Despesa.estornar(conn, id))
+                return new Resposta(200, "{\"mensagem\":\"Pagamento estornado com sucesso\"}");
+            return new Resposta(500, "{\"erro\":\"Erro ao estornar pagamento\"}");
+        } catch (Exception e) {
+            System.err.println("Erro ao estornar despesa: " + e.getMessage());
+            return new Resposta(500, "{\"erro\":\"Erro ao estornar pagamento\"}");
+        }
+    }
+
+    public Resposta ajustarSaldo(String auth, String json) {
+        if (!usuarioPodeGerenciar(auth)) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
+        try (Connection conn = Conexao.getConexao()) {
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+            com.google.gson.JsonObject body = gson.fromJson(json, com.google.gson.JsonObject.class);
+            if (!body.has("valor") || body.get("valor").isJsonNull())
+                return new Resposta(400, "{\"erro\":\"Valor é obrigatório\"}");
+            java.math.BigDecimal valor = body.get("valor").getAsBigDecimal();
+            if (valor.compareTo(java.math.BigDecimal.ZERO) < 0)
+                return new Resposta(400, "{\"erro\":\"Valor não pode ser negativo\"}");
+            if (Despesa.ajustarSaldo(conn, valor))
+                return new Resposta(200, "{\"mensagem\":\"Saldo ajustado com sucesso\"}");
+            return new Resposta(500, "{\"erro\":\"Erro ao ajustar saldo\"}");
+        } catch (Exception e) {
+            System.err.println("Erro ao ajustar saldo: " + e.getMessage());
+            return new Resposta(500, "{\"erro\":\"Erro ao ajustar saldo\"}");
+        }
+    }
+
+        private String escaparJson(String s) {
         if (s == null) return "";
         return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
     }

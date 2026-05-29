@@ -20,6 +20,8 @@ public class Despesa {
     private LocalDate dataPagamento;
     private int categoriaDespesaId;
     private String categoriaDespesaNome;
+    private LocalDate dataPrazo;
+    private java.math.BigDecimal valorPago;
     private Integer colaboradorLancouId;
 
     // ── Singleton do DAO (padrão Material) ────────────────────────────────────
@@ -85,8 +87,8 @@ public class Despesa {
         return getDao().deletar(conn, id);
     }
 
-    public static boolean quitar(Connection conn, int id, LocalDate dataPagamento) throws SQLException {
-        return getDao().quitar(conn, id, dataPagamento);
+    public static boolean quitar(Connection conn, int id, LocalDate dataPagamento, java.math.BigDecimal valorPago) throws SQLException {
+        return getDao().quitar(conn, id, dataPagamento, valorPago);
     }
 
     public static BigDecimal calcularSaldo(Connection conn) throws SQLException {
@@ -126,6 +128,61 @@ public class Despesa {
     public String getCategoriaDespesaNome() { return categoriaDespesaNome; }
     public void setCategoriaDespesaNome(String categoriaDespesaNome) { this.categoriaDespesaNome = categoriaDespesaNome; }
 
+    public LocalDate getDataPrazo() { return dataPrazo; }
+    public void setDataPrazo(LocalDate dataPrazo) { this.dataPrazo = dataPrazo; }
+
+    public java.math.BigDecimal getValorPago() { return valorPago; }
+    public void setValorPago(java.math.BigDecimal valorPago) { this.valorPago = valorPago; }
+
     public Integer getColaboradorLancouId() { return colaboradorLancouId; }
     public void setColaboradorLancouId(Integer colaboradorLancouId) { this.colaboradorLancouId = colaboradorLancouId; }
+    public static boolean estornar(Connection conn, int id) throws SQLException {
+        return getDao().estornar(conn, id);
+    }
+
+    public static boolean ajustarSaldo(Connection conn, java.math.BigDecimal novoValor) throws SQLException {
+        return getDao().ajustarSaldo(conn, novoValor);
+    }
+
+    /**
+     * Calcula o valor com juros de 2% se a data de pagamento for posterior ao vencimento.
+     * Usado apenas para exibição no frontend via campo valorComJuros na listagem.
+     */
+    /**
+     * Retorna a data limite para pagamento sem juros.
+     * Se dataPrazo foi definido, usa ele; caso contrário usa dataVencimento.
+     */
+    public java.time.LocalDate getDataLimiteJuros() {
+        return dataPrazo != null ? dataPrazo : dataVencimento;
+    }
+
+    /**
+     * Calcula valor com juros de 2% se a data de referência ultrapassou o prazo.
+     * dataReferencia: data do pagamento (real ou simulada). Se null, usa hoje.
+     */
+    public java.math.BigDecimal calcularValorComJuros(java.time.LocalDate dataReferencia) {
+        if (valor == null) return java.math.BigDecimal.ZERO;
+        java.time.LocalDate ref = dataReferencia != null ? dataReferencia : java.time.LocalDate.now();
+        java.time.LocalDate limite = getDataLimiteJuros();
+        if (limite != null && ref.isAfter(limite)) {
+            long diasAtraso = java.time.temporal.ChronoUnit.DAYS.between(limite, ref);
+            // Juros compostos: 2% ao dia sobre o saldo devedor
+            java.math.BigDecimal fator = new java.math.BigDecimal("1.02").pow((int) diasAtraso, java.math.MathContext.DECIMAL128);
+            return valor.multiply(fator).setScale(2, java.math.RoundingMode.HALF_UP);
+        }
+        return valor;
+    }
+
+    // Mantido para compatibilidade (usa hoje como referência)
+    public java.math.BigDecimal calcularValorComJuros() {
+        return calcularValorComJuros(java.time.LocalDate.now());
+    }
+
+    public boolean isEmAtraso() {
+        if (dataPagamento != null) return false;
+        java.time.LocalDate limite = getDataLimiteJuros();
+        return limite != null && java.time.LocalDate.now().isAfter(limite);
+    }
+
+
 }
