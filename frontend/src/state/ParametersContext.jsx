@@ -28,6 +28,7 @@ const emptyParameters = {
 
 export function ParametersProvider({ children }) {
   const [parameters, setParameters] = useState(emptyParameters)
+  const [configured, setConfigured] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -38,6 +39,7 @@ export function ParametersProvider({ children }) {
     try {
       const data = await get('/api/parameters')
       setParameters({ ...emptyParameters, ...(data || {}) })
+      setConfigured(!!(data && data.id))
       return data
     } catch (err) {
       setError(err.message)
@@ -55,6 +57,7 @@ export function ParametersProvider({ children }) {
     setError('')
     const data = await put('/api/parameters', payload)
     setParameters({ ...emptyParameters, ...(data || {}) })
+    setConfigured(true)
     return data
   }
 
@@ -90,13 +93,14 @@ export function ParametersProvider({ children }) {
 
   const value = useMemo(() => ({
     parameters,
+    configured,
     loading,
     error,
     fetchParameters,
     updateParameters,
     uploadLogo,
     uploadLogoGrande,
-  }), [parameters, loading, error])
+  }), [parameters, configured, loading, error])
 
   return <ParametersContext.Provider value={value}>{children}</ParametersContext.Provider>
 }

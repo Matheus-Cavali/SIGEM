@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import PageHeader from '../../components/PageHeader'
 import Icon from '../../components/Icon'
 import { CepField, CnpjField, ColorField, LogoUpload, PhoneField, SelectField, TextField } from '../../components/form'
@@ -54,15 +55,18 @@ function absoluteLogoUrl(path) {
 }
 
 export default function Configuracoes() {
+  const navigate = useNavigate()
   const { user } = useAuth()
-  const { parameters, loading, error, updateParameters, uploadLogo, uploadLogoGrande } = useParameters()
+  const { parameters, configured, loading, error, updateParameters, uploadLogo, uploadLogoGrande } = useParameters()
   const [form, setForm] = useState(initialForm)
-  const [editing, setEditing] = useState(false)
+  const [editing, setEditing] = useState(!configured)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [localError, setLocalError] = useState('')
   const [logoPreview, setLogoPreview] = useState('')
   const [logoGrandePreview, setLogoGrandePreview] = useState('')
+
+  const onboarding = !configured && !loading
 
   useEffect(() => {
     const next = { ...initialForm, ...parameters, logo: null, logoGrande: null }
@@ -74,10 +78,15 @@ export default function Configuracoes() {
     setLogoGrandePreview(absoluteLogoUrl(next.caminhoLogoGrande))
   }, [parameters])
 
+  useEffect(() => {
+    setEditing(!configured)
+  }, [configured])
+
   const disabled = !editing || saving
-  const fieldErrors = {}
+  const [fieldErrors, setFieldErrors] = useState({})
 
   function setField(field, value) {
+    setFieldErrors(prev => ({ ...prev, [field]: undefined }))
     if (field.startsWith('endereco.')) {
       const enderecoField = field.replace('endereco.', '')
       setForm(prev => ({
@@ -116,10 +125,33 @@ export default function Configuracoes() {
     }
   }
 
+  function validate() {
+    const erros = {}
+    if (!form.nomeFantasia.trim()) erros.nomeFantasia = 'Nome fantasia é obrigatório'
+    if (!form.cnpj.trim()) erros.cnpj = 'CNPJ é obrigatório'
+    if (!form.telefone.trim()) erros.telefone = 'Telefone é obrigatório'
+    if (!form.email.trim()) erros.email = 'E-mail é obrigatório'
+    const temEndereco = form.endereco.cep || form.endereco.logradouro || form.endereco.numero
+    if (temEndereco) {
+      const addrLabels = { cep: 'CEP', logradouro: 'Logradouro', numero: 'Número', bairro: 'Bairro', cidade: 'Cidade', uf: 'UF' }
+      for (const [key, label] of Object.entries(addrLabels)) {
+        if (!form.endereco[key]?.toString().trim()) erros[`endereco.${key}`] = `${label} é obrigatório`
+      }
+    }
+    return erros
+  }
+
   async function save() {
+    const erros = validate()
+    if (Object.keys(erros).length) {
+      setFieldErrors(erros)
+      return
+    }
+
     setSaving(true)
     setMessage('')
     setLocalError('')
+    setFieldErrors({})
 
     try {
       let logoPath = form.caminhoLogo
@@ -178,10 +210,24 @@ export default function Configuracoes() {
         setLogoGrandePreview('')
       }
 
-      setEditing(false)
+      setEditing(configured)
       setMessage('Configurações salvas com sucesso.')
+      if (onboarding) {
+        setTimeout(() => navigate('/investimentos'), 300)
+      }
     } catch (err) {
       setLocalError(err.message)
+      if (err.fieldErrors) {
+        const mapped = {}
+        for (const [key, value] of Object.entries(err.fieldErrors)) {
+          if (['cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf'].includes(key)) {
+            mapped[`endereco.${key}`] = value
+          } else {
+            mapped[key] = value
+          }
+        }
+        setFieldErrors(mapped)
+      }
     } finally {
       setSaving(false)
     }
@@ -201,11 +247,11 @@ export default function Configuracoes() {
   }
 
   return (
-    <>
+    <div>
       <PageHeader
-        title="Configurações"
-        subtitle="Gerencie as informações da igreja"
-        actionLabel={!editing && user?.nivelAcesso === 1 ? 'Editar' : ''}
+        title={onboarding ? 'Configurações Iniciais' : 'Configurações'}
+        subtitle={onboarding ? 'Preencha os dados obrigatórios para começar' : 'Gerencie as informações da igreja'}
+        actionLabel={!onboarding && !editing && user?.nivelAcesso === 1 ? 'Editar' : ''}
         actionIcon="edit"
         onAction={() => setEditing(true)}
       />
@@ -226,6 +272,7 @@ export default function Configuracoes() {
             setValue={(value) => setField('nomeFantasia', value)}
             placeholder="Igreja Batista Central"
             disabled={disabled}
+            required
             error={fieldErrors.nomeFantasia}
           />
           <CnpjField
@@ -234,6 +281,7 @@ export default function Configuracoes() {
             setValue={(value) => setField('cnpj', value)}
             placeholder="12.345.678/0001-90"
             disabled={disabled}
+            required
             error={fieldErrors.cnpj}
           />
           <LogoUpload
@@ -283,6 +331,8 @@ export default function Configuracoes() {
             setValue={(value) => setField('telefone', value)}
             placeholder="(11) 3456-7890"
             disabled={disabled}
+            required
+            error={fieldErrors.telefone}
           />
           <TextField
             label="E-mail"
@@ -290,6 +340,8 @@ export default function Configuracoes() {
             setValue={(value) => setField('email', value)}
             placeholder="contato@igreja.org.br"
             disabled={disabled}
+            required
+            error={fieldErrors.email}
           />
           <TextField
             label="Site"
@@ -313,6 +365,7 @@ export default function Configuracoes() {
             setValue={handleCepChange}
             placeholder="00000-000"
             disabled={disabled}
+            required
             error={fieldErrors['endereco.cep']}
           />
           <TextField
@@ -321,6 +374,7 @@ export default function Configuracoes() {
             setValue={(value) => setField('endereco.logradouro', value)}
             placeholder="Rua das Flores"
             disabled={disabled}
+            required
             error={fieldErrors['endereco.logradouro']}
           />
           <TextField
@@ -329,6 +383,7 @@ export default function Configuracoes() {
             setValue={(value) => setField('endereco.numero', value)}
             placeholder="123"
             disabled={disabled}
+            required
             error={fieldErrors['endereco.numero']}
           />
           <TextField
@@ -344,6 +399,7 @@ export default function Configuracoes() {
             setValue={(value) => setField('endereco.bairro', value)}
             placeholder="Centro"
             disabled={disabled}
+            required
             error={fieldErrors['endereco.bairro']}
           />
           <TextField
@@ -352,6 +408,7 @@ export default function Configuracoes() {
             setValue={(value) => setField('endereco.cidade', value)}
             placeholder="Presidente Prudente"
             disabled={disabled}
+            required
             error={fieldErrors['endereco.cidade']}
           />
           <SelectField
@@ -361,6 +418,7 @@ export default function Configuracoes() {
             placeholder="Selecione"
             options={ESTADOS}
             disabled={disabled}
+            required
             error={fieldErrors['endereco.uf']}
           />
         </div>
@@ -368,12 +426,12 @@ export default function Configuracoes() {
 
       {editing && (
         <div className="settings-actions">
-          <button className="secondary-action" type="button" onClick={cancel} disabled={saving}>Cancelar</button>
+          {!onboarding && <button className="secondary-action" type="button" onClick={cancel} disabled={saving}>Cancelar</button>}
           <button className="primary-action" type="button" onClick={save} disabled={saving}>
             {saving ? 'Salvando...' : 'Salvar'}
           </button>
         </div>
       )}
-    </>
+    </div>
   )
 }
