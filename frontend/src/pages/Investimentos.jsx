@@ -10,6 +10,12 @@ import CurrencyField from '../components/form/CurrencyField'
 import DateField from '../components/form/DateField'
 import { useAuth } from '../state/AuthContext'
 
+function hojeISO() {
+  const d = new Date()
+  const pad = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 const initialForm = { nome: '', valorMeta: '0,00', dataAbertura: '', status: 'ABERTO' }
 
 export default function Investimentos() {
@@ -162,7 +168,7 @@ export default function Investimentos() {
             <CurrencyField label="Meta de Valor (R$)" value={form.valorMeta}
               setValue={v => handleFieldChange('valorMeta', v)} error={fieldErrors.valorMeta} required />
             {!editing && (
-              <DateField label="Data Meta" value={form.dataAbertura} setValue={v => handleFieldChange('dataAbertura', v)} error={fieldErrors.dataAbertura} required />
+              <DateField label="Data Meta" value={form.dataAbertura} setValue={v => handleFieldChange('dataAbertura', v)} error={fieldErrors.dataAbertura} required minDate={hojeISO()} maxDate="2099-12-31" />
             )}
             {editing && (
               <div className="field-container">

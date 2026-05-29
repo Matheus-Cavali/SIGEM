@@ -10,6 +10,12 @@ import CurrencyField from '../components/form/CurrencyField'
 import DateField from '../components/form/DateField'
 import { useAuth } from '../state/AuthContext'
 
+function hojeISO() {
+  const d = new Date()
+  const pad = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 const initialForm = { investimentoId: '', valorAporte: '0,00', dataAporte: '' }
 
 export default function Aportes() {
@@ -196,7 +202,7 @@ export default function Aportes() {
             </div>
             <CurrencyField label="Valor (R$)" value={form.valorAporte}
               setValue={v => handleFieldChange('valorAporte', v)} error={fieldErrors.valorAporte} required />
-            <DateField label="Data" value={form.dataAporte} setValue={v => handleFieldChange('dataAporte', v)} error={fieldErrors.dataAporte} required />
+            <DateField label="Data" value={form.dataAporte} setValue={v => handleFieldChange('dataAporte', v)} error={fieldErrors.dataAporte} required minDate={hojeISO()} maxDate="2099-12-31" />
             <div className="form-submit">
               <button className="primary-action">{editing ? 'Salvar Alteracoes' : 'Salvar Aporte'}</button>
             </div>
