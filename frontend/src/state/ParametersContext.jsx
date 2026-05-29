@@ -8,12 +8,22 @@ const emptyParameters = {
   razaoSocial: '',
   cnpj: '',
   caminhoLogo: '',
+  caminhoLogoGrande: '',
   corPrimaria: '#1f4f82',
   corSecundaria: '#7d0a1e',
   telefone: '',
   email: '',
   site: '',
-  endereco: '',
+  endereco: {
+    id: null,
+    cep: '',
+    logradouro: '',
+    numero: '',
+    complemento: '',
+    bairro: '',
+    cidade: '',
+    uf: '',
+  },
 }
 
 export function ParametersProvider({ children }) {
@@ -63,6 +73,21 @@ export function ParametersProvider({ children }) {
     return data
   }
 
+  async function uploadLogoGrande(file) {
+    if (!file) return null
+
+    const formData = new FormData()
+    formData.append('logoGrande', file)
+
+    const data = await postForm('/api/parameters/logo-grande', formData)
+
+    if (data && data.caminhoLogoGrande) {
+      setParameters(prev => ({ ...prev, caminhoLogoGrande: data.caminhoLogoGrande }))
+    }
+
+    return data
+  }
+
   const value = useMemo(() => ({
     parameters,
     loading,
@@ -70,6 +95,7 @@ export function ParametersProvider({ children }) {
     fetchParameters,
     updateParameters,
     uploadLogo,
+    uploadLogoGrande,
   }), [parameters, loading, error])
 
   return <ParametersContext.Provider value={value}>{children}</ParametersContext.Provider>
