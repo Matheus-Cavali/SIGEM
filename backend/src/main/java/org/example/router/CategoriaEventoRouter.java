@@ -48,98 +48,93 @@ public class CategoriaEventoRouter implements HttpHandler {
         if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
 
             exchange.sendResponseHeaders(204, -1);
+        } else {
+            String path = exchange.getRequestURI().getPath();
+            String metodo = exchange.getRequestMethod();
+            String auth = exchange.getRequestHeaders().getFirst("Authorization");
 
-            return;
-        }
+            try {
 
-        String path = exchange.getRequestURI().getPath();
+                if (
+                        "POST".equalsIgnoreCase(metodo) &&
+                                "/api/categorias-eventos".equals(path)
+                ) {
 
-        String metodo = exchange.getRequestMethod();
+                    String json = new String(
+                            exchange.getRequestBody().readAllBytes(),
+                            StandardCharsets.UTF_8
+                    );
 
-        String auth =
-                exchange.getRequestHeaders().getFirst("Authorization");
+                    Resposta r =
+                            controller.cadastrar(auth, json);
 
-        try {
+                    enviarResposta(exchange, r.body, r.status);
+                }
 
-            if (
-                    "POST".equalsIgnoreCase(metodo) &&
-                            "/api/categorias-eventos".equals(path)
-            ) {
+                else if (
+                        "GET".equalsIgnoreCase(metodo) &&
+                                "/api/categorias-eventos".equals(path)
+                ) {
 
-                String json = new String(
-                        exchange.getRequestBody().readAllBytes(),
-                        StandardCharsets.UTF_8
-                );
+                    Resposta r =
+                            controller.listar(
+                                    auth,
+                                    exchange.getRequestURI().getQuery()
+                            );
 
-                Resposta r =
-                        controller.cadastrar(auth, json);
+                    enviarResposta(exchange, r.body, r.status);
+                }
 
-                enviarResposta(exchange, r.body, r.status);
-            }
+                else if (
+                        "PUT".equalsIgnoreCase(metodo) &&
+                                path.matches("/api/categorias-eventos/\\d+")
+                ) {
 
-            else if (
-                    "GET".equalsIgnoreCase(metodo) &&
-                            "/api/categorias-eventos".equals(path)
-            ) {
+                    int id = extrairId(path);
 
-                Resposta r =
-                        controller.listar(
-                                auth,
-                                exchange.getRequestURI().getQuery()
-                        );
+                    String json = new String(
+                            exchange.getRequestBody().readAllBytes(),
+                            StandardCharsets.UTF_8
+                    );
 
-                enviarResposta(exchange, r.body, r.status);
-            }
+                    Resposta r =
+                            controller.atualizar(auth, id, json);
 
-            else if (
-                    "PUT".equalsIgnoreCase(metodo) &&
-                            path.matches("/api/categorias-eventos/\\d+")
-            ) {
+                    enviarResposta(exchange, r.body, r.status);
+                }
 
-                int id = extrairId(path);
+                else if (
+                        "DELETE".equalsIgnoreCase(metodo) &&
+                                path.matches("/api/categorias-eventos/\\d+")
+                ) {
 
-                String json = new String(
-                        exchange.getRequestBody().readAllBytes(),
-                        StandardCharsets.UTF_8
-                );
+                    int id = extrairId(path);
 
-                Resposta r =
-                        controller.atualizar(auth, id, json);
+                    Resposta r =
+                            controller.excluir(auth, id);
 
-                enviarResposta(exchange, r.body, r.status);
-            }
+                    enviarResposta(exchange, r.body, r.status);
+                }
 
-            else if (
-                    "DELETE".equalsIgnoreCase(metodo) &&
-                            path.matches("/api/categorias-eventos/\\d+")
-            ) {
+                else {
 
-                int id = extrairId(path);
+                    enviarResposta(
+                            exchange,
+                            "{\"erro\":\"Rota não encontrada\"}",
+                            404
+                    );
+                }
 
-                Resposta r =
-                        controller.excluir(auth, id);
+            } catch (Exception e) {
 
-                enviarResposta(exchange, r.body, r.status);
-            }
-
-            else {
+                System.err.println("ERRO: " + e.getMessage());
 
                 enviarResposta(
                         exchange,
-                        "{\"erro\":\"Rota não encontrada\"}",
-                        404
+                        "{\"erro\":\"Erro interno\"}",
+                        500
                 );
             }
-
-        } catch (Exception e) {
-
-            System.err.println("ERRO: " + e.getMessage());
-
-            enviarResposta(
-                    exchange,
-                    "{\"erro\":\"Erro interno\"}",
-                    500
-            );
         }
     }
 

@@ -2,23 +2,20 @@ package org.example.router;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
-import org.example.controller.MaterialControl;
+import org.example.controller.CategoriaFinanceiraControl;
 import org.example.model.Resposta;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
-public class MaterialRouter implements HttpHandler {
-    private static MaterialControl control;
+public class CategoriaFinanceiraRouter implements HttpHandler {
+    private static CategoriaFinanceiraControl control;
 
-    public static synchronized MaterialControl getControl() {
-        if (control == null)
-            control = new MaterialControl();
+    public static synchronized CategoriaFinanceiraControl getControl() {
+        if(control == null) control = new CategoriaFinanceiraControl();
         return control;
     }
-
-    public MaterialRouter() {}
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
@@ -35,19 +32,19 @@ public class MaterialRouter implements HttpHandler {
         } else try {
             Resposta r;
 
-            if("POST".equalsIgnoreCase(metodo) && "/api/materiais".equals(path)){
+            if("POST".equalsIgnoreCase(metodo) && "/api/categorias-financeiras".equals(path)){
                 String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
                 r = getControl().cadastrar(auth, json);
             }
-            else if("GET".equalsIgnoreCase(metodo) && "/api/materiais".equals(path)){
+            else if("GET".equalsIgnoreCase(metodo) && "/api/categorias-financeiras".equals(path)){
                 r = getControl().listar(exchange.getRequestURI().getQuery());
             }
-            else if("PUT".equalsIgnoreCase(metodo) && path.matches("/api/materiais/\\d+")){
+            else if("PUT".equalsIgnoreCase(metodo) && path.matches("/api/categorias-financeiras/\\d+")){
                 int id = Integer.parseInt(path.substring(path.lastIndexOf("/") + 1));
                 String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
                 r = getControl().atualizar(auth, id, json);
             }
-            else if("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/materiais/\\d+")){
+            else if("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/categorias-financeiras/\\d+")){
                 int id = Integer.parseInt(path.substring(path.lastIndexOf("/") + 1));
                 r = getControl().excluir(auth, id);
             }
@@ -57,7 +54,7 @@ public class MaterialRouter implements HttpHandler {
 
             enviarResposta(exchange, r.body, r.status);
         }
-        catch (Exception e){
+        catch(Exception e){
             System.err.println("ERRO: " + e.getMessage());
             enviarResposta(exchange, "{\"erro\":\"Erro interno do servidor\"}", 500);
         }
@@ -68,11 +65,8 @@ public class MaterialRouter implements HttpHandler {
             byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().set("Content-Type", "application/json");
             exchange.sendResponseHeaders(status, bytes.length);
-            try(OutputStream os = exchange.getResponseBody()){
-                os.write(bytes);
-            }
-        }
-        catch (IOException e){
+            try(OutputStream os = exchange.getResponseBody()){ os.write(bytes); }
+        } catch(IOException e){
             System.err.println("Erro crítico de I/O: " + e.getMessage());
         }
     }

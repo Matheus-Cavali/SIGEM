@@ -77,6 +77,24 @@ public class CaixaDao {
         return null;
     }
 
+    public Caixa buscarPorData(Connection conn, LocalDate data){
+        String sql = "SELECT * FROM caixa WHERE data_caixa = ? ORDER BY id DESC LIMIT 1";
+
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
+            stmt.setObject(1, data);
+
+            try(ResultSet rs = stmt.executeQuery()){
+                if(rs.next())
+                    return extrair(rs);
+            }
+        }
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao buscar caixa por data", e);
+        }
+
+        return null;
+    }
+
     public Caixa buscarCaixaAberto(Connection conn){
         String sql = "SELECT * FROM caixa WHERE horario_fechamento IS NULL ORDER BY id DESC LIMIT 1";
 

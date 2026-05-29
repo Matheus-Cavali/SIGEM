@@ -577,6 +577,49 @@ select.is-invalid {
   width: 260px;
 }
 
+.caixa-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+  border-radius: 8px;
+  background: var(--card, #ffffff);
+  border: 1px solid var(--line, #d9e0ea);
+}
+
+.caixa-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.caixa-indicador {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.caixa-indicador.verde {
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+}
+
+.caixa-indicador.vermelho {
+  background: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+}
+
+.caixa-aberto-texto {
+  color: #22c55e;
+}
+
+.caixa-fechado-texto {
+  color: #ef4444;
+}
+
 .icon-button--danger:hover {
   background: #fce8ea;
   color: var(--red);

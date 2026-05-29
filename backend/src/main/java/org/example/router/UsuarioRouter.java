@@ -28,44 +28,43 @@ public class UsuarioRouter implements HttpHandler {
 
         if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
             exchange.sendResponseHeaders(204, -1);
-            return;
-        }
+        } else {
+            String path = exchange.getRequestURI().getPath();
+            String metodo = exchange.getRequestMethod();
+            String auth = exchange.getRequestHeaders().getFirst("Authorization");
 
-        String path = exchange.getRequestURI().getPath();
-        String metodo = exchange.getRequestMethod();
-        String auth = exchange.getRequestHeaders().getFirst("Authorization");
-
-        try {
-            if ("POST".equalsIgnoreCase(metodo)) {
-                if ("/api/login".equals(path)) {
-                    processarLogin(exchange);
-                } else if ("/api/alterar-Primeira-Senha".equals(path)) {
-                    processarAlteracaoSenha(exchange);
-                } else if ("/api/cadastrar-interno".equals(path)) {
-                    processarCadastroInterno(exchange);
+            try {
+                if ("POST".equalsIgnoreCase(metodo)) {
+                    if ("/api/login".equals(path)) {
+                        processarLogin(exchange);
+                    } else if ("/api/alterar-Primeira-Senha".equals(path)) {
+                        processarAlteracaoSenha(exchange);
+                    } else if ("/api/cadastrar-interno".equals(path)) {
+                        processarCadastroInterno(exchange);
+                    }
+                } else if ("GET".equalsIgnoreCase(metodo) && "/api/usuarios".equals(path)) {
+                    listarUsuarios(exchange, auth);
+                } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+")) {
+                    buscarUsuario(exchange, auth);
+                } else if ("PATCH".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+/status")) {
+                    alterarStatusUsuario(exchange);
+                } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+")) {
+                    atualizarUsuario(exchange);
+                } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/recurso/\\d+/permissoes")) {
+                    listarPermissoes(exchange, auth);
+                } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/recurso/\\d+/permissoes")) {
+                    atualizarPermissoes(exchange, auth);
+                } else if ("GET".equalsIgnoreCase(metodo) && "/api/recurso".equals(path)) {
+                    listarTodosRecursos(exchange, auth);
+                } else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+")) {
+                    removerUsuario(exchange);
+                } else {
+                    enviarResposta(exchange, "{\"erro\":\"Rota não encontrada\"}", 404);
                 }
-            } else if ("GET".equalsIgnoreCase(metodo) && "/api/usuarios".equals(path)) {
-                listarUsuarios(exchange, auth);
-            } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+")) {
-                buscarUsuario(exchange, auth);
-            } else if ("PATCH".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+/status")) {
-                alterarStatusUsuario(exchange);
-            } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+")) {
-                atualizarUsuario(exchange);
-            } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/recurso/\\d+/permissoes")) {
-                listarPermissoes(exchange, auth);
-            } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/recurso/\\d+/permissoes")) {
-                atualizarPermissoes(exchange, auth);
-            } else if ("GET".equalsIgnoreCase(metodo) && "/api/recurso".equals(path)) {
-                listarTodosRecursos(exchange, auth);
-            } else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+")) {
-                removerUsuario(exchange);
-            } else {
-                enviarResposta(exchange, "{\"erro\":\"Rota não encontrada\"}", 404);
+            } catch (Exception e) {
+                System.err.println("ERRO: " + e.getMessage());
+                enviarResposta(exchange, "{\"erro\":\"Erro interno do servidor\"}", 500);
             }
-        } catch (Exception e) {
-            System.err.println("ERRO: " + e.getMessage());
-            enviarResposta(exchange, "{\"erro\":\"Erro interno do servidor\"}", 500);
         }
     }
 

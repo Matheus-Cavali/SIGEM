@@ -32,10 +32,7 @@ public class CategoriaMaterialRouter implements HttpHandler {
 
         if("OPTIONS".equalsIgnoreCase(metodo)){
             exchange.sendResponseHeaders(204, -1);
-            return;
-        }
-
-        try{
+        } else try {
             Resposta r;
 
             if("POST".equalsIgnoreCase(metodo) && "/api/categorias-materiais".equals(path)){

@@ -16,6 +16,8 @@ import Despesas from './pages/Despesas'
 import Documentos from './pages/Documentos'
 import CategoriasDocumentos from './pages/CategoriasDocumentos'
 import DoacoesMateriais from './pages/DoacoesMateriais'
+import DoacoesFinanceiras from './pages/DoacoesFinanceiras'
+import CategoriasFinanceiras from './pages/CategoriasFinanceiras'
 import Eventos from './pages/Eventos'
 import LocaisEvento from './pages/LocaisEvento'
 
@@ -28,6 +30,8 @@ export default function App() {
         <Route path="investimentos" element={<Investimentos />} />
         <Route path="aportes" element={<Aportes />} />
         <Route path="doacoes-materiais" element={<DoacoesMateriais />} />
+        <Route path="doacoes-financeiras" element={<DoacoesFinanceiras />} />
+        <Route path="categorias-financeiras" element={<CategoriasFinanceiras />} />
         <Route path="configuracoes" element={<Configuracoes />} />
         <Route path="materiais" element={<Materiais />} />
         <Route path="categorias-materiais" element={<CategoriasMateriais />} />

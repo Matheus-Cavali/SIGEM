@@ -28,34 +28,33 @@ public class ColaboradorRouter implements HttpHandler {
 
         if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
             exchange.sendResponseHeaders(204, -1);
-            return;
-        }
+        } else {
+            String path = exchange.getRequestURI().getPath();
+            String metodo = exchange.getRequestMethod();
+            String auth = exchange.getRequestHeaders().getFirst("Authorization");
 
-        String path = exchange.getRequestURI().getPath();
-        String metodo = exchange.getRequestMethod();
-        String auth = exchange.getRequestHeaders().getFirst("Authorization");
+            try {
+                Resposta r;
 
-        try {
-            Resposta r;
+                if ("GET".equalsIgnoreCase(metodo) && "/api/colaboradores".equals(path)) {
+                    r = controller.listar(auth, exchange.getRequestURI().getQuery());
+                } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/colaboradores/\\d+")) {
+                    int id = Integer.parseInt(path.split("/")[3]);
+                    r = controller.buscarPorId(auth, id);
+                } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/colaboradores/\\d+")) {
+                    int id = Integer.parseInt(path.split("/")[3]);
+                    String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+                    r = controller.atualizar(auth, id, json);
+                } else {
+                    r = new Resposta(404, "{\"erro\":\"Rota não encontrada\"}");
+                }
 
-            if ("GET".equalsIgnoreCase(metodo) && "/api/colaboradores".equals(path)) {
-                r = controller.listar(auth, exchange.getRequestURI().getQuery());
-            } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/colaboradores/\\d+")) {
-                int id = Integer.parseInt(path.split("/")[3]);
-                r = controller.buscarPorId(auth, id);
-            } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/colaboradores/\\d+")) {
-                int id = Integer.parseInt(path.split("/")[3]);
-                String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-                r = controller.atualizar(auth, id, json);
-            } else {
-                r = new Resposta(404, "{\"erro\":\"Rota não encontrada\"}");
+                enviarResposta(exchange, r.body, r.status);
+
+            } catch (Exception e) {
+                System.err.println("ERRO: " + e.getMessage());
+                enviarResposta(exchange, "{\"erro\":\"Erro interno do servidor\"}", 500);
             }
-
-            enviarResposta(exchange, r.body, r.status);
-
-        } catch (Exception e) {
-            System.err.println("ERRO: " + e.getMessage());
-            enviarResposta(exchange, "{\"erro\":\"Erro interno do servidor\"}", 500);
         }
     }
 

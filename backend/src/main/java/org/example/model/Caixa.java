@@ -62,6 +62,13 @@ public class Caixa {
             throw new RuntimeException(new Gson().toJson(Map.of("erros", erros)));
         }
 
+        Caixa caixaHoje = getDao().buscarPorData(conn, LocalDate.now());
+        if(caixaHoje != null){
+            Map<String, String> erros = new LinkedHashMap<>();
+            erros.put("dataCaixa", "Já existe um caixa registrado para hoje.");
+            throw new RuntimeException(new Gson().toJson(Map.of("erros", erros)));
+        }
+
         Caixa ultimo = getDao().buscarUltimoCaixa(conn);
         if(ultimo == null || ultimo.getValorFechamento() == null)
             c.setValorAbertura(BigDecimal.ZERO);

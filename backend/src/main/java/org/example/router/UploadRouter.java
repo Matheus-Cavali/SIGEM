@@ -24,25 +24,23 @@ public class UploadRouter implements HttpHandler {
 
         if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
             exchange.sendResponseHeaders(405, -1);
-            return;
-        }
+        } else {
+            String relative = exchange.getRequestURI().getPath().replaceFirst("^/uploads/?", "");
+            Path baseDir = Path.of("uploads").toAbsolutePath().normalize();
+            Path file = baseDir.resolve(relative).normalize();
 
-        String relative = exchange.getRequestURI().getPath().replaceFirst("^/uploads/?", "");
-        Path baseDir = Path.of("uploads").toAbsolutePath().normalize();
-        Path file = baseDir.resolve(relative).normalize();
+            if (!file.startsWith(baseDir) || !Files.exists(file) || Files.isDirectory(file)) {
+                exchange.sendResponseHeaders(404, -1);
+            } else {
+                String contentType = Files.probeContentType(file);
+                exchange.getResponseHeaders().set("Content-Type", contentType != null ? contentType : "application/octet-stream");
+                byte[] bytes = Files.readAllBytes(file);
+                exchange.sendResponseHeaders(200, bytes.length);
 
-        if (!file.startsWith(baseDir) || !Files.exists(file) || Files.isDirectory(file)) {
-            exchange.sendResponseHeaders(404, -1);
-            return;
-        }
-
-        String contentType = Files.probeContentType(file);
-        exchange.getResponseHeaders().set("Content-Type", contentType != null ? contentType : "application/octet-stream");
-        byte[] bytes = Files.readAllBytes(file);
-        exchange.sendResponseHeaders(200, bytes.length);
-
-        try (OutputStream os = exchange.getResponseBody()) {
-            os.write(bytes);
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(bytes);
+                }
+            }
         }
     }
 }

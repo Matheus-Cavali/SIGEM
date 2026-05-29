@@ -28,73 +28,72 @@ public class DespesaRouter implements HttpHandler {
 
         if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
             exchange.sendResponseHeaders(204, -1);
-            return;
-        }
+        } else {
+            String path = exchange.getRequestURI().getPath();
+            String metodo = exchange.getRequestMethod();
+            String auth = exchange.getRequestHeaders().getFirst("Authorization");
 
-        String path = exchange.getRequestURI().getPath();
-        String metodo = exchange.getRequestMethod();
-        String auth = exchange.getRequestHeaders().getFirst("Authorization");
+            try {
 
-        try {
+                // ── Categorias de Despesa ─────────────────────────────────────────
 
-            // ── Categorias de Despesa ─────────────────────────────────────────
+                if ("POST".equalsIgnoreCase(metodo) && "/api/categorias-despesa".equals(path)) {
+                    Resposta r = controller.criarCategoriaDespesa(auth, lerBody(exchange));
+                    enviarResposta(exchange, r.body, r.status);
 
-            if ("POST".equalsIgnoreCase(metodo) && "/api/categorias-despesa".equals(path)) {
-                Resposta r = controller.criarCategoriaDespesa(auth, lerBody(exchange));
-                enviarResposta(exchange, r.body, r.status);
+                } else if ("GET".equalsIgnoreCase(metodo) && "/api/categorias-despesa".equals(path)) {
+                    Resposta r = controller.listarCategoriasDespesa(auth, exchange.getRequestURI().getQuery());
+                    enviarResposta(exchange, r.body, r.status);
 
-            } else if ("GET".equalsIgnoreCase(metodo) && "/api/categorias-despesa".equals(path)) {
-                Resposta r = controller.listarCategoriasDespesa(auth, exchange.getRequestURI().getQuery());
-                enviarResposta(exchange, r.body, r.status);
+                } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/categorias-despesa/\\d+")) {
+                    Resposta r = controller.atualizarCategoriaDespesa(auth, extrairUltimoId(path), lerBody(exchange));
+                    enviarResposta(exchange, r.body, r.status);
 
-            } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/categorias-despesa/\\d+")) {
-                Resposta r = controller.atualizarCategoriaDespesa(auth, extrairUltimoId(path), lerBody(exchange));
-                enviarResposta(exchange, r.body, r.status);
+                } else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/categorias-despesa/\\d+")) {
+                    Resposta r = controller.deletarCategoriaDespesa(auth, extrairUltimoId(path));
+                    enviarResposta(exchange, r.body, r.status);
 
-            } else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/categorias-despesa/\\d+")) {
-                Resposta r = controller.deletarCategoriaDespesa(auth, extrairUltimoId(path));
-                enviarResposta(exchange, r.body, r.status);
+                // ── Saldo (deve vir antes de /api/despesas/\d+ para não ser capturado) ──
 
-            // ── Saldo (deve vir antes de /api/despesas/\d+ para não ser capturado) ──
+                } else if ("GET".equalsIgnoreCase(metodo) && "/api/despesas/saldo".equals(path)) {
+                    Resposta r = controller.consultarSaldo(auth);
+                    enviarResposta(exchange, r.body, r.status);
 
-            } else if ("GET".equalsIgnoreCase(metodo) && "/api/despesas/saldo".equals(path)) {
-                Resposta r = controller.consultarSaldo(auth);
-                enviarResposta(exchange, r.body, r.status);
+                // ── Despesas ──────────────────────────────────────────────────────
 
-            // ── Despesas ──────────────────────────────────────────────────────
+                } else if ("POST".equalsIgnoreCase(metodo) && "/api/despesas".equals(path)) {
+                    Resposta r = controller.lancarDespesa(auth, lerBody(exchange));
+                    enviarResposta(exchange, r.body, r.status);
 
-            } else if ("POST".equalsIgnoreCase(metodo) && "/api/despesas".equals(path)) {
-                Resposta r = controller.lancarDespesa(auth, lerBody(exchange));
-                enviarResposta(exchange, r.body, r.status);
+                } else if ("GET".equalsIgnoreCase(metodo) && "/api/despesas".equals(path)) {
+                    Resposta r = controller.listarDespesas(auth, exchange.getRequestURI().getQuery());
+                    enviarResposta(exchange, r.body, r.status);
 
-            } else if ("GET".equalsIgnoreCase(metodo) && "/api/despesas".equals(path)) {
-                Resposta r = controller.listarDespesas(auth, exchange.getRequestURI().getQuery());
-                enviarResposta(exchange, r.body, r.status);
+                } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/despesas/\\d+")) {
+                    Resposta r = controller.buscarDespesa(auth, extrairUltimoId(path));
+                    enviarResposta(exchange, r.body, r.status);
 
-            } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/despesas/\\d+")) {
-                Resposta r = controller.buscarDespesa(auth, extrairUltimoId(path));
-                enviarResposta(exchange, r.body, r.status);
+                } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/despesas/\\d+")) {
+                    Resposta r = controller.atualizarDespesa(auth, extrairUltimoId(path), lerBody(exchange));
+                    enviarResposta(exchange, r.body, r.status);
 
-            } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/despesas/\\d+")) {
-                Resposta r = controller.atualizarDespesa(auth, extrairUltimoId(path), lerBody(exchange));
-                enviarResposta(exchange, r.body, r.status);
+                } else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/despesas/\\d+")) {
+                    Resposta r = controller.deletarDespesa(auth, extrairUltimoId(path));
+                    enviarResposta(exchange, r.body, r.status);
 
-            } else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/despesas/\\d+")) {
-                Resposta r = controller.deletarDespesa(auth, extrairUltimoId(path));
-                enviarResposta(exchange, r.body, r.status);
+                } else if ("POST".equalsIgnoreCase(metodo) && path.matches("/api/despesas/\\d+/quitar")) {
+                    Resposta r = controller.quitarDespesa(auth, extrairUltimoId(path), lerBody(exchange));
+                    enviarResposta(exchange, r.body, r.status);
 
-            } else if ("POST".equalsIgnoreCase(metodo) && path.matches("/api/despesas/\\d+/quitar")) {
-                Resposta r = controller.quitarDespesa(auth, extrairUltimoId(path), lerBody(exchange));
-                enviarResposta(exchange, r.body, r.status);
+                } else {
+                    enviarResposta(exchange, "{\"erro\":\"Rota não encontrada\"}", 404);
+                }
 
-            } else {
-                enviarResposta(exchange, "{\"erro\":\"Rota não encontrada\"}", 404);
+            } catch (Exception e) {
+                System.err.println("ERRO DespesaRouter: " + e.getMessage());
+                e.printStackTrace();
+                enviarResposta(exchange, "{\"erro\":\"Erro interno\"}", 500);
             }
-
-        } catch (Exception e) {
-            System.err.println("ERRO DespesaRouter: " + e.getMessage());
-            e.printStackTrace();
-            enviarResposta(exchange, "{\"erro\":\"Erro interno\"}", 500);
         }
     }
 
