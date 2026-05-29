@@ -122,7 +122,7 @@ public class CategoriaMaterialControl {
             return new Resposta(200, "{\"mensagem\":\"Categoria de material excluída com sucesso\"}");
         }
         catch (Exception e){
-            return new Resposta(400, "{\"erro\":\"Erro ao excluir categoria de material\"}");
+            return new Resposta(400, "{\"erro\":\"" + e.getMessage() + "\"}");
         }
     }
 }

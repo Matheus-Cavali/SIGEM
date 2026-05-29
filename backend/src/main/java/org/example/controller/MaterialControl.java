@@ -128,7 +128,7 @@ public class MaterialControl {
             return new Resposta(200, "{\"mensagem\":\"Material excluído com sucesso\"}");
         }
         catch (Exception e){
-            return new Resposta(400, "{\"erro\":\"Erro ao excluir material\"}");
+            return new Resposta(400, "{\"erro\":\"" + e.getMessage() + "\"}");
         }
     }
 }

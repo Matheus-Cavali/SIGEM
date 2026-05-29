@@ -46,6 +46,9 @@ const paths = {
       <path d="M21 12H9" />
     </>
   ),
+  minus: (
+    <path d="M5 12h14" />
+  ),
   plus: (
     <>
       <path d="M12 5v14" />

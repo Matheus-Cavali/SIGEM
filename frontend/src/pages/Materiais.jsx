@@ -4,6 +4,8 @@ import { useAuth } from '../state/AuthContext'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
 import '../components/form/BaseField/BaseField.scss'
+import Modal from '../components/Modal'
+import '../components/Modal/Modal.scss'
 
 const initialForm = { nome: '', descricao: '', quantidadeEstoque: '', categoriaMaterialId: '' }
 
@@ -18,6 +20,7 @@ export default function Materiais() {
   const [fieldErrors, setFieldErrors] = useState({})
   const [filtroNome, setFiltroNome] = useState('')
   const [filtroCategoria, setFiltroCategoria] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(null)
   const { can } = useAuth()
   const canManage = can('GESTAO_DOACOES')
 
@@ -138,17 +141,20 @@ export default function Materiais() {
     }
   }
 
-  const remove = async (item) => {
-    const confirmed = window.confirm('Excluir "' + item.nome + '"?')
+  const remove = (item) => {
+    setConfirmDelete(item)
+  }
 
-    if (confirmed) {
-      try {
-        await del('/api/materiais/' + item.id)
-        setItems(prev => prev.filter(current => current.id !== item.id))
-        setSuccess('Material excluído com sucesso.')
-      } catch (error) {
-        alert(error.message)
-      }
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return
+    try {
+      await del('/api/materiais/' + confirmDelete.id)
+      setItems(prev => prev.filter(current => current.id !== confirmDelete.id))
+      setSuccess('Material excluído com sucesso.')
+    } catch (error) {
+      alert(error.message)
+    } finally {
+      setConfirmDelete(null)
     }
   }
 
@@ -221,15 +227,31 @@ export default function Materiais() {
         </section>
       )}
 
+      <Modal
+        open={!!confirmDelete}
+        title="Confirmar exclusão"
+        variant="error"
+        hideCloseButton
+        onClose={() => setConfirmDelete(null)}
+        footer={
+          <>
+            <button className="ghost-action" onClick={() => setConfirmDelete(null)}>Cancelar</button>
+            <button className="danger-action" onClick={handleConfirmDelete}>Excluir</button>
+          </>
+        }
+      >
+        <p>Excluir material "{confirmDelete?.nome}"?</p>
+      </Modal>
+
       <div className="cards-list">
         {items.map((item, index) => (
           <article className="finance-card" key={item.id}>
             <div>
               <h3>{item.nome}</h3>
               <div className="meta-row">
-                {item.descricao && <span><Icon name="box" size={14} /> {item.descricao}</span>}
-                <span>Estoque: {item.quantidadeEstoque}</span>
-                {item.categoriaMaterialId && <span>Cat: {categorias.find(c => c.id === item.categoriaMaterialId)?.nome || item.categoriaMaterialId}</span>}
+                {item.descricao && <span><Icon name="box" size={14} /> <strong>Descrição:</strong> {item.descricao}</span>}
+                <span><strong>Estoque:</strong> {item.quantidadeEstoque}</span>
+                {item.categoriaMaterialId && <span><strong>Categoria:</strong> {categorias.find(c => c.id === item.categoriaMaterialId)?.nome || item.categoriaMaterialId}</span>}
               </div>
             </div>
             <div className="card-actions">

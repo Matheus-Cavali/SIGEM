@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react'
-import { get, post } from '../api/http'
+import { del, get, post, put } from '../api/http'
 import { useAuth } from '../state/AuthContext'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
-import { formatarData } from '../utils/format'
+import DateField from '../components/form/DateField'
+import TextField from '../components/form/TextField'
+import BaseField from '../components/form/BaseField'
+import Modal from '../components/Modal'
+import { dmyToISO } from '../utils/date'
 import '../components/form/BaseField/BaseField.scss'
+import '../components/Modal/Modal.scss'
 
 const initialForm = { materialId: '', quantidade: '' }
 
@@ -21,6 +26,15 @@ export default function DoacoesMateriais() {
   const [filtroCategoria, setFiltroCategoria] = useState('')
   const [filtroDataInicio, setFiltroDataInicio] = useState('')
   const [filtroDataFim, setFiltroDataFim] = useState('')
+  const [erroData, setErroData] = useState('')
+  const [showNovoMaterial, setShowNovoMaterial] = useState(false)
+  const [novoMaterialForm, setNovoMaterialForm] = useState({ nome: '', descricao: '', quantidadeEstoque: '0', categoriaMaterialId: '' })
+  const [novoMaterialErro, setNovoMaterialErro] = useState('')
+  const [novoMaterialFieldErrors, setNovoMaterialFieldErrors] = useState({})
+  const [salvandoMaterial, setSalvandoMaterial] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null)
+  const [errorModal, setErrorModal] = useState({ open: false, message: '' })
   const { user, can } = useAuth()
   const canManage = can('GESTAO_DOACOES')
 
@@ -63,14 +77,40 @@ export default function DoacoesMateriais() {
   }
 
   useEffect(() => {
+    let dateError = ''
+    if (filtroDataInicio && filtroDataFim) {
+      const isoInicio = dmyToISO(filtroDataInicio)
+      const isoFim = dmyToISO(filtroDataFim)
+      if (isoFim < isoInicio) {
+        dateError = 'Data fim não pode ser menor que data início'
+      }
+    }
+    setErroData(dateError)
+
     const timer = setTimeout(() => {
-      load(filtroMaterial, filtroCategoria || null, filtroDataInicio, filtroDataFim)
+      if (!dateError) {
+        load(filtroMaterial, filtroCategoria || null, filtroDataInicio, filtroDataFim)
+      }
     }, 300)
     return () => clearTimeout(timer)
   }, [filtroMaterial, filtroCategoria, filtroDataInicio, filtroDataFim])
 
   const openNew = () => {
-    setForm(initialForm)
+    setForm({ ...initialForm })
+    setEditing(null)
+    setErro('')
+    setFieldErrors({})
+    setSuccess('')
+    setFormOpen(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const openEdit = (item) => {
+    setForm({
+      materialId: String(item.materialId),
+      quantidade: String(item.quantidade),
+    })
+    setEditing(item.id)
     setErro('')
     setFieldErrors({})
     setSuccess('')
@@ -110,13 +150,22 @@ export default function DoacoesMateriais() {
       try {
         const payload = {
           materialId: parseInt(form.materialId, 10),
-          quantidade: parseInt(form.quantidade, 10)
+          quantidade: parseInt(form.quantidade, 10),
         }
 
-        await post('/api/doacoes-materiais', payload)
-        setSuccess('Doação cadastrada com sucesso.')
+        if (editing) {
+          await put('/api/doacoes-materiais/' + editing, payload)
+          setSuccess('Doação alterada com sucesso.')
+          setFormOpen(false)
+        } else {
+          await post('/api/doacoes-materiais', payload)
+          setSuccess('Doação cadastrada com sucesso.')
+        }
+
+        setEditing(null)
         setForm(initialForm)
         load(filtroMaterial, filtroCategoria || null, filtroDataInicio, filtroDataFim)
+        loadMateriais()
       } catch (error) {
         if (error.fieldErrors) {
           setFieldErrors(error.fieldErrors)
@@ -124,6 +173,79 @@ export default function DoacoesMateriais() {
           setErro(error.message)
         }
       }
+    }
+  }
+
+  const handleNovoMaterialChange = (field, value) => {
+    setNovoMaterialForm(prev => ({ ...prev, [field]: value }))
+    setNovoMaterialFieldErrors(prev => ({ ...prev, [field]: '' }))
+  }
+
+  const salvarNovoMaterial = async () => {
+    setNovoMaterialErro('')
+    setNovoMaterialFieldErrors({})
+
+    const erros = {}
+    if (!novoMaterialForm.nome.trim()) erros.nome = 'Nome é obrigatório'
+    if (!novoMaterialForm.descricao.trim()) erros.descricao = 'Descrição é obrigatória'
+    if (novoMaterialForm.quantidadeEstoque === '') {
+      erros.quantidadeEstoque = 'Quantidade em estoque é obrigatória'
+    } else {
+      const qtd = parseInt(novoMaterialForm.quantidadeEstoque, 10)
+      if (qtd < 0) erros.quantidadeEstoque = 'Quantidade não pode ser negativa'
+    }
+    if (!novoMaterialForm.categoriaMaterialId) erros.categoriaMaterialId = 'Categoria é obrigatória'
+
+    if (Object.keys(erros).length > 0) {
+      setNovoMaterialFieldErrors(erros)
+      return
+    }
+
+    setSalvandoMaterial(true)
+    try {
+      const payload = {
+        nome: novoMaterialForm.nome,
+        descricao: novoMaterialForm.descricao,
+        quantidadeEstoque: parseInt(novoMaterialForm.quantidadeEstoque, 10) || 0,
+        categoriaMaterialId: parseInt(novoMaterialForm.categoriaMaterialId, 10),
+      }
+      const data = await post('/api/materiais', payload)
+      await loadMateriais()
+
+      const novoId = data?.id
+      if (novoId) {
+        setForm(prev => ({ ...prev, materialId: String(novoId) }))
+        setFieldErrors(prev => ({ ...prev, materialId: '' }))
+      }
+
+      setSuccess('Material cadastrado com sucesso.')
+      setShowNovoMaterial(false)
+    } catch (error) {
+      if (error.fieldErrors) {
+        setNovoMaterialFieldErrors(error.fieldErrors)
+      } else {
+        setNovoMaterialErro(error.message)
+      }
+    } finally {
+      setSalvandoMaterial(false)
+    }
+  }
+
+  const remove = (item) => {
+    setConfirmDelete(item)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return
+    try {
+      await del('/api/doacoes-materiais/' + confirmDelete.id)
+      setItems(prev => prev.filter(current => current.id !== confirmDelete.id))
+      setSuccess('Doação de material excluída com sucesso.')
+      loadMateriais()
+    } catch (error) {
+      setErrorModal({ open: true, message: error.message })
+    } finally {
+      setConfirmDelete(null)
     }
   }
 
@@ -152,47 +274,130 @@ export default function DoacoesMateriais() {
           <option value="">Todas as categorias</option>
           {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
         </select>
-        <input
-          type="text"
-          placeholder="Data início (dd/mm/aaaa)"
+        <DateField
+          placeholder="Data início"
           value={filtroDataInicio}
-          onChange={e => setFiltroDataInicio(formatarData(e.target.value))}
+          setValue={setFiltroDataInicio}
         />
-        <input
-          type="text"
-          placeholder="Data fim (dd/mm/aaaa)"
+        <DateField
+          placeholder="Data fim"
           value={filtroDataFim}
-          onChange={e => setFiltroDataFim(formatarData(e.target.value))}
+          setValue={setFiltroDataFim}
+          error={erroData}
+          minDate={filtroDataInicio ? dmyToISO(filtroDataInicio) : undefined}
         />
       </section>
 
       {success && <div className="message success">{success}</div>}
 
+      <Modal
+        open={!!confirmDelete}
+        title="Confirmar exclusão"
+        variant="error"
+        hideCloseButton
+        onClose={() => setConfirmDelete(null)}
+        footer={
+          <>
+            <button className="ghost-action" onClick={() => setConfirmDelete(null)}>Cancelar</button>
+            <button className="danger-action" onClick={handleConfirmDelete}>Excluir</button>
+          </>
+        }
+      >
+        <p>Excluir doação de "{confirmDelete?.materialNome}"?</p>
+      </Modal>
+
+      <Modal
+        open={errorModal.open}
+        title="Erro"
+        variant="error"
+        onClose={() => setErrorModal({ open: false, message: '' })}
+        footer={
+          <button className="primary-action" onClick={() => setErrorModal({ open: false, message: '' })}>Fechar</button>
+        }
+      >
+        <p>{errorModal.message}</p>
+      </Modal>
+
       {formOpen && (
         <section className="editor-card">
           <div className="editor-title">
-            <h2>Nova Doação de Material</h2>
+            <h2>{editing ? 'Editar Doação de Material' : 'Nova Doação de Material'}</h2>
             <button className="ghost-icon" onClick={() => setFormOpen(false)}><Icon name="close" size={16} /></button>
           </div>
           {erro && <div className="message inline">{erro}</div>}
           <form className="inline-form" onSubmit={save} noValidate>
             <div className="field-container">
               <label className="field-label"><span>Material <span className="required-star">*</span></span></label>
-              <select className={'field-control' + (fieldErrors.materialId ? ' is-invalid' : '')}
-                      value={form.materialId} onChange={e => handleFieldChange('materialId', e.target.value)}>
-                <option value="">Selecione...</option>
-                {materiais.map(m => <option key={m.id} value={m.id}>{m.nome} (Estoque: {m.quantidadeEstoque})</option>)}
-              </select>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                <select className={'field-control' + (fieldErrors.materialId ? ' is-invalid' : '')}
+                        value={form.materialId} onChange={e => handleFieldChange('materialId', e.target.value)} style={{ flex: 1 }}>
+                  <option value="">Selecione...</option>
+                  {materiais.map(m => <option key={m.id} value={m.id}>{m.nome} (Estoque: {m.quantidadeEstoque})</option>)}
+                </select>
+                {canManage && (
+                  <button type="button" className="icon-button" onClick={() => setShowNovoMaterial(o => !o)} title={showNovoMaterial ? 'Fechar' : 'Cadastrar novo material'}>
+                    <Icon name={showNovoMaterial ? 'minus' : 'plus'} size={18} />
+                  </button>
+                )}
+              </div>
               {fieldErrors.materialId && <span className="field-error">{fieldErrors.materialId}</span>}
             </div>
+
             <div className="field-container">
               <label className="field-label"><span>Quantidade <span className="required-star">*</span></span></label>
               <input className={'field-control' + (fieldErrors.quantidade ? ' is-invalid' : '')}
                      value={form.quantidade} onChange={e => handleFieldChange('quantidade', e.target.value)} placeholder="0" type="number" min="1" />
               {fieldErrors.quantidade && <span className="field-error">{fieldErrors.quantidade}</span>}
             </div>
+
+            {showNovoMaterial && (
+              <div style={{
+                gridColumn: '1 / -1',
+                maxWidth: '600px',
+                background: 'var(--color-surface, #fff)',
+                border: '1px solid var(--color-border, #e5e7eb)',
+                borderRadius: '8px',
+                padding: '1rem',
+                marginTop: '0.5rem',
+              }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  marginBottom: '0.75rem',
+                }}>
+                  <strong style={{ fontSize: '0.875rem' }}>Novo Material</strong>
+                </div>
+                {novoMaterialErro && <div className="message inline">{novoMaterialErro}</div>}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <TextField label="Nome" required value={novoMaterialForm.nome}
+                    setValue={v => handleNovoMaterialChange('nome', v)}
+                    placeholder="Nome do material" error={novoMaterialFieldErrors.nome} />
+                  <TextField label="Descrição" required value={novoMaterialForm.descricao}
+                    setValue={v => handleNovoMaterialChange('descricao', v)}
+                    placeholder="Descrição do material" error={novoMaterialFieldErrors.descricao} />
+                  <BaseField label="Quantidade em Estoque" error={novoMaterialFieldErrors.quantidadeEstoque}>
+                    <input className="field-control" type="number" min="0"
+                      value={novoMaterialForm.quantidadeEstoque}
+                      onChange={e => handleNovoMaterialChange('quantidadeEstoque', e.target.value)} />
+                  </BaseField>
+                  <BaseField label="Categoria" required error={novoMaterialFieldErrors.categoriaMaterialId}>
+                    <select className="field-control"
+                      value={novoMaterialForm.categoriaMaterialId}
+                      onChange={e => handleNovoMaterialChange('categoriaMaterialId', e.target.value)}>
+                      <option value="">Selecione...</option>
+                      {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                    </select>
+                  </BaseField>
+                  <div className="form-submit">
+                    <button type="button" className="primary-action" disabled={salvandoMaterial}
+                      onClick={salvarNovoMaterial}>
+                      {salvandoMaterial ? 'Salvando...' : 'Salvar Material'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="form-submit">
-              <button className="primary-action">Salvar Doação</button>
+              <button className="primary-action">{editing ? 'Salvar Alterações' : 'Salvar Doação'}</button>
             </div>
           </form>
         </section>
@@ -204,11 +409,15 @@ export default function DoacoesMateriais() {
             <div>
               <h3>{item.materialNome}</h3>
               <div className="meta-row">
-                <span><Icon name="box" size={14} /> Qtd: {item.quantidade}</span>
-                <span>Cat: {nomeCategoria(item.materialId)}</span>
-                <span>Data do registro: {item.dataFormatada}</span>
-                <span>Registrado por: {item.colaboradorNome}</span>
+                <span><Icon name="box" size={14} /> <strong>Qtd:</strong> {item.quantidade}</span>
+                <span><strong>Categoria:</strong> {nomeCategoria(item.materialId)}</span>
+                <span><strong>Data do registro:</strong> {item.dataFormatada}</span>
+                <span><strong>Registrado por:</strong> {item.colaboradorNome}</span>
               </div>
+            </div>
+            <div className="card-actions">
+              {canManage && <button className="icon-button" onClick={() => openEdit(item)} title="Editar"><Icon name="edit" size={16} /></button>}
+              {canManage && <button className="icon-button icon-button--danger" onClick={() => remove(item)} title="Excluir"><Icon name="trash" size={16} /></button>}
             </div>
           </article>
         ))}

@@ -9,7 +9,7 @@ import '../components/Modal/Modal.scss'
 
 const initialForm = { nome: '' }
 
-export default function CategoriasMateriais() {
+export default function CategoriasFinanceiras() {
   const [items, setItems] = useState([])
   const [form, setForm] = useState(initialForm)
   const [formOpen, setFormOpen] = useState(false)
@@ -24,7 +24,7 @@ export default function CategoriasMateriais() {
 
   const load = async (nome) => {
     try {
-      let path = '/api/categorias-materiais'
+      let path = '/api/categorias-financeiras'
       const params = []
       if (nome) params.push('nome=' + encodeURIComponent(nome))
       if (params.length) path += '?' + params.join('&')
@@ -91,11 +91,11 @@ export default function CategoriasMateriais() {
         const payload = { nome: form.nome }
 
         if (editing) {
-          await put('/api/categorias-materiais/' + editing, payload)
+          await put('/api/categorias-financeiras/' + editing, payload)
           setSuccess('Categoria alterada com sucesso.')
           setFormOpen(false)
         } else {
-          await post('/api/categorias-materiais', payload)
+          await post('/api/categorias-financeiras', payload)
           setSuccess('Categoria cadastrada com sucesso.')
         }
 
@@ -119,7 +119,7 @@ export default function CategoriasMateriais() {
   const handleConfirmDelete = async () => {
     if (!confirmDelete) return
     try {
-      await del('/api/categorias-materiais/' + confirmDelete.id)
+      await del('/api/categorias-financeiras/' + confirmDelete.id)
       setItems(prev => prev.filter(current => current.id !== confirmDelete.id))
       setSuccess('Categoria excluída com sucesso.')
     } catch (error) {
@@ -137,7 +137,7 @@ export default function CategoriasMateriais() {
 
   return (
     <>
-      <PageHeader title="Categorias de Materiais" subtitle="Gerencie as categorias dos materiais da igreja" actionLabel={canManage ? 'Adicionar Categoria' : ''} onAction={canManage ? openNew : null} />
+      <PageHeader title="Categorias Financeiras" subtitle="Gerencie as categorias das doações financeiras da igreja" actionLabel={canManage ? 'Adicionar Categoria' : ''} onAction={canManage ? openNew : null} />
 
       <section className="filter-bar">
         <input

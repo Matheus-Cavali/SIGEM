@@ -6,6 +6,7 @@ import org.example.dao.MaterialDao;
 
 import java.sql.Connection;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class DoacaoMaterial extends Doacao {
@@ -27,16 +28,22 @@ public class DoacaoMaterial extends Doacao {
         super();
     }
 
-    public DoacaoMaterial(Integer id, LocalDate data, Integer colaboradorId, Integer materialId, int quantidade) {
+    public DoacaoMaterial(Integer id, LocalDate data, Integer colaboradorId, String colaboradorNome, Integer materialId, String materialNome, int quantidade) {
         super(id, data, colaboradorId);
         this.materialId = materialId;
         this.quantidade = quantidade;
+        this.colaboradorNome = colaboradorNome;
+        this.materialNome = materialNome;
+        this.dataFormatada = data.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
     }
 
-    public DoacaoMaterial(LocalDate data, Integer colaboradorId, Integer materialId, int quantidade) {
+    public DoacaoMaterial(LocalDate data, Integer colaboradorId, Integer materialId, int quantidade, String colaboradorNome, String materialNome) {
         super(data, colaboradorId);
         this.materialId = materialId;
         this.quantidade = quantidade;
+        this.colaboradorNome = colaboradorNome;
+        this.materialNome = materialNome;
+        this.dataFormatada = data.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
     }
 
     public static Map<String, String> validarDoacaoMaterial(DoacaoMaterial dm){
@@ -55,28 +62,72 @@ public class DoacaoMaterial extends Doacao {
         if(!erros.isEmpty())
             throw new RuntimeException(new Gson().toJson(Map.of("erros", erros)));
 
-        try {
-            conn.setAutoCommit(false);
+        int id = getDao().inserirDoacao(conn, dm);
+        dm.setId(id);
 
-            int id = getDao().inserirDoacao(conn, dm);
-            dm.setId(id);
+        getDao().inserirDoacaoMaterial(conn, dm);
 
-            getDao().inserirDoacaoMaterial(conn, dm);
+        new MaterialDao().atualizarQuantidade(conn, dm.getMaterialId(), dm.getQuantidade());
+    }
 
-            new MaterialDao().atualizarQuantidade(conn, dm.getMaterialId(), dm.getQuantidade());
+    public void alterar(Connection conn, DoacaoMaterial novosDados){
+        Map<String, String> erros = validarDoacaoMaterial(novosDados);
+        if(!erros.isEmpty())
+            throw new RuntimeException(new Gson().toJson(Map.of("erros", erros)));
 
-            conn.commit();
+        DoacaoMaterial original = getDao().buscarPorDoacaoId(conn, novosDados.getId());
+        if(original == null)
+            throw new RuntimeException("Doação de material não encontrada");
+
+        novosDados.setColaboradorId(original.getColaboradorId());
+        if(novosDados.getData() == null)
+            novosDados.setData(original.getData());
+
+        MaterialDao materialDao = new MaterialDao();
+
+        if(original.getMaterialId().equals(novosDados.getMaterialId())){
+            int diff = novosDados.getQuantidade() - original.getQuantidade();
+            if(diff < 0){
+                Material material = materialDao.buscarPorId(conn, original.getMaterialId());
+                if(material == null)
+                    throw new RuntimeException("Material não encontrado");
+                int novoEstoque = material.getQuantidadeEstoque() + diff;
+                if(novoEstoque < 0)
+                    throw new RuntimeException("Quantidade de materiais em estoque insuficientes para realizar a alteração");
+            }
+            if(diff != 0)
+                materialDao.atualizarQuantidade(conn, original.getMaterialId(), diff);
+        } else {
+            Material oldMaterial = materialDao.buscarPorId(conn, original.getMaterialId());
+            if(oldMaterial == null)
+                throw new RuntimeException("Material original não encontrado");
+            int novoEstoqueAntigo = oldMaterial.getQuantidadeEstoque() - original.getQuantidade();
+            if(novoEstoqueAntigo < 0)
+                throw new RuntimeException("Quantidade de materiais em estoque insuficientes para realizar a alteração");
+            materialDao.atualizarQuantidade(conn, original.getMaterialId(), -original.getQuantidade());
+            materialDao.atualizarQuantidade(conn, novosDados.getMaterialId(), novosDados.getQuantidade());
         }
-        catch (Exception e){
-            try { conn.rollback(); } catch (Exception ignored) {}
-            String msg = e.getMessage();
-            if(msg != null && (msg.contains("\"erros\"") || msg.contains("DatabaseException")))
-                throw new RuntimeException(msg);
-            throw new RuntimeException("Falha ao cadastrar doacao de material: " + e.getMessage());
-        }
-        finally {
-            try { conn.setAutoCommit(true); } catch (Exception ignored) {}
-        }
+
+        getDao().atualizar(conn, novosDados);
+    }
+
+    public void excluir(Connection conn, int doacaoId){
+        DoacaoMaterial dm = getDao().buscarPorDoacaoId(conn, doacaoId);
+        if(dm == null)
+            throw new RuntimeException("Doação de material não encontrada");
+
+        Material material = new MaterialDao().buscarPorId(conn, dm.getMaterialId());
+        if(material == null)
+            throw new RuntimeException("Material não encontrado");
+
+        int novoEstoque = material.getQuantidadeEstoque() - dm.getQuantidade();
+        if(novoEstoque < 0)
+            throw new RuntimeException("Quantidade de materiais em estoque insuficientes para realizar a exclusão");
+
+        getDao().excluirDoacaoMaterial(conn, doacaoId);
+        getDao().excluirDoacao(conn, doacaoId);
+
+        new MaterialDao().atualizarQuantidade(conn, dm.getMaterialId(), -dm.getQuantidade());
     }
 
     public List<DoacaoMaterial> filtrar(Connection conn, String materialNome, Integer categoriaId, LocalDate dataInicio, LocalDate dataFim){

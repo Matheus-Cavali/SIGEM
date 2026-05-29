@@ -47,7 +47,7 @@ export async function request(path, options = {}) {
     const error = new Error(data?.erro || data?.mensagem || 'Erro na requisicao')
     if (data?.erros) {
       error.fieldErrors = data.erros
-      error.message = JSON.stringify(data.erros)
+      error.message = Object.values(data.erros).join('. ')
     }
     throw error
   }

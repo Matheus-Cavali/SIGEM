@@ -40,10 +40,7 @@ public class EventoRouter implements HttpHandler {
         if ("OPTIONS".equalsIgnoreCase(metodo)) {
 
             exchange.sendResponseHeaders(204, -1);
-            return;
-        }
-
-        try {
+        } else try {
 
             Resposta r;
 

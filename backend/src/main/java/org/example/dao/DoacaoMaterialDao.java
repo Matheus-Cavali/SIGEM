@@ -5,7 +5,6 @@ import org.example.model.DoacaoMaterial;
 
 import java.sql.*;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -104,16 +103,93 @@ public class DoacaoMaterialDao {
         return lista;
     }
 
+    public DoacaoMaterial buscarPorDoacaoId(Connection conn, int doacaoId){
+        String sql = "SELECT d.id, d.data_doacao, d.colaborador_id, dm.material_id, dm.quantidade " +
+                     "FROM doacao d " +
+                     "JOIN doacao_material dm ON d.id = dm.doacao_id " +
+                     "WHERE d.id = ?";
+
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
+            stmt.setInt(1, doacaoId);
+
+            try(ResultSet rs = stmt.executeQuery()){
+                if(rs.next()){
+                    DoacaoMaterial dm = new DoacaoMaterial();
+                    dm.setId(rs.getInt("id"));
+                    dm.setData(rs.getObject("data_doacao", LocalDate.class));
+                    dm.setColaboradorId(rs.getInt("colaborador_id"));
+                    dm.setMaterialId(rs.getInt("material_id"));
+                    dm.setQuantidade(rs.getInt("quantidade"));
+                    return dm;
+                }
+            }
+        }
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao buscar doacao de material", e);
+        }
+
+        return null;
+    }
+
+    public boolean atualizar(Connection conn, DoacaoMaterial dm){
+        String sqlDoacao = "UPDATE doacao SET data_doacao = ?, colaborador_id = ? WHERE id = ?";
+        String sqlDoacaoMaterial = "UPDATE doacao_material SET material_id = ?, quantidade = ? WHERE doacao_id = ?";
+
+        try{
+            try(PreparedStatement stmt = conn.prepareStatement(sqlDoacao)){
+                stmt.setObject(1, dm.getData());
+                stmt.setInt(2, dm.getColaboradorId());
+                stmt.setInt(3, dm.getId());
+                stmt.executeUpdate();
+            }
+
+            try(PreparedStatement stmt = conn.prepareStatement(sqlDoacaoMaterial)){
+                stmt.setInt(1, dm.getMaterialId());
+                stmt.setInt(2, dm.getQuantidade());
+                stmt.setInt(3, dm.getId());
+                stmt.executeUpdate();
+            }
+
+            return true;
+        }
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao atualizar doacao de material", e);
+        }
+    }
+
+    public void excluirDoacaoMaterial(Connection conn, int doacaoId){
+        String sql = "DELETE FROM doacao_material WHERE doacao_id = ?";
+
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
+            stmt.setInt(1, doacaoId);
+            stmt.executeUpdate();
+        }
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao excluir doacao de material", e);
+        }
+    }
+
+    public void excluirDoacao(Connection conn, int doacaoId){
+        String sql = "DELETE FROM doacao WHERE id = ?";
+
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
+            stmt.setInt(1, doacaoId);
+            stmt.executeUpdate();
+        }
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao excluir doacao", e);
+        }
+    }
+
     private DoacaoMaterial extrair(ResultSet rs) throws SQLException{
-        DoacaoMaterial dm = new DoacaoMaterial();
-        dm.setId(rs.getInt("id"));
-        dm.setData(rs.getObject("data_doacao", LocalDate.class));
-        dm.setDataFormatada(dm.getData().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
-        dm.setColaboradorId(rs.getInt("colaborador_id"));
-        dm.setColaboradorNome(rs.getString("colaborador_nome"));
-        dm.setMaterialId(rs.getInt("material_id"));
-        dm.setMaterialNome(rs.getString("material_nome"));
-        dm.setQuantidade(rs.getInt("quantidade"));
-        return dm;
+        return new DoacaoMaterial(
+            rs.getInt("id"),
+            rs.getObject("data_doacao", LocalDate.class),
+            rs.getInt("colaborador_id"),
+            rs.getString("colaborador_nome"),
+            rs.getInt("material_id"),
+            rs.getString("material_nome"),
+            rs.getInt("quantidade")
+        );
     }
 }

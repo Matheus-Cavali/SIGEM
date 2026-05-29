@@ -2,28 +2,28 @@ package org.example.router;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
-import org.example.controller.MaterialControl;
+import org.example.controller.CaixaControl;
 import org.example.model.Resposta;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
-public class MaterialRouter implements HttpHandler {
-    private static MaterialControl control;
+public class CaixaRouter implements HttpHandler {
+    private static CaixaControl control;
 
-    public static synchronized MaterialControl getControl() {
-        if (control == null)
-            control = new MaterialControl();
+    public static synchronized CaixaControl getControl(){
+        if(control == null)
+            control = new CaixaControl();
         return control;
     }
 
-    public MaterialRouter() {}
+    public CaixaRouter() {}
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
         exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
-        exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, PATCH, OPTIONS");
         exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
         String metodo = exchange.getRequestMethod();
@@ -35,21 +35,25 @@ public class MaterialRouter implements HttpHandler {
         } else try {
             Resposta r;
 
-            if("POST".equalsIgnoreCase(metodo) && "/api/materiais".equals(path)){
+            if("POST".equalsIgnoreCase(metodo) && "/api/caixas".equals(path)){
                 String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-                r = getControl().cadastrar(auth, json);
+                r = getControl().abrir(auth, json);
             }
-            else if("GET".equalsIgnoreCase(metodo) && "/api/materiais".equals(path)){
-                r = getControl().listar(exchange.getRequestURI().getQuery());
+            else if("GET".equalsIgnoreCase(metodo) && "/api/caixas/aberto".equals(path)){
+                r = getControl().buscarAberto();
             }
-            else if("PUT".equalsIgnoreCase(metodo) && path.matches("/api/materiais/\\d+")){
-                int id = Integer.parseInt(path.substring(path.lastIndexOf("/") + 1));
+            else if("GET".equalsIgnoreCase(metodo) && "/api/caixas".equals(path)){
+                r = getControl().listar();
+            }
+            else if("PUT".equalsIgnoreCase(metodo) && path.matches("/api/caixas/\\d+/fechar")){
+                int id = Integer.parseInt(path.split("/")[3]);
                 String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-                r = getControl().atualizar(auth, id, json);
+                r = getControl().fechar(auth, id, json);
             }
-            else if("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/materiais/\\d+")){
-                int id = Integer.parseInt(path.substring(path.lastIndexOf("/") + 1));
-                r = getControl().excluir(auth, id);
+            else if("PATCH".equalsIgnoreCase(metodo) && path.matches("/api/caixas/\\d+/movimentar")){
+                int id = Integer.parseInt(path.split("/")[3]);
+                String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+                r = getControl().movimentar(auth, id, json);
             }
             else{
                 r = new Resposta(404, "{\"erro\":\"Rota não encontrada\"}");
@@ -57,7 +61,7 @@ public class MaterialRouter implements HttpHandler {
 
             enviarResposta(exchange, r.body, r.status);
         }
-        catch (Exception e){
+        catch(Exception e){
             System.err.println("ERRO: " + e.getMessage());
             enviarResposta(exchange, "{\"erro\":\"Erro interno do servidor\"}", 500);
         }
@@ -72,7 +76,7 @@ public class MaterialRouter implements HttpHandler {
                 os.write(bytes);
             }
         }
-        catch (IOException e){
+        catch(IOException e){
             System.err.println("Erro crítico de I/O: " + e.getMessage());
         }
     }
