@@ -31,7 +31,8 @@ export default function Permissoes() {
   const loadRecursos = async () => {
     try {
       const data = await get('/api/recurso')
-      setRecursos(Array.isArray(data) ? data : [])
+      const obsoletas = ['GESTAO_COLABORADORES', 'GESTAO_VOLUNTARIOS']
+      setRecursos(Array.isArray(data) ? data.filter(r => !obsoletas.includes(r.nome)) : [])
     } catch (error) {
       if (!error.fieldErrors) setErro(error.message)
     }

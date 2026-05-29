@@ -1,16 +1,17 @@
 package org.example.model;
 
+import com.google.gson.Gson;
 import org.example.dao.InvestimentoFuturoDao;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class InvestimentoFuturo {
-    private int id;
+    private Integer id;
     private String nome;
     private BigDecimal valorMeta;
     private LocalDate dataAbertura;
@@ -39,32 +40,47 @@ public class InvestimentoFuturo {
         return erros;
     }
 
-    public static int salvar(Connection conn, InvestimentoFuturo inv) throws SQLException {
-        return getInvestimentoFuturoDao().inserir(conn, inv);
+    public void cadastrar(Connection conn, InvestimentoFuturo inv) {
+        Map<String, String> erros = inv.validar();
+        InvestimentoFuturo existente = getInvestimentoFuturoDao().buscarPorNome(conn, inv.getNome().trim());
+        if (existente != null) erros.put("nome", "Já existe um investimento com este nome");
+        if (!erros.isEmpty())
+            throw new RuntimeException(new Gson().toJson(Map.of("erros", erros)));
+        int id = getInvestimentoFuturoDao().inserir(conn, inv);
+        inv.setId(id);
     }
 
-    public static InvestimentoFuturo buscarPorId(Connection conn, int id) throws SQLException {
+    public void alterar(Connection conn, InvestimentoFuturo inv) {
+        Map<String, String> erros = inv.validar();
+        if (!erros.isEmpty())
+            throw new RuntimeException(new Gson().toJson(Map.of("erros", erros)));
+        getInvestimentoFuturoDao().atualizar(conn, inv);
+    }
+
+    public void excluir(Connection conn, Integer id) {
+        if (id == null || id <= 0) throw new IllegalArgumentException("ID inválido.");
+        getInvestimentoFuturoDao().deletar(conn, id);
+    }
+
+    public InvestimentoFuturo buscarPorId(Connection conn, Integer id) {
+        if (id == null || id <= 0) throw new IllegalArgumentException("ID inválido.");
         return getInvestimentoFuturoDao().buscarPorId(conn, id);
     }
 
-    public static InvestimentoFuturo buscarPorNome(Connection conn, String nome) throws SQLException {
+    public InvestimentoFuturo buscarPorNome(Connection conn, String nome) {
         return getInvestimentoFuturoDao().buscarPorNome(conn, nome);
     }
 
-    public static boolean atualizar(Connection conn, InvestimentoFuturo inv) throws SQLException {
-        return getInvestimentoFuturoDao().atualizar(conn, inv);
-    }
-
-    public static boolean deletar(Connection conn, int id) throws SQLException {
-        return getInvestimentoFuturoDao().deletar(conn, id);
-    }
-
-    public static BigDecimal calcularSaldo(Connection conn, int investimentoId) throws SQLException {
+    public BigDecimal calcularSaldo(Connection conn, int investimentoId) {
         return getInvestimentoFuturoDao().calcularSaldo(conn, investimentoId);
     }
 
-    public int getId() { return id; }
-    public void setId(int id) { this.id = id; }
+    public List<InvestimentoFuturo> filtrar(Connection conn, String nome, String status) {
+        return getInvestimentoFuturoDao().listar(conn, nome, status);
+    }
+
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
     public String getNome() { return nome; }
     public void setNome(String nome) { this.nome = nome; }
     public BigDecimal getValorMeta() { return valorMeta; }

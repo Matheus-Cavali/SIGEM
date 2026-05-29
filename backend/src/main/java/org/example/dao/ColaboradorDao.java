@@ -86,7 +86,7 @@ public class ColaboradorDao {
                 stmt.setObject(1, colab.getDataAdmissao());
                 stmt.setObject(2, colab.getDataDemissao());
                 stmt.setInt(3, colab.getId());
-                stmt.executeUpdate();
+                if (stmt.executeUpdate() != 1) return false;
             }
             try (PreparedStatement stmt = conn.prepareStatement("UPDATE usuario SET nome = ?, email = ?, celular = ? WHERE id = ?")) {
                 stmt.setString(1, colab.getNome());

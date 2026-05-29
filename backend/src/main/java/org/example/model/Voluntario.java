@@ -3,8 +3,8 @@ package org.example.model;
 import org.example.dao.VoluntarioDao;
 
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.List;
 
 public class Voluntario extends Usuario {
     private LocalDate dataInicio;
@@ -21,12 +21,24 @@ public class Voluntario extends Usuario {
         super();
     }
 
-    public static void cadastrar(Connection conn, int usuarioId, String data) throws SQLException {
+    public static void cadastrar(Connection conn, int usuarioId, String data) {
         getVoluntarioDao().inserir(conn, usuarioId, data);
     }
 
-    public static Voluntario buscarPorId(Connection conn, int usuarioId) throws SQLException {
+    public static Voluntario buscarPorId(Connection conn, int usuarioId) {
         return getVoluntarioDao().buscarPorId(conn, usuarioId);
+    }
+
+    public static List<Voluntario> listar(Connection conn, String nome, String email) {
+        return getVoluntarioDao().listar(conn, nome, email);
+    }
+
+    public static boolean atualizar(Connection conn, Voluntario v) {
+        return getVoluntarioDao().atualizar(conn, v);
+    }
+
+    public static boolean atualizarDataDesligamento(Connection conn, int id, LocalDate data) {
+        return getVoluntarioDao().atualizarDataDesligamento(conn, id, data);
     }
 
     public LocalDate getDataInicio() { return dataInicio; }

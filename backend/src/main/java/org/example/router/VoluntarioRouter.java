@@ -11,14 +11,15 @@ import java.nio.charset.StandardCharsets;
 
 public class VoluntarioRouter implements HttpHandler {
 
-    private static VoluntarioRouter instancia;
-    private VoluntarioRouter() {}
-    public static VoluntarioRouter getInstancia() {
-        if (instancia == null) instancia = new VoluntarioRouter();
-        return instancia;
+    private VoluntarioControl control;
+
+    public VoluntarioRouter() {
+        control = new VoluntarioControl();
     }
 
-    private VoluntarioControl controller = VoluntarioControl.getInstancia();
+    public VoluntarioControl getControl() {
+        return control;
+    }
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
@@ -39,14 +40,14 @@ public class VoluntarioRouter implements HttpHandler {
             Resposta r;
 
             if ("GET".equalsIgnoreCase(metodo) && "/api/voluntarios".equals(path)) {
-                r = controller.listar(auth, exchange.getRequestURI().getQuery());
+                r = control.listar(auth, exchange.getRequestURI().getQuery());
             } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/voluntarios/\\d+")) {
                 int id = Integer.parseInt(path.split("/")[3]);
-                r = controller.buscarPorId(auth, id);
+                r = control.buscarPorId(auth, id);
             } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/voluntarios/\\d+")) {
                 int id = Integer.parseInt(path.split("/")[3]);
                 String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-                r = controller.atualizar(auth, id, json);
+                r = control.atualizar(auth, id, json);
             } else {
                 r = new Resposta(404, "{\"erro\":\"Rota não encontrada\"}");
             }

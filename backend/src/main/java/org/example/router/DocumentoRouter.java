@@ -56,11 +56,11 @@ public class DocumentoRouter implements HttpHandler {
                 r = getControl().cadastrar(auth, json);
             }
             else if("GET".equalsIgnoreCase(metodo) && "/api/documentos".equals(path)){
-                r = getControl().listar(exchange.getRequestURI().getQuery());
+                r = getControl().listar(auth, exchange.getRequestURI().getQuery());
             }
             else if("GET".equalsIgnoreCase(metodo) && path.matches("/api/documentos/\\d+")){
                 int id = Integer.parseInt(path.substring(path.lastIndexOf("/") + 1));
-                r = getControl().buscarPorId(id);
+                r = getControl().buscarPorId(auth, id);
             }
             else if("PUT".equalsIgnoreCase(metodo) && path.matches("/api/documentos/\\d+")){
                 int id = Integer.parseInt(path.substring(path.lastIndexOf("/") + 1));

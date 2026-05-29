@@ -3,8 +3,7 @@ package org.example.controller;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import org.example.conexao.Conexao;
-import org.example.dao.RecursoSistemaDao;
-import org.example.dao.UsuarioDao;
+
 import org.example.model.CategoriaEvento;
 import org.example.model.RecursoSistema;
 import org.example.model.Resposta;
@@ -55,9 +54,7 @@ public class CategoriaEventoControl {
 
             try (Connection conn = Conexao.getConexao()) {
 
-                UsuarioDao uDao = new UsuarioDao();
-
-                Usuario u = uDao.buscarPorEmail(conn, email);
+                Usuario u = Usuario.buscarPorEmail(conn, email);
 
                 if (u != null) {
 
@@ -67,9 +64,7 @@ public class CategoriaEventoControl {
 
                     } else {
 
-                        RecursoSistemaDao rDao = new RecursoSistemaDao();
-
-                        for (RecursoSistema r : rDao.listarPorUsuario(conn, u.getId())) {
+                        for (RecursoSistema r : RecursoSistema.listarPorUsuario(conn, u.getId())) {
 
                             if (!permitido && r.getNome().equals(recursoNome)) {
                                 permitido = true;

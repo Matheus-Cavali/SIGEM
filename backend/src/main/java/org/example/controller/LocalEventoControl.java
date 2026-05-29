@@ -2,8 +2,7 @@ package org.example.controller;
 
 import com.google.gson.Gson;
 import org.example.conexao.Conexao;
-import org.example.dao.RecursoSistemaDao;
-import org.example.dao.UsuarioDao;
+
 import org.example.model.LocalEvento;
 import org.example.model.RecursoSistema;
 import org.example.model.Resposta;
@@ -40,19 +39,16 @@ public class LocalEventoControl {
 
         if (email != null) {
             try{
-                UsuarioDao uDao = new UsuarioDao();
                 Connection conn = Conexao.getConexao();
 
-                Usuario u = uDao.buscarPorEmail(conn, email);
+                Usuario u = Usuario.buscarPorEmail(conn, email);
 
                 if (u != null) {
 
                     if (u.getNivelAcesso() == 1)
                         return true;
 
-                    RecursoSistemaDao rDao = new RecursoSistemaDao();
-
-                    for (RecursoSistema r : rDao.listarPorUsuario(conn, u.getId())) {
+                    for (RecursoSistema r : RecursoSistema.listarPorUsuario(conn, u.getId())) {
                         if (r.getNome().equals(recursoNome))
                             return true;
                     }

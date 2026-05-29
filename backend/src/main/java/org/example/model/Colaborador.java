@@ -3,8 +3,8 @@ package org.example.model;
 import org.example.dao.ColaboradorDao;
 
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.List;
 
 public class Colaborador extends Usuario {
     private LocalDate dataAdmissao;
@@ -21,12 +21,24 @@ public class Colaborador extends Usuario {
         super();
     }
 
-    public static void cadastrar(Connection conn, int usuarioId, String data) throws SQLException {
+    public static void cadastrar(Connection conn, int usuarioId, String data) {
         getColaboradorDao().inserir(conn, usuarioId, data);
     }
 
-    public static Colaborador buscarPorId(Connection conn, int usuarioId) throws SQLException {
+    public static Colaborador buscarPorId(Connection conn, int usuarioId) {
         return getColaboradorDao().buscarPorId(conn, usuarioId);
+    }
+
+    public static List<Colaborador> listar(Connection conn, String nome, String email) {
+        return getColaboradorDao().listar(conn, nome, email);
+    }
+
+    public static boolean atualizar(Connection conn, Colaborador c) {
+        return getColaboradorDao().atualizar(conn, c);
+    }
+
+    public static boolean atualizarDataDemissao(Connection conn, int id, LocalDate data) {
+        return getColaboradorDao().atualizarDataDemissao(conn, id, data);
     }
 
     public LocalDate getDataAdmissao() { return dataAdmissao; }

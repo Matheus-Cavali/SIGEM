@@ -132,9 +132,9 @@ public class InvestimentoFuturoDao {
     }
 
     public void migrarStatus() {
-        try (Connection conn = Conexao.getConexao()) {
-            migrarStatus(conn);
-        } catch (SQLException e) {
+        try {
+            migrarStatus(Conexao.getConexao());
+        } catch (Exception e) {
             throw new DatabaseException("Erro na conexao para migrar status", e);
         }
     }

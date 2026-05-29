@@ -175,7 +175,8 @@ public class UsuarioDao {
     }
 
     public void criarAdmin() {
-        try (Connection conn = Conexao.getConexao()) {
+        try {
+            Connection conn = Conexao.getConexao();
             if (buscarPorEmail(conn, "admin@sigem.com") == null) {
                 System.out.println("Criando Administrador padrao do sistema...");
                 String senhaHash = Criptografia.hashSenha("123");

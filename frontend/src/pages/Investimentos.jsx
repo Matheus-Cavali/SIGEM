@@ -57,7 +57,7 @@ export default function Investimentos() {
       const data = await get('/api/investimentos/' + item.id)
       setForm({
         nome: data.nome || '',
-        valorMeta: String(data.valorMeta || '').replace('.', ','),
+        valorMeta: String(Math.round(Number(data.valorMeta || 0) * 100)),
         dataAbertura: data.dataAbertura || '',
         status: data.status || 'ABERTO',
       })

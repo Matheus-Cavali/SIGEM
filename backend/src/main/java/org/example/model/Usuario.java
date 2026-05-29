@@ -1,11 +1,12 @@
 package org.example.model;
 
+import com.google.gson.Gson;
 import org.example.dao.UsuarioDao;
 import org.example.util.CpfUtil;
 
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class Usuario {
@@ -49,27 +50,76 @@ public class Usuario {
         return erros;
     }
 
-    public static int cadastrar(Connection conn, String nome, String email, String senhaHash, String cpf, int nivelAcesso, String tipoUsuario) throws SQLException {
-        return getUsuarioDao().inserir(conn, nome, email, senhaHash, cpf, nivelAcesso, tipoUsuario);
+    public void cadastrar(Connection conn, Usuario u) {
+        Map<String, String> erros = u.validar();
+        Usuario porEmail = getUsuarioDao().buscarPorEmail(conn, u.getEmail());
+        if (porEmail != null) erros.put("email", "Email já cadastrado");
+        String cpfLimpo = u.getCpf() != null ? u.getCpf().replaceAll("[^0-9]", "") : "";
+        Usuario porCpf = getUsuarioDao().buscarPorCPF(conn, cpfLimpo);
+        if (porCpf != null) erros.put("cpf", "CPF já cadastrado");
+        if (!erros.isEmpty())
+            throw new RuntimeException(new Gson().toJson(Map.of("erros", erros)));
+        int id = getUsuarioDao().inserir(conn, u.getNome(), u.getEmail(), u.getSenha(), cpfLimpo, u.getNivelAcesso(), u.getTipoUsuario());
+        u.setId(id);
     }
 
-    public static Usuario buscarPorEmail(Connection conn, String email) throws SQLException {
+    public void alterar(Connection conn, Usuario u) {
+        if (u.getId() <= 0) throw new IllegalArgumentException("ID inválido.");
+        if (!getUsuarioDao().atualizar(conn, u))
+            throw new RuntimeException("Erro ao atualizar usuário");
+    }
+
+    public void excluir(Connection conn, int id) {
+        if (id <= 0) throw new IllegalArgumentException("ID inválido.");
+        if (!getUsuarioDao().deletar(conn, id))
+            throw new RuntimeException("Erro ao excluir usuário");
+    }
+
+    public void alterarStatus(Connection conn, int id, boolean ativo) {
+        if (!getUsuarioDao().alterarStatus(conn, id, ativo))
+            throw new RuntimeException("Erro ao alterar status do usuário");
+    }
+
+    public int contarColaboradorAcessoTotalAtivo(Connection conn) {
+        return getUsuarioDao().contarColaboradorAcessoTotalAtivo(conn);
+    }
+
+    public List<Usuario> filtrar(Connection conn, String nome, String email, String tipo) {
+        return getUsuarioDao().listarTodos(conn, nome, email, tipo);
+    }
+
+    public static Usuario buscarPorEmail(Connection conn, String email) {
         return getUsuarioDao().buscarPorEmail(conn, email);
     }
 
-    public static Usuario buscarPorCPF(Connection conn, String cpf) throws SQLException {
+    public static Usuario buscarPorCPF(Connection conn, String cpf) {
         return getUsuarioDao().buscarPorCPF(conn, cpf);
     }
 
-    public static Usuario buscarPorId(Connection conn, int id) throws SQLException {
+    public static Usuario buscarPorId(Connection conn, int id) {
         return getUsuarioDao().buscarPorId(conn, id);
     }
 
-    public static boolean mudarSenha(Connection conn, String cpf, String novaSenha) throws SQLException {
+    public static boolean mudarSenha(Connection conn, String cpf, String novaSenha) {
         return getUsuarioDao().mudarSenha(conn, cpf, novaSenha);
     }
 
-    // --- GETTERS E SETTERS ---
+    public static int cadastrar(Connection conn, String nome, String email, String senhaHash, String cpf, int nivelAcesso, String tipoUsuario) {
+        return getUsuarioDao().inserir(conn, nome, email, senhaHash, cpf, nivelAcesso, tipoUsuario);
+    }
+
+    public static List<Usuario> listarTodos(Connection conn, String nome, String email, String tipo) {
+        return getUsuarioDao().listarTodos(conn, nome, email, tipo);
+    }
+
+    public static boolean atualizar(Connection conn, Usuario u) {
+        return getUsuarioDao().atualizar(conn, u);
+    }
+
+    public static boolean deletar(Connection conn, int id) {
+        return getUsuarioDao().deletar(conn, id);
+    }
+
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
     public String getNome() { return nome; }
