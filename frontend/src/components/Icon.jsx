@@ -55,9 +55,6 @@ const paths = {
       <path d="M5 12h14" />
     </>
   ),
-  minus: (
-    <path d="M5 12h14" />
-  ),
   edit: (
     <>
       <path d="M12 20h9" />

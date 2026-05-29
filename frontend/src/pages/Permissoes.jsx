@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { get, put } from '../api/http'
+import { toast } from 'react-toastify'
 import { useAuth } from '../state/AuthContext'
 import PageHeader from '../components/PageHeader'
 
@@ -15,16 +16,14 @@ export default function Permissoes() {
   const [recursos, setRecursos] = useState([])
   const [usuarioId, setUsuarioId] = useState('')
   const [recursoIds, setRecursoIds] = useState([])
-  const [erro, setErro] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
-  const [salvo, setSalvo] = useState('')
 
   const loadUsuarios = async () => {
     try {
       const data = await get('/api/usuarios?tipo=colaborador')
       setUsuarios(Array.isArray(data) ? data.filter(u => u.nivelAcesso !== 1) : [])
     } catch (error) {
-      if (!error.fieldErrors) setErro(error.message)
+      if (!error.fieldErrors) toast.error(error.message)
     }
   }
 
@@ -34,7 +33,7 @@ export default function Permissoes() {
       const obsoletas = ['GESTAO_COLABORADORES', 'GESTAO_VOLUNTARIOS']
       setRecursos(Array.isArray(data) ? data.filter(r => !obsoletas.includes(r.nome)) : [])
     } catch (error) {
-      if (!error.fieldErrors) setErro(error.message)
+      if (!error.fieldErrors) toast.error(error.message)
     }
   }
 
@@ -56,7 +55,7 @@ export default function Permissoes() {
         if (error.fieldErrors) {
           setFieldErrors(error.fieldErrors)
         } else {
-          setErro(error.message)
+          toast.error(error.message)
         }
         setRecursoIds([])
       }
@@ -76,16 +75,16 @@ export default function Permissoes() {
   }
 
   const salvar = async () => {
-    setErro(''); setSalvo(''); setFieldErrors({})
+    setFieldErrors({})
     if (usuarioId) {
       try {
         await put('/api/recurso/' + usuarioId + '/permissoes', { recursoIds })
-        setSalvo('Permissões salvas com sucesso!')
+        toast.success('Permissões salvas com sucesso!')
       } catch (error) {
         if (error.fieldErrors) {
           setFieldErrors(error.fieldErrors)
         } else {
-          setErro(error.message)
+          toast.error(error.message)
         }
       }
     } else {
@@ -99,8 +98,7 @@ export default function Permissoes() {
 
       <section className="editor-card">
         <div className="editor-title"><h2>Selecionar Colaborador</h2></div>
-        {erro && <div className="message inline">{erro}</div>}
-        {salvo && <div className="message success">{salvo}</div>}
+
 
         <div className="inline-form">
           <div className="field-container">

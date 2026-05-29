@@ -546,12 +546,6 @@ select.is-invalid {
   font-size: 13px;
 }
 
-.message.success {
-  border-color: #b7dec7;
-  background: #f2fbf5;
-  color: #276749;
-}
-
 .message.inline {
   margin: 0 0 16px;
 }

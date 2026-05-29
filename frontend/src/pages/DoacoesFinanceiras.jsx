@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { del, get, post, put } from '../api/http'
+import { toast } from 'react-toastify'
 import { useAuth } from '../state/AuthContext'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
@@ -16,8 +17,6 @@ export default function DoacoesFinanceiras() {
   const [categorias, setCategorias] = useState([])
   const [form, setForm] = useState(initialForm)
   const [formOpen, setFormOpen] = useState(false)
-  const [erro, setErro] = useState('')
-  const [success, setSuccess] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [filtroCategoria, setFiltroCategoria] = useState('')
   const [filtroDataInicio, setFiltroDataInicio] = useState('')
@@ -25,7 +24,6 @@ export default function DoacoesFinanceiras() {
   const [erroData, setErroData] = useState('')
   const [editing, setEditing] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
-  const [errorModal, setErrorModal] = useState({ open: false, message: '' })
 
   const [caixaAberto, setCaixaAberto] = useState(null)
   const [caixaLoading, setCaixaLoading] = useState(true)
@@ -61,7 +59,7 @@ export default function DoacoesFinanceiras() {
       const data = await get(path)
       setItems(Array.isArray(data) ? data : [])
     } catch (error) {
-      setErro(error.message)
+      toast.error(error.message)
     }
   }
 
@@ -89,9 +87,7 @@ export default function DoacoesFinanceiras() {
   const openNew = () => {
     setForm({ ...initialForm })
     setEditing(null)
-    setErro('')
     setFieldErrors({})
-    setSuccess('')
     setFormOpen(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -102,9 +98,7 @@ export default function DoacoesFinanceiras() {
       categoriaFinanceiraId: String(item.categoriaFinanceiraId),
     })
     setEditing(item.id)
-    setErro('')
     setFieldErrors({})
-    setSuccess('')
     setFormOpen(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -130,11 +124,13 @@ export default function DoacoesFinanceiras() {
 
   const save = async (event) => {
     event.preventDefault()
-    setErro('')
-    setSuccess('')
     setFieldErrors({})
 
     const campos = validarCampos()
+    if (campos.caixa) {
+      toast.error(campos.caixa)
+      delete campos.caixa
+    }
     const temErros = Object.keys(campos).length > 0
     if (temErros) {
       setFieldErrors(campos)
@@ -149,11 +145,11 @@ export default function DoacoesFinanceiras() {
 
         if (editing) {
           await put('/api/doacoes-financeiras/' + editing, payload)
-          setSuccess('Doação alterada com sucesso.')
+          toast.success('Doação alterada com sucesso.')
           setFormOpen(false)
         } else {
           await post('/api/doacoes-financeiras', payload)
-          setSuccess('Doação cadastrada com sucesso.')
+          toast.success('Doação cadastrada com sucesso.')
         }
 
         setEditing(null)
@@ -164,7 +160,7 @@ export default function DoacoesFinanceiras() {
         if (error.fieldErrors) {
           setFieldErrors(error.fieldErrors)
         } else {
-          setErro(error.message)
+          toast.error(error.message)
         }
       }
     }
@@ -179,10 +175,10 @@ export default function DoacoesFinanceiras() {
     try {
       await del('/api/doacoes-financeiras/' + confirmDelete.id)
       setItems(prev => prev.filter(current => current.id !== confirmDelete.id))
-      setSuccess('Doação financeira excluída com sucesso.')
+      toast.success('Doação financeira excluída com sucesso.')
       loadCaixaAberto()
     } catch (error) {
-      setErrorModal({ open: true, message: error.message })
+      toast.error(error.message)
     } finally {
       setConfirmDelete(null)
     }
@@ -192,9 +188,9 @@ export default function DoacoesFinanceiras() {
     try {
       await post('/api/caixas', {})
       await loadCaixaAberto()
-      setSuccess('Caixa aberto com sucesso.')
+      toast.success('Caixa aberto com sucesso.')
     } catch (error) {
-      setErro(error.message)
+      toast.error(error.message)
     } finally {
       setConfirmAbrirCaixa(false)
     }
@@ -206,19 +202,13 @@ export default function DoacoesFinanceiras() {
         valorFechamento: parseFloat(caixaAberto.saldo)
       })
       await loadCaixaAberto()
-      setSuccess('Caixa fechado com sucesso.')
+      toast.success('Caixa fechado com sucesso.')
     } catch (error) {
-      setErro(error.message)
+      toast.error(error.message)
     } finally {
       setFecharCaixaModal(false)
     }
   }
-
-  useEffect(() => {
-    if (!success) return
-    const timer = setTimeout(() => setSuccess(''), 4000)
-    return () => clearTimeout(timer)
-  }, [success])
 
   return (
     <>
@@ -272,9 +262,6 @@ export default function DoacoesFinanceiras() {
         />
       </section>
 
-      {success && <div className="message success">{success}</div>}
-      {erro && <div className="message inline">{erro}</div>}
-
       <Modal
         open={!!confirmDelete}
         title="Confirmar exclusão"
@@ -291,18 +278,6 @@ export default function DoacoesFinanceiras() {
         {confirmDelete && (
           <p>Excluir doação de R$ {parseFloat(confirmDelete.valor).toFixed(2)}?</p>
         )}
-      </Modal>
-
-      <Modal
-        open={errorModal.open}
-        title="Erro"
-        variant="error"
-        onClose={() => setErrorModal({ open: false, message: '' })}
-        footer={
-          <button className="primary-action" onClick={() => setErrorModal({ open: false, message: '' })}>Fechar</button>
-        }
-      >
-        <p>{errorModal.message}</p>
       </Modal>
 
       <Modal
@@ -363,8 +338,6 @@ export default function DoacoesFinanceiras() {
               </select>
               {fieldErrors.categoriaFinanceiraId && <span className="field-error">{fieldErrors.categoriaFinanceiraId}</span>}
             </div>
-
-            {fieldErrors.caixa && <div className="message inline">{fieldErrors.caixa}</div>}
 
             <div className="form-submit">
               <button className="primary-action">{editing ? 'Salvar Alterações' : 'Salvar Doação'}</button>

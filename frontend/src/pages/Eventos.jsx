@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
 import { del, get, patch, post, put } from '../api/http'
+import { toast } from 'react-toastify'
 import { useAuth } from '../state/AuthContext'
 import PageHeader from '../components/PageHeader'
 import { DateTimeField, CurrencyField } from '../components/form'
 import { moeda, valorParaNumero } from '../utils/format'
 import Icon from '../components/Icon'
+import Modal from '../components/Modal'
 import '../components/form/BaseField/BaseField.scss'
+import '../components/Modal/Modal.scss'
 
 function toISO(br) {
   if (!br || br.length < 16) return ''
@@ -71,8 +74,9 @@ export default function Eventos() {
   const [editing, setEditing] = useState(null)
   const [encerrandoId, setEncerrandoId] = useState(null)
 
-  const [erro, setErro] = useState('')
-  const [success, setSuccess] = useState('')
+  const [confirmAction, setConfirmAction] = useState(null)
+
+
 
   const [fieldErrors, setFieldErrors] = useState({})
 
@@ -109,7 +113,7 @@ export default function Eventos() {
       setItems(Array.isArray(data) ? data : [])
     }
     catch (error) {
-      setErro(error.message)
+      toast.error(error.message)
     }
   }
 
@@ -170,9 +174,6 @@ export default function Eventos() {
 
     setEditing(null)
 
-    setErro('')
-    setSuccess('')
-
     setFieldErrors({})
 
     setFormOpen(true)
@@ -191,9 +192,6 @@ export default function Eventos() {
     })
 
     setEditing(item.id)
-
-    setErro('')
-    setSuccess('')
 
     setFieldErrors({})
 
@@ -258,9 +256,6 @@ export default function Eventos() {
 
     event.preventDefault()
 
-    setErro('')
-    setSuccess('')
-
     setFieldErrors({})
 
     const erros = validarCampos()
@@ -288,7 +283,7 @@ export default function Eventos() {
 
           await put('/api/eventos/' + editing, payload)
 
-          setSuccess('Evento alterado com sucesso.')
+          toast.success('Evento alterado com sucesso.')
 
           setFormOpen(false)
         }
@@ -296,7 +291,7 @@ export default function Eventos() {
 
           await post('/api/eventos', payload)
 
-          setSuccess('Evento criado com sucesso.')
+          toast.success('Evento criado com sucesso.')
         }
 
         setEditing(null)
@@ -311,54 +306,18 @@ export default function Eventos() {
           setFieldErrors(error.fieldErrors)
         }
         else {
-          setErro(error.message)
+          toast.error(error.message)
         }
       }
     }
   }
 
-  const abrirEvento = async (item) => {
-
-    const confirmed = window.confirm(
-      'Tem certeza que deseja abrir este evento?'
-    )
-
-    if (confirmed) {
-
-      try {
-
-        await patch('/api/eventos/' + item.id + '/abrir')
-
-        setSuccess('Evento aberto com sucesso.')
-
-        load(filtroNome, filtroStatus)
-      }
-      catch (error) {
-        alert(error.message)
-      }
-    }
+  const abrirEvento = (item) => {
+    setConfirmAction({ item, type: 'abrir' })
   }
 
-  const cancelarEvento = async (item) => {
-
-    const confirmed = window.confirm(
-      'Tem certeza que deseja cancelar este evento?'
-    )
-
-    if (confirmed) {
-
-      try {
-
-        await patch('/api/eventos/' + item.id + '/cancelar')
-
-        setSuccess('Evento cancelado com sucesso.')
-
-        load(filtroNome, filtroStatus)
-      }
-      catch (error) {
-        alert(error.message)
-      }
-    }
+  const cancelarEvento = (item) => {
+    setConfirmAction({ item, type: 'cancelar' })
   }
 
   const openEncerrar = (item) => {
@@ -372,65 +331,54 @@ export default function Eventos() {
     setEncerrarOpen(true)
   }
 
-  const encerrarEvento = async () => {
+  const encerrarEvento = () => {
 
     if (!encerramento.resultadoFinanceiro) {
       setEncerramentoFieldErrors({ resultadoFinanceiro: 'Resultado financeiro é obrigatório' })
       return
     }
 
-    const confirmed = window.confirm(
-      'Tem certeza que deseja encerrar este evento?\nAs informações de encerramento não poderão ser alteradas depois.'
-    )
-
-    if (confirmed) {
-
-      try {
-
-        await patch(
-          '/api/eventos/' + encerrandoId + '/encerrar',
-          {
-            observacoesHistorico:
-              encerramento.observacoesHistorico || null,
-
-            resultadoFinanceiro:
-              valorParaNumero(encerramento.resultadoFinanceiro)
-          }
-        )
-
-        setEncerrarOpen(false)
-
-        setSuccess('Evento encerrado com sucesso.')
-
-        load(filtroNome, filtroStatus)
+    setConfirmAction({
+      item: { id: encerrandoId },
+      type: 'encerrar',
+      payload: {
+        observacoesHistorico: encerramento.observacoesHistorico || null,
+        resultadoFinanceiro: valorParaNumero(encerramento.resultadoFinanceiro)
       }
-      catch (error) {
-        alert(error.message)
-      }
-    }
+    })
   }
 
-  const remove = async (item) => {
+  const remove = (item) => {
+    setConfirmAction({ item, type: 'delete' })
+  }
 
-    const confirmed = window.confirm(
-      'Excluir "' + item.nome + '"?'
-    )
+  const handleConfirmAction = async () => {
+    if (!confirmAction) return
+    const { item, type, payload } = confirmAction
 
-    if (confirmed) {
-
-      try {
-
+    try {
+      if (type === 'delete') {
         await del('/api/eventos/' + item.id)
-
-        setItems(prev =>
-          prev.filter(current => current.id !== item.id)
-        )
-
-        setSuccess('Evento excluído com sucesso.')
+        setItems(prev => prev.filter(current => current.id !== item.id))
+        toast.success('Evento excluído com sucesso.')
+      } else if (type === 'abrir') {
+        await patch('/api/eventos/' + item.id + '/abrir')
+        toast.success('Evento aberto com sucesso.')
+        load(filtroNome, filtroStatus)
+      } else if (type === 'cancelar') {
+        await patch('/api/eventos/' + item.id + '/cancelar')
+        toast.success('Evento cancelado com sucesso.')
+        load(filtroNome, filtroStatus)
+      } else if (type === 'encerrar') {
+        await patch('/api/eventos/' + item.id + '/encerrar', payload)
+        setEncerrarOpen(false)
+        toast.success('Evento encerrado com sucesso.')
+        load(filtroNome, filtroStatus)
       }
-      catch (error) {
-        alert(error.message)
-      }
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setConfirmAction(null)
     }
   }
 
@@ -444,21 +392,6 @@ export default function Eventos() {
       return [...prev, id]
     })
   }
-
-  useEffect(() => {
-
-    if (!success)
-      return
-
-    const timer = setTimeout(() => {
-
-      setSuccess('')
-
-    }, 4000)
-
-    return () => clearTimeout(timer)
-
-  }, [success])
 
   const getStatusClass = (status) => {
 
@@ -506,12 +439,6 @@ export default function Eventos() {
         </select>
       </section>
 
-      {success &&
-        <div className="message success">
-          {success}
-        </div>
-      }
-
       {formOpen && (
         <section className="editor-card">
 
@@ -530,12 +457,6 @@ export default function Eventos() {
               <Icon name="close" size={16} />
             </button>
           </div>
-
-          {erro &&
-            <div className="message inline">
-              {erro}
-            </div>
-          }
 
           <form
             className="inline-form"
@@ -747,6 +668,43 @@ export default function Eventos() {
           </div>
         </section>
       )}
+
+      <Modal
+        open={!!confirmAction}
+        title={
+          confirmAction?.type === 'delete' ? 'Confirmar exclusão'
+          : confirmAction?.type === 'encerrar' ? 'Confirmar encerramento'
+          : 'Confirmar ação'
+        }
+        variant={confirmAction?.type === 'delete' ? 'error' : 'info'}
+        hideCloseButton
+        onClose={() => setConfirmAction(null)}
+        footer={
+          <>
+            <button className="ghost-action" onClick={() => setConfirmAction(null)}>Cancelar</button>
+            <button className="danger-action" onClick={handleConfirmAction}>
+              {confirmAction?.type === 'delete' ? 'Excluir'
+                : confirmAction?.type === 'encerrar' ? 'Encerrar'
+                : confirmAction?.type === 'abrir' ? 'Abrir'
+                : 'Confirmar'
+              }
+            </button>
+          </>
+        }
+      >
+        {confirmAction?.type === 'delete' && (
+          <p>Excluir evento "{confirmAction.item.nome}"?</p>
+        )}
+        {confirmAction?.type === 'abrir' && (
+          <p>Tem certeza que deseja abrir este evento?</p>
+        )}
+        {confirmAction?.type === 'cancelar' && (
+          <p>Tem certeza que deseja cancelar este evento?</p>
+        )}
+        {confirmAction?.type === 'encerrar' && (
+          <p>Tem certeza que deseja encerrar este evento? As informações de encerramento não poderão ser alteradas depois.</p>
+        )}
+      </Modal>
 
       <div className="cards-list">
 

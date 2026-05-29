@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { post } from '../api/http'
+import { toast } from 'react-toastify'
 import { useAuth } from '../state/AuthContext'
 import Icon from '../components/Icon'
 import { formatarCpf } from '../utils/format'
@@ -8,7 +9,6 @@ import { formatarCpf } from '../utils/format'
 export default function Login() {
   const [form, setForm] = useState({ email: '', senha: '' })
   const [trocaSenha, setTrocaSenha] = useState({ ativo: false, cpf: '', senha: '', confirmar: '' })
-  const [erro, setErro] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const { login } = useAuth()
@@ -23,7 +23,6 @@ export default function Login() {
 
   const enviar = async (event) => {
     event.preventDefault()
-    setErro('')
     setFieldErrors({})
     setLoading(true)
 
@@ -47,7 +46,7 @@ export default function Login() {
         if (error.fieldErrors) {
           setFieldErrors(error.fieldErrors)
         } else {
-          setErro(error.message)
+          toast.error(error.message)
         }
       } finally {
         setLoading(false)
@@ -57,7 +56,6 @@ export default function Login() {
 
   const alterarSenha = async (event) => {
     event.preventDefault()
-    setErro('')
     setLoading(true)
 
     try {
@@ -68,12 +66,12 @@ export default function Login() {
       await post('/api/alterar-Primeira-Senha', { cpf: trocaSenha.cpf, senha: trocaSenha.senha })
       setTrocaSenha({ ativo: false, cpf: '', senha: '', confirmar: '' })
       setForm(prev => ({ ...prev, senha: '' }))
-      setErro('Senha alterada. Entre novamente.')
+      toast.success('Senha alterada. Entre novamente.')
     } catch (error) {
       if (error.fieldErrors) {
         setFieldErrors(error.fieldErrors)
       } else {
-        setErro(error.message)
+        toast.error(error.message)
       }
     } finally {
       setLoading(false)
@@ -95,7 +93,6 @@ export default function Login() {
           <form className="auth-card" onSubmit={enviar}>
             <h2>Entrar</h2>
             <p>Acesse os investimentos, aportes e registros da igreja.</p>
-            {erro && <div className="message">{erro}</div>}
             <label>
               <span>Email ou CPF <span className="required-star">*</span></span>
               <input
@@ -125,7 +122,6 @@ export default function Login() {
           <form className="auth-card" onSubmit={alterarSenha}>
             <h2>Primeiro acesso</h2>
             <p>Defina uma nova senha antes de continuar.</p>
-            {erro && <div className="message">{erro}</div>}
             <label>
               <span>CPF</span>
               <input value={trocaSenha.cpf} disabled />

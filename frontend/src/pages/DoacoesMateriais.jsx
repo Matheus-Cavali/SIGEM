@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { del, get, post, put } from '../api/http'
+import { toast } from 'react-toastify'
 import { useAuth } from '../state/AuthContext'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
@@ -19,8 +20,6 @@ export default function DoacoesMateriais() {
   const [categorias, setCategorias] = useState([])
   const [form, setForm] = useState(initialForm)
   const [formOpen, setFormOpen] = useState(false)
-  const [erro, setErro] = useState('')
-  const [success, setSuccess] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [filtroMaterial, setFiltroMaterial] = useState('')
   const [filtroCategoria, setFiltroCategoria] = useState('')
@@ -29,12 +28,10 @@ export default function DoacoesMateriais() {
   const [erroData, setErroData] = useState('')
   const [showNovoMaterial, setShowNovoMaterial] = useState(false)
   const [novoMaterialForm, setNovoMaterialForm] = useState({ nome: '', descricao: '', quantidadeEstoque: '0', categoriaMaterialId: '' })
-  const [novoMaterialErro, setNovoMaterialErro] = useState('')
   const [novoMaterialFieldErrors, setNovoMaterialFieldErrors] = useState({})
   const [salvandoMaterial, setSalvandoMaterial] = useState(false)
   const [editing, setEditing] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
-  const [errorModal, setErrorModal] = useState({ open: false, message: '' })
   const { user, can } = useAuth()
   const canManage = can('GESTAO_DOACOES')
 
@@ -64,7 +61,7 @@ export default function DoacoesMateriais() {
       const data = await get(path)
       setItems(Array.isArray(data) ? data : [])
     } catch (error) {
-      setErro(error.message)
+      toast.error(error.message)
     }
   }
 
@@ -98,9 +95,7 @@ export default function DoacoesMateriais() {
   const openNew = () => {
     setForm({ ...initialForm })
     setEditing(null)
-    setErro('')
     setFieldErrors({})
-    setSuccess('')
     setFormOpen(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -111,9 +106,7 @@ export default function DoacoesMateriais() {
       quantidade: String(item.quantidade),
     })
     setEditing(item.id)
-    setErro('')
     setFieldErrors({})
-    setSuccess('')
     setFormOpen(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -136,8 +129,6 @@ export default function DoacoesMateriais() {
 
   const save = async (event) => {
     event.preventDefault()
-    setErro('')
-    setSuccess('')
     setFieldErrors({})
 
     const campos = validarCampos()
@@ -155,11 +146,11 @@ export default function DoacoesMateriais() {
 
         if (editing) {
           await put('/api/doacoes-materiais/' + editing, payload)
-          setSuccess('Doação alterada com sucesso.')
+          toast.success('Doação alterada com sucesso.')
           setFormOpen(false)
         } else {
           await post('/api/doacoes-materiais', payload)
-          setSuccess('Doação cadastrada com sucesso.')
+          toast.success('Doação cadastrada com sucesso.')
         }
 
         setEditing(null)
@@ -170,7 +161,7 @@ export default function DoacoesMateriais() {
         if (error.fieldErrors) {
           setFieldErrors(error.fieldErrors)
         } else {
-          setErro(error.message)
+          toast.error(error.message)
         }
       }
     }
@@ -182,7 +173,6 @@ export default function DoacoesMateriais() {
   }
 
   const salvarNovoMaterial = async () => {
-    setNovoMaterialErro('')
     setNovoMaterialFieldErrors({})
 
     const erros = {}
@@ -218,13 +208,13 @@ export default function DoacoesMateriais() {
         setFieldErrors(prev => ({ ...prev, materialId: '' }))
       }
 
-      setSuccess('Material cadastrado com sucesso.')
+      toast.success('Material cadastrado com sucesso.')
       setShowNovoMaterial(false)
     } catch (error) {
       if (error.fieldErrors) {
         setNovoMaterialFieldErrors(error.fieldErrors)
       } else {
-        setNovoMaterialErro(error.message)
+        toast.error(error.message)
       }
     } finally {
       setSalvandoMaterial(false)
@@ -240,20 +230,14 @@ export default function DoacoesMateriais() {
     try {
       await del('/api/doacoes-materiais/' + confirmDelete.id)
       setItems(prev => prev.filter(current => current.id !== confirmDelete.id))
-      setSuccess('Doação de material excluída com sucesso.')
+      toast.success('Doação de material excluída com sucesso.')
       loadMateriais()
     } catch (error) {
-      setErrorModal({ open: true, message: error.message })
+      toast.error(error.message)
     } finally {
       setConfirmDelete(null)
     }
   }
-
-  useEffect(() => {
-    if (!success) return
-    const timer = setTimeout(() => setSuccess(''), 4000)
-    return () => clearTimeout(timer)
-  }, [success])
 
   return (
     <>
@@ -288,8 +272,6 @@ export default function DoacoesMateriais() {
         />
       </section>
 
-      {success && <div className="message success">{success}</div>}
-
       <Modal
         open={!!confirmDelete}
         title="Confirmar exclusão"
@@ -306,25 +288,12 @@ export default function DoacoesMateriais() {
         <p>Excluir doação de "{confirmDelete?.materialNome}"?</p>
       </Modal>
 
-      <Modal
-        open={errorModal.open}
-        title="Erro"
-        variant="error"
-        onClose={() => setErrorModal({ open: false, message: '' })}
-        footer={
-          <button className="primary-action" onClick={() => setErrorModal({ open: false, message: '' })}>Fechar</button>
-        }
-      >
-        <p>{errorModal.message}</p>
-      </Modal>
-
       {formOpen && (
         <section className="editor-card">
           <div className="editor-title">
             <h2>{editing ? 'Editar Doação de Material' : 'Nova Doação de Material'}</h2>
             <button className="ghost-icon" onClick={() => setFormOpen(false)}><Icon name="close" size={16} /></button>
           </div>
-          {erro && <div className="message inline">{erro}</div>}
           <form className="inline-form" onSubmit={save} noValidate>
             <div className="field-container">
               <label className="field-label"><span>Material <span className="required-star">*</span></span></label>
@@ -366,7 +335,6 @@ export default function DoacoesMateriais() {
                 }}>
                   <strong style={{ fontSize: '0.875rem' }}>Novo Material</strong>
                 </div>
-                {novoMaterialErro && <div className="message inline">{novoMaterialErro}</div>}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   <TextField label="Nome" required value={novoMaterialForm.nome}
                     setValue={v => handleNovoMaterialChange('nome', v)}

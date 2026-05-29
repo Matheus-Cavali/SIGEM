@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { del, get, post, put } from '../api/http'
+import { toast } from 'react-toastify'
 import { useAuth } from '../state/AuthContext'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
+import Modal from '../components/Modal'
+import '../components/Modal/Modal.scss'
 
 const initialForm = { nome: '' }
 
@@ -11,8 +14,8 @@ export default function CategoriasEventos() {
   const [form, setForm] = useState(initialForm)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
-  const [erro, setErro] = useState('')
   const [filtroNome, setFiltroNome] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(null)
   const { can } = useAuth()
   const canManage = can('GESTAO_EVENTOS')
 
@@ -32,7 +35,7 @@ export default function CategoriasEventos() {
       const data = await get(path)
       setItems(Array.isArray(data) ? data : [])
     } catch (error) {
-      setErro(error.message)
+      toast.error(error.message)
     }
   }
 
@@ -51,7 +54,6 @@ export default function CategoriasEventos() {
   const openNew = () => {
     setForm(initialForm)
     setEditing(null)
-    setErro('')
     setFormOpen(true)
   }
 
@@ -60,13 +62,11 @@ export default function CategoriasEventos() {
       nome: item.nome || ''
     })
     setEditing(item.id)
-    setErro('')
     setFormOpen(true)
   }
 
   const save = async (event) => {
     event.preventDefault()
-    setErro('')
 
     try {
       if (!form.nome) {
@@ -88,20 +88,23 @@ export default function CategoriasEventos() {
       setForm(initialForm)
       load(filtroNome)
     } catch (error) {
-      setErro(error.message)
+      toast.error(error.message)
     }
   }
 
-  const remove = async (item) => {
-    const confirmed = window.confirm('Excluir "' + item.nome + '"?')
+  const remove = (item) => {
+    setConfirmDelete(item)
+  }
 
-    if (confirmed) {
-      try {
-        await del('/api/categorias-eventos/' + item.id)
-        setItems(prev => prev.filter(current => current.id !== item.id))
-      } catch (error) {
-        alert(error.message)
-      }
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return
+    try {
+      await del('/api/categorias-eventos/' + confirmDelete.id)
+      setItems(prev => prev.filter(current => current.id !== confirmDelete.id))
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setConfirmDelete(null)
     }
   }
 
@@ -131,7 +134,6 @@ export default function CategoriasEventos() {
             </button>
           </div>
 
-          {erro && <div className="message inline">{erro}</div>}
 
           <form className="inline-form" onSubmit={save}>
             <label>
@@ -154,6 +156,22 @@ export default function CategoriasEventos() {
           </form>
         </section>
       )}
+
+      <Modal
+        open={!!confirmDelete}
+        title="Confirmar exclusão"
+        variant="error"
+        hideCloseButton
+        onClose={() => setConfirmDelete(null)}
+        footer={
+          <>
+            <button className="ghost-action" onClick={() => setConfirmDelete(null)}>Cancelar</button>
+            <button className="danger-action" onClick={handleConfirmDelete}>Excluir</button>
+          </>
+        }
+      >
+        <p>Excluir categoria "{confirmDelete?.nome}"?</p>
+      </Modal>
 
       <div className="cards-list">
         {items.map((item, index) => (

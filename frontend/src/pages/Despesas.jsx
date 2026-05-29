@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
 import { del, get, post, put } from '../api/http'
+import { toast } from 'react-toastify'
 import { useAuth } from '../state/AuthContext'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
 import { moeda, valorParaNumero } from '../utils/format'
 import DateField from '../components/form/DateField'
+import Modal from '../components/Modal'
 import '../components/form/BaseField/BaseField.scss'
+import '../components/Modal/Modal.scss'
 
 // Retorna a data de hoje no formato dd/mm/aaaa
 function hoje() {
@@ -53,8 +56,6 @@ export default function Despesas() {
   const [form, setForm] = useState(initialForm)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
-  const [erro, setErro] = useState('')
-  const [success, setSuccess] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [filtroDescricao, setFiltroDescricao] = useState('')
   const [filtroCategoria, setFiltroCategoria] = useState('')
@@ -62,7 +63,8 @@ export default function Despesas() {
   // Modal de quitar
   const [quitarModal, setQuitarModal] = useState(null) // item sendo quitado
   const [quitarData, setQuitarData] = useState('')
-  const [quitarErro, setQuitarErro] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(null)
+  const [confirmEstornar, setConfirmEstornar] = useState(null)
 
   // Ajuste de saldo
   const [ajusteOpen, setAjusteOpen] = useState(false)
@@ -90,7 +92,7 @@ export default function Despesas() {
       const data = await get(path)
       setItems(Array.isArray(data) ? data : [])
     } catch (error) {
-      setErro(error.message)
+      toast.error(error.message)
     }
   }
 
@@ -113,9 +115,7 @@ export default function Despesas() {
   const openNew = () => {
     setForm(initialForm)
     setEditing(null)
-    setErro('')
     setFieldErrors({})
-    setSuccess('')
     setFormOpen(true)
   }
 
@@ -128,9 +128,7 @@ export default function Despesas() {
       categoriaDespesaId: String(item.categoriaDespesaId ?? ''),
     })
     setEditing(item.id)
-    setErro('')
     setFieldErrors({})
-    setSuccess('')
     setFormOpen(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -159,8 +157,6 @@ export default function Despesas() {
 
   const save = async (event) => {
     event.preventDefault()
-    setErro('')
-    setSuccess('')
     setFieldErrors({})
 
     const campos = validarCampos()
@@ -182,11 +178,11 @@ export default function Despesas() {
 
       if (editing) {
         await put('/api/despesas/' + editing, payload)
-        setSuccess('Despesa alterada com sucesso.')
+        toast.success('Despesa alterada com sucesso.')
         setFormOpen(false)
       } else {
         await post('/api/despesas', payload)
-        setSuccess('Despesa cadastrada com sucesso.')
+        toast.success('Despesa cadastrada com sucesso.')
       }
 
       setEditing(null)
@@ -197,62 +193,66 @@ export default function Despesas() {
       if (error.fieldErrors) {
         setFieldErrors(error.fieldErrors)
       } else {
-        setErro(error.message)
+        toast.error(error.message)
       }
     }
   }
 
-  const remove = async (item) => {
-    const confirmed = window.confirm('Excluir despesa "' + item.descricao + '"?')
-    if (confirmed) {
-      try {
-        await del('/api/despesas/' + item.id)
-        setItems(prev => prev.filter(current => current.id !== item.id))
-        setSuccess('Despesa excluída com sucesso.')
-        loadSaldo()
-      } catch (error) {
-        alert(error.message)
-      }
+  const remove = (item) => {
+    setConfirmDelete(item)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return
+    try {
+      await del('/api/despesas/' + confirmDelete.id)
+      setItems(prev => prev.filter(current => current.id !== confirmDelete.id))
+      toast.success('Despesa excluída com sucesso.')
+      loadSaldo()
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setConfirmDelete(null)
     }
   }
 
   const abrirQuitar = (item) => {
     setQuitarModal(item)
     setQuitarData(hoje())
-    setQuitarErro('')
   }
 
   const confirmarQuitar = async () => {
-    if (!quitarData) { setQuitarErro('Informe a data de pagamento'); return }
-    setQuitarErro('')
+    if (!quitarData) { toast.error('Informe a data de pagamento'); return }
     try {
       const res = await post('/api/despesas/' + quitarModal.id + '/quitar', { dataPagamento: quitarData })
       if (res?.comJuros) {
-        setSuccess(`Despesa quitada com juros de 2%. Valor pago: ${moeda(res.valorPago)}`)
+        toast.success(`Despesa quitada com juros de 2%. Valor pago: ${moeda(res.valorPago)}`)
       } else {
-        setSuccess('Despesa quitada com sucesso.')
+        toast.success('Despesa quitada com sucesso.')
       }
       setQuitarModal(null)
       load(filtroDescricao, filtroCategoria || null)
       loadSaldo()
     } catch (error) {
-      setQuitarErro(error.message)
+      toast.error(error.message)
     }
   }
 
-  const estornar = async (item) => {
-    const confirmed = window.confirm(
-      `Estornar pagamento de "${item.descricao}"?\nO valor será devolvido ao caixa e a despesa voltará como pendente.`
-    )
-    if (!confirmed) return
+  const estornar = (item) => {
+    setConfirmEstornar(item)
+  }
 
+  const handleConfirmEstornar = async () => {
+    if (!confirmEstornar) return
     try {
-      await post('/api/despesas/' + item.id + '/estornar', {})
-      setSuccess('Pagamento estornado com sucesso.')
+      await post('/api/despesas/' + confirmEstornar.id + '/estornar', {})
+      toast.success('Pagamento estornado com sucesso.')
       load(filtroDescricao, filtroCategoria || null)
       loadSaldo()
     } catch (error) {
-      alert(error.message)
+      toast.error(error.message)
+    } finally {
+      setConfirmEstornar(null)
     }
   }
 
@@ -265,7 +265,7 @@ export default function Despesas() {
     }
     try {
       await post('/api/despesas/ajustar-saldo', { valor })
-      setSuccess('Saldo do caixa ajustado com sucesso.')
+      toast.success('Saldo do caixa ajustado com sucesso.')
       setAjusteOpen(false)
       setAjusteValor('')
       loadSaldo()
@@ -273,12 +273,6 @@ export default function Despesas() {
       setAjusteErro(error.message)
     }
   }
-
-  useEffect(() => {
-    if (!success) return
-    const timer = setTimeout(() => setSuccess(''), 4000)
-    return () => clearTimeout(timer)
-  }, [success])
 
   const pendentes = items.filter(i => !i.dataPagamento)
   const pagas = items.filter(i => i.dataPagamento)
@@ -359,8 +353,6 @@ export default function Despesas() {
         </select>
       </section>
 
-      {success && <div className="message success">{success}</div>}
-
       {formOpen && (
         <section className="editor-card">
           <div className="editor-title">
@@ -369,7 +361,6 @@ export default function Despesas() {
               <Icon name="close" size={16} />
             </button>
           </div>
-          {erro && <div className="message inline">{erro}</div>}
           <form className="inline-form" onSubmit={save} noValidate>
 
             <div className="field-container">
@@ -535,8 +526,6 @@ export default function Despesas() {
               )
             })()}
 
-            {quitarErro && <div className="message inline" style={{ marginBottom: '0.75rem' }}>{quitarErro}</div>}
-
             <div className="form-submit" style={{ display: 'flex', gap: '0.5rem' }}>
               <button className="primary-action" onClick={confirmarQuitar}>Confirmar Pagamento</button>
               <button className="icon-button" onClick={() => setQuitarModal(null)}>Cancelar</button>
@@ -544,6 +533,38 @@ export default function Despesas() {
           </section>
         </div>
       )}
+
+      <Modal
+        open={!!confirmDelete}
+        title="Confirmar exclusão"
+        variant="error"
+        hideCloseButton
+        onClose={() => setConfirmDelete(null)}
+        footer={
+          <>
+            <button className="ghost-action" onClick={() => setConfirmDelete(null)}>Cancelar</button>
+            <button className="danger-action" onClick={handleConfirmDelete}>Excluir</button>
+          </>
+        }
+      >
+        <p>Excluir despesa "{confirmDelete?.descricao}"?</p>
+      </Modal>
+
+      <Modal
+        open={!!confirmEstornar}
+        title="Confirmar estorno"
+        variant="info"
+        hideCloseButton
+        onClose={() => setConfirmEstornar(null)}
+        footer={
+          <>
+            <button className="ghost-action" onClick={() => setConfirmEstornar(null)}>Cancelar</button>
+            <button className="danger-action" onClick={handleConfirmEstornar}>Estornar</button>
+          </>
+        }
+      >
+        <p>Estornar pagamento de "{confirmEstornar?.descricao}"? O valor será devolvido ao caixa e a despesa voltará como pendente.</p>
+      </Modal>
 
       {/* Em atraso */}
       {emAtraso.length > 0 && (

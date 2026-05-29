@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { del, get, post, put } from '../api/http'
+import { toast } from 'react-toastify'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
 import { dataParaBackend, moeda, valorParaNumero } from '../utils/format'
+import Modal from '../components/Modal'
+import '../components/Modal/Modal.scss'
 import CurrencyField from '../components/form/CurrencyField'
 import DateField from '../components/form/DateField'
 import { useAuth } from '../state/AuthContext'
@@ -14,10 +17,10 @@ export default function Investimentos() {
   const [form, setForm] = useState(initialForm)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
-  const [erro, setErro] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [filtroNome, setFiltroNome] = useState('')
   const [filtroStatus, setFiltroStatus] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(null)
   const { user, can } = useAuth()
   const canManage = can('REGISTRAR_INVESTIMENTO')
 
@@ -31,7 +34,7 @@ export default function Investimentos() {
       const data = await get(path)
       setItems(Array.isArray(data) ? data : [])
     } catch (error) {
-      if (!error.fieldErrors) setErro(error.message)
+      if (!error.fieldErrors) toast.error(error.message)
     }
   }
 
@@ -45,13 +48,11 @@ export default function Investimentos() {
   const openNew = () => {
     setForm(initialForm)
     setEditing(null)
-    setErro('')
     setFieldErrors({})
     setFormOpen(true)
   }
 
   const openEdit = async (item) => {
-    setErro('')
     setFieldErrors({})
     try {
       const data = await get('/api/investimentos/' + item.id)
@@ -64,7 +65,7 @@ export default function Investimentos() {
       setEditing(item.id)
       setFormOpen(true)
     } catch (error) {
-      if (!error.fieldErrors) setErro(error.message)
+      if (!error.fieldErrors) toast.error(error.message)
     }
   }
 
@@ -78,7 +79,6 @@ export default function Investimentos() {
 
   const save = async (event) => {
     event.preventDefault()
-    setErro('')
     setFieldErrors({})
 
     const campos = validarCampos()
@@ -105,7 +105,7 @@ export default function Investimentos() {
         if (error.fieldErrors) {
           setFieldErrors(error.fieldErrors)
         } else {
-          setErro(error.message)
+          toast.error(error.message)
         }
       }
     }
@@ -116,16 +116,19 @@ export default function Investimentos() {
     setFieldErrors(prev => ({ ...prev, [field]: '' }))
   }
 
-  const remove = async (item) => {
-    const confirmed = window.confirm('Excluir "' + item.nome + '"?')
+  const remove = (item) => {
+    setConfirmDelete(item)
+  }
 
-    if (confirmed) {
-      try {
-        await del('/api/investimentos/' + item.id)
-        setItems(prev => prev.filter(current => current.id !== item.id))
-      } catch (error) {
-        alert(error.message)
-      }
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return
+    try {
+      await del('/api/investimentos/' + confirmDelete.id)
+      setItems(prev => prev.filter(current => current.id !== confirmDelete.id))
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setConfirmDelete(null)
     }
   }
 
@@ -149,7 +152,6 @@ export default function Investimentos() {
             <h2>{editing ? 'Editar Investimento' : 'Novo Investimento'}</h2>
             <button className="ghost-icon" onClick={() => setFormOpen(false)}><Icon name="close" size={16} /></button>
           </div>
-          {erro && <div className="message inline">{erro}</div>}
           <form className="inline-form" onSubmit={save}>
             <div className="field-container">
               <label className="field-label">Nome <span className="required-star">*</span></label>
@@ -177,6 +179,22 @@ export default function Investimentos() {
           </form>
         </section>
       )}
+
+      <Modal
+        open={!!confirmDelete}
+        title="Confirmar exclusão"
+        variant="error"
+        hideCloseButton
+        onClose={() => setConfirmDelete(null)}
+        footer={
+          <>
+            <button className="ghost-action" onClick={() => setConfirmDelete(null)}>Cancelar</button>
+            <button className="danger-action" onClick={handleConfirmDelete}>Excluir</button>
+          </>
+        }
+      >
+        <p>Excluir investimento "{confirmDelete?.nome}"?</p>
+      </Modal>
 
       <div className="cards-list">
         {items.map((item, index) => (

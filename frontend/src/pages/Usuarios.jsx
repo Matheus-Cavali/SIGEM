@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import { del, get, post, put, request } from '../api/http'
+import { toast } from 'react-toastify'
 import { useAuth } from '../state/AuthContext'
 import { formatarCpf } from '../utils/format'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
+import Modal from '../components/Modal'
+import '../components/Modal/Modal.scss'
 import { CpfField, PhoneField, CepField } from '../components/form'
 
 const initialForm = {
@@ -20,10 +23,11 @@ export default function Usuarios() {
   const [form, setForm] = useState(initialForm)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
-  const [erro, setErro] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [filtroNome, setFiltroNome] = useState('')
   const [filtroTipo, setFiltroTipo] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(null)
+  const [confirmToggle, setConfirmToggle] = useState(null)
 
   const load = async (nome, tipo) => {
     try {
@@ -35,7 +39,7 @@ export default function Usuarios() {
       const data = await get(path)
       setItems(Array.isArray(data) ? data : [])
     } catch (error) {
-      if (!error.fieldErrors) setErro(error.message)
+      if (!error.fieldErrors) toast.error(error.message)
     }
   }
 
@@ -49,7 +53,6 @@ export default function Usuarios() {
   const openNew = () => {
     setForm(initialForm)
     setEditing(null)
-    setErro('')
     setFieldErrors({})
     setFormOpen(true)
   }
@@ -71,7 +74,6 @@ export default function Usuarios() {
       nivelAcesso: String(item.nivelAcesso ?? '2'),
     })
     setEditing(item.id)
-    setErro('')
     setFieldErrors({})
     setFormOpen(true)
   }
@@ -88,7 +90,6 @@ export default function Usuarios() {
 
   const save = async (event) => {
     event.preventDefault()
-    setErro('')
     setFieldErrors({})
 
     const campos = validarCampos()
@@ -128,42 +129,45 @@ export default function Usuarios() {
         if (error.fieldErrors) {
           setFieldErrors(error.fieldErrors)
         } else {
-          setErro(error.message)
+          toast.error(error.message)
         }
       }
     }
   }
 
-  const toggleStatus = async (item) => {
-    const novoStatus = !item.statusAtivo
-    const acao = novoStatus ? 'reativar' : 'desativar'
-    const confirmado = window.confirm(acao === 'desativar'
-      ? 'Desativar usuario "' + item.nome + '"? Ele nao podera acessar o sistema.'
-      : 'Reativar usuario "' + item.nome + '"?')
+  const toggleStatus = (item) => {
+    setConfirmToggle(item)
+  }
 
-    if (confirmado) {
-      try {
-        await request('/api/usuarios/' + item.id + '/status', {
-          method: 'PATCH',
-          body: JSON.stringify({ status_ativo: novoStatus }),
-        })
-        setItems(prev => prev.map(u => u.id === item.id ? { ...u, statusAtivo: novoStatus } : u))
-      } catch (error) {
-        alert(error.message)
-      }
+  const handleConfirmToggle = async () => {
+    if (!confirmToggle) return
+    const novoStatus = !confirmToggle.statusAtivo
+    try {
+      await request('/api/usuarios/' + confirmToggle.id + '/status', {
+        method: 'PATCH',
+        body: JSON.stringify({ status_ativo: novoStatus }),
+      })
+      setItems(prev => prev.map(u => u.id === confirmToggle.id ? { ...u, statusAtivo: novoStatus } : u))
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setConfirmToggle(null)
     }
   }
 
-  const remove = async (item) => {
-    const confirmado = window.confirm('Excluir permanentemente o usuario "' + item.nome + '"?')
+  const remove = (item) => {
+    setConfirmDelete(item)
+  }
 
-    if (confirmado) {
-      try {
-        await del('/api/usuarios/' + item.id)
-        setItems(prev => prev.filter(u => u.id !== item.id))
-      } catch (error) {
-        alert(error.message)
-      }
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return
+    try {
+      await del('/api/usuarios/' + confirmDelete.id)
+      setItems(prev => prev.filter(u => u.id !== confirmDelete.id))
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setConfirmDelete(null)
     }
   }
 
@@ -204,7 +208,6 @@ export default function Usuarios() {
             <h2>{editing ? 'Editar Usuario' : 'Novo Usuario'}</h2>
             <button className="ghost-icon" onClick={() => setFormOpen(false)}><Icon name="close" size={16} /></button>
           </div>
-          {erro && <div className="message inline">{erro}</div>}
           <form className="inline-form" onSubmit={save}>
             <div className="field-container">
               <label className="field-label">Nome <span className="required-star">*</span></label>
@@ -269,6 +272,45 @@ export default function Usuarios() {
           </form>
         </section>
       )}
+
+      <Modal
+        open={!!confirmDelete}
+        title="Confirmar exclusão"
+        variant="error"
+        hideCloseButton
+        onClose={() => setConfirmDelete(null)}
+        footer={
+          <>
+            <button className="ghost-action" onClick={() => setConfirmDelete(null)}>Cancelar</button>
+            <button className="danger-action" onClick={handleConfirmDelete}>Excluir</button>
+          </>
+        }
+      >
+        <p>Excluir permanentemente o usuário "{confirmDelete?.nome}"?</p>
+      </Modal>
+
+      <Modal
+        open={!!confirmToggle}
+        title="Confirmar alteração de status"
+        variant="info"
+        hideCloseButton
+        onClose={() => setConfirmToggle(null)}
+        footer={
+          <>
+            <button className="ghost-action" onClick={() => setConfirmToggle(null)}>Cancelar</button>
+            <button className="danger-action" onClick={handleConfirmToggle}>
+              {confirmToggle?.statusAtivo ? 'Desativar' : 'Reativar'}
+            </button>
+          </>
+        }
+      >
+        <p>
+          {confirmToggle?.statusAtivo
+            ? 'Desativar usuário "' + confirmToggle?.nome + '"? Ele não poderá acessar o sistema.'
+            : 'Reativar usuário "' + confirmToggle?.nome + '"?'
+          }
+        </p>
+      </Modal>
 
       <div className="cards-list">
         {items.map(item => (

@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { del, get, post, put } from '../api/http'
+import { toast } from 'react-toastify'
 import { useAuth } from '../state/AuthContext'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
+import Modal from '../components/Modal'
+import '../components/Modal/Modal.scss'
 
 const initialForm = {
   nome: '',
@@ -14,10 +17,9 @@ export default function LocaisEventos() {
   const [form, setForm] = useState(initialForm)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
-  const [erro, setErro] = useState('')
-  const [success, setSuccess] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [filtroNome, setFiltroNome] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
   const { can } = useAuth()
   const canManage = can('GESTAO_EVENTOS')
@@ -38,7 +40,7 @@ export default function LocaisEventos() {
       const data = await get(path)
       setItems(Array.isArray(data) ? data : [])
     } catch (error) {
-      setErro(error.message)
+      toast.error(error.message)
     }
   }
 
@@ -57,8 +59,6 @@ export default function LocaisEventos() {
   const openNew = () => {
     setForm(initialForm)
     setEditing(null)
-    setErro('')
-    setSuccess('')
     setFieldErrors({})
     setFormOpen(true)
   }
@@ -70,8 +70,6 @@ export default function LocaisEventos() {
     })
 
     setEditing(item.id)
-    setErro('')
-    setSuccess('')
     setFieldErrors({})
     setFormOpen(true)
 
@@ -96,8 +94,6 @@ export default function LocaisEventos() {
   const save = async (event) => {
     event.preventDefault()
 
-    setErro('')
-    setSuccess('')
     setFieldErrors({})
 
     const campos = validarCampos()
@@ -116,11 +112,11 @@ export default function LocaisEventos() {
 
         if (editing) {
           await put('/api/locais-evento/' + editing, payload)
-          setSuccess('Local alterado com sucesso.')
+          toast.success('Local alterado com sucesso.')
           setFormOpen(false)
         } else {
           await post('/api/locais-evento', payload)
-          setSuccess('Local cadastrado com sucesso.')
+          toast.success('Local cadastrado com sucesso.')
         }
 
         setEditing(null)
@@ -130,39 +126,28 @@ export default function LocaisEventos() {
         if (error.fieldErrors) {
           setFieldErrors(error.fieldErrors)
         } else {
-          setErro(error.message)
+          toast.error(error.message)
         }
       }
     }
   }
 
-  const remove = async (item) => {
-    const confirmed = window.confirm('Excluir "' + item.nome + '"?')
-
-    if (confirmed) {
-      try {
-        await del('/api/locais-evento/' + item.id)
-
-        setItems(prev =>
-          prev.filter(current => current.id !== item.id)
-        )
-
-        setSuccess('Local excluído com sucesso.')
-      } catch (error) {
-        alert(error.message)
-      }
-    }
+  const remove = (item) => {
+    setConfirmDelete(item)
   }
 
-  useEffect(() => {
-    if (!success) return
-
-    const timer = setTimeout(() => {
-      setSuccess('')
-    }, 4000)
-
-    return () => clearTimeout(timer)
-  }, [success])
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return
+    try {
+      await del('/api/locais-evento/' + confirmDelete.id)
+      setItems(prev => prev.filter(current => current.id !== confirmDelete.id))
+      toast.success('Local excluído com sucesso.')
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setConfirmDelete(null)
+    }
+  }
 
   return (
     <>
@@ -181,12 +166,6 @@ export default function LocaisEventos() {
         />
       </section>
 
-      {success && (
-        <div className="message success">
-          {success}
-        </div>
-      )}
-
       {formOpen && (
         <section className="editor-card">
           <div className="editor-title">
@@ -201,12 +180,6 @@ export default function LocaisEventos() {
               <Icon name="close" size={16} />
             </button>
           </div>
-
-          {erro && (
-            <div className="message inline">
-              {erro}
-            </div>
-          )}
 
           <form
             className="inline-form"
@@ -264,6 +237,22 @@ export default function LocaisEventos() {
           </form>
         </section>
       )}
+
+      <Modal
+        open={!!confirmDelete}
+        title="Confirmar exclusão"
+        variant="error"
+        hideCloseButton
+        onClose={() => setConfirmDelete(null)}
+        footer={
+          <>
+            <button className="ghost-action" onClick={() => setConfirmDelete(null)}>Cancelar</button>
+            <button className="danger-action" onClick={handleConfirmDelete}>Excluir</button>
+          </>
+        }
+      >
+        <p>Excluir local "{confirmDelete?.nome}"?</p>
+      </Modal>
 
       <div className="cards-list">
         {items.map((item, index) => (

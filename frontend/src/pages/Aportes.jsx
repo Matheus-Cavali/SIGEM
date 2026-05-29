@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { del, get, post, put } from '../api/http'
+import { toast } from 'react-toastify'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
 import { dataParaBackend, moeda, valorParaNumero } from '../utils/format'
+import Modal from '../components/Modal'
+import '../components/Modal/Modal.scss'
 import CurrencyField from '../components/form/CurrencyField'
 import DateField from '../components/form/DateField'
 import { useAuth } from '../state/AuthContext'
@@ -15,11 +18,11 @@ export default function Aportes() {
   const [formOpen, setFormOpen] = useState(false)
   const [form, setForm] = useState(initialForm)
   const [editing, setEditing] = useState(null)
-  const [erro, setErro] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [usuariosPerm, setUsuariosPerm] = useState([])
   const [filtroInvestimento, setFiltroInvestimento] = useState('')
   const [filtroColaborador, setFiltroColaborador] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(null)
   const { user, can } = useAuth()
   const canManage = can(['LANCAR_APORTE', 'REGISTRAR_INVESTIMENTO'])
 
@@ -46,10 +49,10 @@ export default function Aportes() {
       setInvestimentos(safeInvs)
       setAportes(flat)
 
-      const usuarios = await get('/api/recurso/usuarios?permissao=LANCAR_APORTE')
+      const usuarios = await get('/api/recurso/usuarios?permissao=LANCAR_APORTE').catch(() => [])
       setUsuariosPerm(Array.isArray(usuarios) ? usuarios : [])
     } catch (error) {
-      if (!error.fieldErrors) setErro(error.message)
+      if (!error.fieldErrors) toast.error(error.message)
     }
   }
 
@@ -58,7 +61,6 @@ export default function Aportes() {
   const openNew = () => {
     setForm(initialForm)
     setEditing(null)
-    setErro('')
     setFieldErrors({})
     setFormOpen(true)
   }
@@ -70,7 +72,6 @@ export default function Aportes() {
       dataAporte: item.dataAporte || '',
     })
     setEditing(item)
-    setErro('')
     setFieldErrors({})
     setFormOpen(true)
   }
@@ -97,7 +98,6 @@ export default function Aportes() {
 
   const save = async (event) => {
     event.preventDefault()
-    setErro('')
     setFieldErrors({})
 
     const campos = validarCampos()
@@ -124,7 +124,7 @@ export default function Aportes() {
         if (error.fieldErrors) {
           setFieldErrors(error.fieldErrors)
         } else {
-          setErro(error.message)
+          toast.error(error.message)
         }
       }
     }
@@ -135,16 +135,19 @@ export default function Aportes() {
     setFieldErrors(prev => ({ ...prev, [field]: '' }))
   }
 
-  const remove = async (item) => {
-    const confirmed = window.confirm('Excluir aporte de ' + moeda(item.valorAporte) + '?')
+  const remove = (item) => {
+    setConfirmDelete(item)
+  }
 
-    if (confirmed) {
-      try {
-        await del('/api/investimentos/' + item.investimentoId + '/aportes/' + item.id)
-        setAportes(prev => prev.filter(current => current.id !== item.id))
-      } catch (error) {
-        alert(error.message)
-      }
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return
+    try {
+      await del('/api/investimentos/' + confirmDelete.investimentoId + '/aportes/' + confirmDelete.id)
+      setAportes(prev => prev.filter(current => current.id !== confirmDelete.id))
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setConfirmDelete(null)
     }
   }
 
@@ -177,7 +180,6 @@ export default function Aportes() {
             <h2>{editing ? 'Editar Aporte' : 'Novo Aporte'}</h2>
             <button className="ghost-icon" onClick={() => setFormOpen(false)}><Icon name="close" size={16} /></button>
           </div>
-          {erro && <div className="message inline">{erro}</div>}
           <form className="inline-form" onSubmit={save}>
             <div className="field-container">
               <label className="field-label">Investimento <span className="required-star">*</span></label>
@@ -201,6 +203,22 @@ export default function Aportes() {
           </form>
         </section>
       )}
+
+      <Modal
+        open={!!confirmDelete}
+        title="Confirmar exclusão"
+        variant="error"
+        hideCloseButton
+        onClose={() => setConfirmDelete(null)}
+        footer={
+          <>
+            <button className="ghost-action" onClick={() => setConfirmDelete(null)}>Cancelar</button>
+            <button className="danger-action" onClick={handleConfirmDelete}>Excluir</button>
+          </>
+        }
+      >
+        <p>Excluir aporte de {confirmDelete && moeda(confirmDelete.valorAporte)}?</p>
+      </Modal>
 
       <div className="cards-list">
         {filtered.map(item => (

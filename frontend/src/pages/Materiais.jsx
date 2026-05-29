@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { del, get, post, put } from '../api/http'
+import { toast } from 'react-toastify'
 import { useAuth } from '../state/AuthContext'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
@@ -15,8 +16,6 @@ export default function Materiais() {
   const [form, setForm] = useState(initialForm)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
-  const [erro, setErro] = useState('')
-  const [success, setSuccess] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [filtroNome, setFiltroNome] = useState('')
   const [filtroCategoria, setFiltroCategoria] = useState('')
@@ -41,7 +40,7 @@ export default function Materiais() {
       const data = await get(path)
       setItems(Array.isArray(data) ? data : [])
     } catch (error) {
-      setErro(error.message)
+      toast.error(error.message)
     }
   }
 
@@ -57,9 +56,7 @@ export default function Materiais() {
   const openNew = () => {
     setForm(initialForm)
     setEditing(null)
-    setErro('')
     setFieldErrors({})
-    setSuccess('')
     setFormOpen(true)
   }
 
@@ -71,9 +68,7 @@ export default function Materiais() {
       categoriaMaterialId: String(item.categoriaMaterialId ?? ''),
     })
     setEditing(item.id)
-    setErro('')
     setFieldErrors({})
-    setSuccess('')
     setFormOpen(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -98,8 +93,6 @@ export default function Materiais() {
 
   const save = async (event) => {
     event.preventDefault()
-    setErro('')
-    setSuccess('')
     setFieldErrors({})
 
     const campos = validarCampos()
@@ -121,11 +114,11 @@ export default function Materiais() {
 
         if (editing) {
           await put('/api/materiais/' + editing, payload)
-          setSuccess('Material alterado com sucesso.')
+          toast.success('Material alterado com sucesso.')
           setFormOpen(false)
         } else {
           await post('/api/materiais', payload)
-          setSuccess('Material cadastrado com sucesso.')
+          toast.success('Material cadastrado com sucesso.')
         }
 
         setEditing(null)
@@ -135,7 +128,7 @@ export default function Materiais() {
         if (error.fieldErrors) {
           setFieldErrors(error.fieldErrors)
         } else {
-          setErro(error.message)
+          toast.error(error.message)
         }
       }
     }
@@ -150,19 +143,13 @@ export default function Materiais() {
     try {
       await del('/api/materiais/' + confirmDelete.id)
       setItems(prev => prev.filter(current => current.id !== confirmDelete.id))
-      setSuccess('Material excluído com sucesso.')
+      toast.success('Material excluído com sucesso.')
     } catch (error) {
-      alert(error.message)
+      toast.error(error.message)
     } finally {
       setConfirmDelete(null)
     }
   }
-
-  useEffect(() => {
-    if (!success) return
-    const timer = setTimeout(() => setSuccess(''), 4000)
-    return () => clearTimeout(timer)
-  }, [success])
 
   return (
     <>
@@ -183,15 +170,12 @@ export default function Materiais() {
         </select>
       </section>
 
-      {success && <div className="message success">{success}</div>}
-
       {formOpen && (
         <section className="editor-card">
           <div className="editor-title">
             <h2>{editing ? 'Editar Material' : 'Novo Material'}</h2>
             <button className="ghost-icon" onClick={() => setFormOpen(false)}><Icon name="close" size={16} /></button>
           </div>
-          {erro && <div className="message inline">{erro}</div>}
           <form className="inline-form" onSubmit={save} noValidate>
             <div className="field-container">
               <label className="field-label"><span>Nome <span className="required-star">*</span></span></label>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import PageHeader from '../../components/PageHeader'
 import Icon from '../../components/Icon'
 import { CepField, CnpjField, ColorField, LogoUpload, PhoneField, SelectField, TextField } from '../../components/form'
@@ -61,8 +62,6 @@ export default function Configuracoes() {
   const [form, setForm] = useState(initialForm)
   const [editing, setEditing] = useState(!configured)
   const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState('')
-  const [localError, setLocalError] = useState('')
   const [logoPreview, setLogoPreview] = useState('')
   const [logoGrandePreview, setLogoGrandePreview] = useState('')
 
@@ -158,8 +157,6 @@ export default function Configuracoes() {
     }
 
     setSaving(true)
-    setMessage('')
-    setLocalError('')
     setFieldErrors({})
 
     try {
@@ -216,12 +213,12 @@ export default function Configuracoes() {
       }
 
       setEditing(false)
-      setMessage('Configurações salvas com sucesso.')
+      toast.success('Configurações salvas com sucesso.')
       if (onboarding) {
         setTimeout(() => navigate('/investimentos'), 300)
       }
     } catch (err) {
-      setLocalError(err.message)
+      toast.error(err.message)
       if (err.fieldErrors) {
         const mapped = {}
         for (const [key, value] of Object.entries(err.fieldErrors)) {
@@ -247,8 +244,7 @@ export default function Configuracoes() {
     setLogoPreview(absoluteLogoUrl(next.caminhoLogo))
     setLogoGrandePreview(absoluteLogoUrl(next.caminhoLogoGrande))
     setEditing(false)
-    setLocalError('')
-    setMessage('')
+
   }
 
   return (
@@ -262,8 +258,7 @@ export default function Configuracoes() {
       />
 
       {loading && <div className="message inline">Carregando configurações...</div>}
-      {(error || localError) && <div className="message inline">{error || localError}</div>}
-      {message && <div className="message success inline">{message}</div>}
+      {error && <div className="message inline">{error}</div>}
 
       <section className="settings-card">
         <header className="settings-card-header">

@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { del, get, post, put } from '../api/http'
+import { toast } from 'react-toastify'
 import { useAuth } from '../state/AuthContext'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
 import TextField from '../components/form/TextField'
+import Modal from '../components/Modal'
 import '../components/form/BaseField/BaseField.scss'
+import '../components/Modal/Modal.scss'
 
 const initialForm = { nome: '' }
 
@@ -13,10 +16,9 @@ export default function CategoriasDocumentos() {
   const [form, setForm] = useState(initialForm)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
-  const [erro, setErro] = useState('')
-  const [success, setSuccess] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [filtroNome, setFiltroNome] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(null)
   const { can } = useAuth()
   const canManage = can('GESTAO_DOCUMENTOS')
 
@@ -29,7 +31,7 @@ export default function CategoriasDocumentos() {
       const data = await get(path)
       setItems(Array.isArray(data) ? data : [])
     } catch (error) {
-      setErro(error.message)
+      toast.error(error.message)
     }
   }
 
@@ -45,18 +47,14 @@ export default function CategoriasDocumentos() {
   const openNew = () => {
     setForm(initialForm)
     setEditing(null)
-    setErro('')
     setFieldErrors({})
-    setSuccess('')
     setFormOpen(true)
   }
 
   const openEdit = (item) => {
     setForm({ nome: item.nome || '' })
     setEditing(item.id)
-    setErro('')
     setFieldErrors({})
-    setSuccess('')
     setFormOpen(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -74,8 +72,6 @@ export default function CategoriasDocumentos() {
 
   const save = async (event) => {
     event.preventDefault()
-    setErro('')
-    setSuccess('')
     setFieldErrors({})
 
     const campos = validarCampos()
@@ -90,11 +86,11 @@ export default function CategoriasDocumentos() {
 
         if (editing) {
           await put('/api/categorias-documentos/' + editing, payload)
-          setSuccess('Categoria alterada com sucesso.')
+          toast.success('Categoria alterada com sucesso.')
           setFormOpen(false)
         } else {
           await post('/api/categorias-documentos', payload)
-          setSuccess('Categoria cadastrada com sucesso.')
+          toast.success('Categoria cadastrada com sucesso.')
         }
 
         setEditing(null)
@@ -104,31 +100,28 @@ export default function CategoriasDocumentos() {
         if (error.fieldErrors) {
           setFieldErrors(error.fieldErrors)
         } else {
-          setErro(error.message)
+          toast.error(error.message)
         }
       }
     }
   }
 
-  const remove = async (item) => {
-    const confirmed = window.confirm('Excluir "' + item.nome + '"?')
-
-    if (confirmed) {
-      try {
-        await del('/api/categorias-documentos/' + item.id)
-        setItems(prev => prev.filter(current => current.id !== item.id))
-        setSuccess('Categoria excluída com sucesso.')
-      } catch (error) {
-        alert(error.message)
-      }
-    }
+  const remove = (item) => {
+    setConfirmDelete(item)
   }
 
-  useEffect(() => {
-    if (!success) return
-    const timer = setTimeout(() => setSuccess(''), 4000)
-    return () => clearTimeout(timer)
-  }, [success])
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return
+    try {
+      await del('/api/categorias-documentos/' + confirmDelete.id)
+      setItems(prev => prev.filter(current => current.id !== confirmDelete.id))
+      toast.success('Categoria excluída com sucesso.')
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setConfirmDelete(null)
+    }
+  }
 
   return (
     <>
@@ -142,15 +135,12 @@ export default function CategoriasDocumentos() {
         />
       </section>
 
-      {success && <div className="message success">{success}</div>}
-
       {formOpen && (
         <section className="editor-card">
           <div className="editor-title">
             <h2>{editing ? 'Editar Categoria' : 'Nova Categoria'}</h2>
             <button className="ghost-icon" onClick={() => setFormOpen(false)}><Icon name="close" size={16} /></button>
           </div>
-          {erro && <div className="message inline">{erro}</div>}
           <form className="inline-form" onSubmit={save} noValidate>
             <TextField
               label="Nome"
@@ -166,6 +156,22 @@ export default function CategoriasDocumentos() {
           </form>
         </section>
       )}
+
+      <Modal
+        open={!!confirmDelete}
+        title="Confirmar exclusão"
+        variant="error"
+        hideCloseButton
+        onClose={() => setConfirmDelete(null)}
+        footer={
+          <>
+            <button className="ghost-action" onClick={() => setConfirmDelete(null)}>Cancelar</button>
+            <button className="danger-action" onClick={handleConfirmDelete}>Excluir</button>
+          </>
+        }
+      >
+        <p>Excluir categoria "{confirmDelete?.nome}"?</p>
+      </Modal>
 
       <div className="cards-list">
         {items.map(item => (

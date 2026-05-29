@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { del, get, post, put } from '../api/http'
+import { toast } from 'react-toastify'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
 import { useAuth } from '../state/AuthContext'
+import Modal from '../components/Modal'
+import '../components/Modal/Modal.scss'
 
 const initialForm = { nome: '' }
 
@@ -11,8 +14,8 @@ export default function CategoriasDespesa() {
   const [form, setForm] = useState(initialForm)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
-  const [erro, setErro] = useState('')
   const [filtroNome, setFiltroNome] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(null)
   const { can } = useAuth()
   const canManage = can('GERENCIAR_DESPESA')
 
@@ -23,7 +26,7 @@ export default function CategoriasDespesa() {
       const data = await get(path)
       setItems(Array.isArray(data) ? data : [])
     } catch (error) {
-      setErro(error.message)
+      toast.error(error.message)
     }
   }
 
@@ -37,7 +40,6 @@ export default function CategoriasDespesa() {
   const openNew = () => {
     setForm(initialForm)
     setEditing(null)
-    setErro('')
     setFormOpen(true)
   }
 
@@ -46,13 +48,11 @@ export default function CategoriasDespesa() {
       nome: item.nome || '',
     })
     setEditing(item.id)
-    setErro('')
     setFormOpen(true)
   }
 
   const save = async (event) => {
     event.preventDefault()
-    setErro('')
 
     try {
       if (!form.nome) throw new Error('Nome é obrigatorio')
@@ -70,20 +70,23 @@ export default function CategoriasDespesa() {
       setForm(initialForm)
       load(filtroNome)
     } catch (error) {
-      setErro(error.message)
+      toast.error(error.message)
     }
   }
 
-  const remove = async (item) => {
-    const confirmed = window.confirm('Excluir "' + item.nome + '"?')
+  const remove = (item) => {
+    setConfirmDelete(item)
+  }
 
-    if (confirmed) {
-      try {
-        await del('/api/categorias-despesa/' + item.id)
-        setItems(prev => prev.filter(current => current.id !== item.id))
-      } catch (error) {
-        alert(error.message)
-      }
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return
+    try {
+      await del('/api/categorias-despesa/' + confirmDelete.id)
+      setItems(prev => prev.filter(current => current.id !== confirmDelete.id))
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setConfirmDelete(null)
     }
   }
 
@@ -101,7 +104,6 @@ export default function CategoriasDespesa() {
             <h2>{editing ? 'Editar Categoria de Despesa' : 'Nova Categoria de Despesa'}</h2>
             <button className="ghost-icon" onClick={() => setFormOpen(false)}><Icon name="close" size={16} /></button>
           </div>
-          {erro && <div className="message inline">{erro}</div>}
           <form className="inline-form" onSubmit={save}>
             <label>
               <span>Nome</span>
@@ -113,6 +115,22 @@ export default function CategoriasDespesa() {
           </form>
         </section>
       )}
+
+      <Modal
+        open={!!confirmDelete}
+        title="Confirmar exclusão"
+        variant="error"
+        hideCloseButton
+        onClose={() => setConfirmDelete(null)}
+        footer={
+          <>
+            <button className="ghost-action" onClick={() => setConfirmDelete(null)}>Cancelar</button>
+            <button className="danger-action" onClick={handleConfirmDelete}>Excluir</button>
+          </>
+        }
+      >
+        <p>Excluir categoria "{confirmDelete?.nome}"?</p>
+      </Modal>
 
       <div className="cards-list">
         {items.map(item => (
