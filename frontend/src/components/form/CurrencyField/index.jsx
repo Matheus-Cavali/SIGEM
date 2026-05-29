@@ -1,13 +1,21 @@
 import BaseField from '../BaseField'
 
 function formatCurrency(value) {
-  const digits = value.replace(/\D/g, '')
+  const str = value || ''
+  const hasMinus = str.includes('-')
+  const digits = str.replace(/\D/g, '')
   const cents = Number(digits || 0) / 100
 
-  return cents.toLocaleString('pt-BR', {
+  if (digits.length === 0 && hasMinus) return '-'
+
+  const formatted = cents.toLocaleString('pt-BR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })
+
+  if (cents === 0) return formatted
+
+  return hasMinus ? '-' + formatted : formatted
 }
 
 export default function CurrencyField({ value, setValue, label, placeholder, disabled, error, required }) {

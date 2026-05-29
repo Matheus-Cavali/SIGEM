@@ -28,7 +28,7 @@ public class Main {
             server.createContext("/api/recurso", new UsuarioRouter());
             server.createContext("/api/parameters", new ParametrizacaoIgrejaRouter());
             server.createContext("/uploads", UploadRouter.getInstancia());
-            server.createContext("/api/categorias-eventos", CategoriaEventoRouter.getInstancia());
+            server.createContext("/api/categorias-eventos", new CategoriaEventoRouter());
             server.createContext("/api/categorias-despesa", DespesaRouter.getInstancia());
             server.createContext("/api/despesas", DespesaRouter.getInstancia());
             server.createContext("/api/documentos", new DocumentoRouter());

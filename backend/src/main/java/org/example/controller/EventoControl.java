@@ -98,7 +98,11 @@ public class EventoControl {
                     ts += " 00:00:00";
                 else if (ts.indexOf(":", ts.indexOf(":") + 1) == -1)
                     ts += ":00";
-                evento.setDataInicio(Timestamp.valueOf(ts));
+                try {
+                    evento.setDataInicio(Timestamp.valueOf(ts));
+                } catch (IllegalArgumentException e) {
+                    return new Resposta(400, "{\"erro\":\"Data de início inválida\"}");
+                }
             }
 
             if (df != null && !df.trim().isEmpty()) {
@@ -107,7 +111,11 @@ public class EventoControl {
                     ts += " 00:00:00";
                 else if (ts.indexOf(":", ts.indexOf(":") + 1) == -1)
                     ts += ":00";
-                evento.setDataFim(Timestamp.valueOf(ts));
+                try {
+                    evento.setDataFim(Timestamp.valueOf(ts));
+                } catch (IllegalArgumentException e) {
+                    return new Resposta(400, "{\"erro\":\"Data de fim inválida\"}");
+                }
             }
 
             Number localId = (Number) map.get("localId");
@@ -202,7 +210,11 @@ public class EventoControl {
                     ts += " 00:00:00";
                 else if (ts.indexOf(":", ts.indexOf(":") + 1) == -1)
                     ts += ":00";
-                evento.setDataInicio(Timestamp.valueOf(ts));
+                try {
+                    evento.setDataInicio(Timestamp.valueOf(ts));
+                } catch (IllegalArgumentException e) {
+                    return new Resposta(400, "{\"erro\":\"Data de início inválida\"}");
+                }
             }
 
             if (df != null && !df.trim().isEmpty()) {
@@ -211,7 +223,11 @@ public class EventoControl {
                     ts += " 00:00:00";
                 else if (ts.indexOf(":", ts.indexOf(":") + 1) == -1)
                     ts += ":00";
-                evento.setDataFim(Timestamp.valueOf(ts));
+                try {
+                    evento.setDataFim(Timestamp.valueOf(ts));
+                } catch (IllegalArgumentException e) {
+                    return new Resposta(400, "{\"erro\":\"Data de fim inválida\"}");
+                }
             }
 
             Number categoria = (Number) map.get("categoriaEventoId");
@@ -294,14 +310,13 @@ public class EventoControl {
 
             Map<?, ?> dados = gson.fromJson(json, Map.class);
 
-            BigDecimal resultadoFinanceiro = null;
+            if (dados.get("resultadoFinanceiro") == null)
+                return new Resposta(400,
+                        "{\"erro\":\"Resultado financeiro é obrigatório\"}");
 
-            if (dados.get("resultadoFinanceiro") != null) {
-
-                resultadoFinanceiro = BigDecimal.valueOf(
-                        ((Number) dados.get("resultadoFinanceiro")).doubleValue()
-                );
-            }
+            BigDecimal resultadoFinanceiro = BigDecimal.valueOf(
+                    ((Number) dados.get("resultadoFinanceiro")).doubleValue()
+            );
 
             String observacoesHistorico =
                     (String) dados.get("observacoesHistorico");

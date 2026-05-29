@@ -187,6 +187,22 @@ public class EventoDao {
         return lista;
     }
 
+    public boolean abrirEvento(Connection conn, Integer id, Timestamp dataInicioAtual){
+
+        String sql = "UPDATE evento SET status = 'ABERTO', data_inicio = ? WHERE id = ?";
+
+        try(PreparedStatement stmt = conn.prepareStatement(sql)){
+
+            stmt.setTimestamp(1, dataInicioAtual);
+            stmt.setInt(2, id);
+
+            return stmt.executeUpdate() == 1;
+        }
+        catch (SQLException e){
+            throw new DatabaseException("Erro ao abrir evento", e);
+        }
+    }
+
     public boolean alterarStatus(Connection conn, Integer id, String status){
 
         String sql = "UPDATE evento SET status = ? WHERE id = ?";
@@ -205,6 +221,7 @@ public class EventoDao {
 
     public boolean encerrarEvento(Connection conn,
                                   Integer id,
+                                  Timestamp dataFim,
                                   String observacoesHistorico,
                                   BigDecimal resultadoFinanceiro){
 
@@ -212,6 +229,7 @@ public class EventoDao {
                 UPDATE evento
                 SET
                     status = 'ENCERRADO',
+                    data_fim = ?,
                     observacoes_historico = ?,
                     resultado_financeiro = ?
                 WHERE id = ?
@@ -219,14 +237,15 @@ public class EventoDao {
 
         try(PreparedStatement stmt = conn.prepareStatement(sql)){
 
-            stmt.setString(1, observacoesHistorico);
+            stmt.setTimestamp(1, dataFim);
+            stmt.setString(2, observacoesHistorico);
 
             if(resultadoFinanceiro != null)
-                stmt.setBigDecimal(2, resultadoFinanceiro);
+                stmt.setBigDecimal(3, resultadoFinanceiro);
             else
-                stmt.setNull(2, Types.DECIMAL);
+                stmt.setNull(3, Types.DECIMAL);
 
-            stmt.setInt(3, id);
+            stmt.setInt(4, id);
 
             return stmt.executeUpdate() == 1;
         }

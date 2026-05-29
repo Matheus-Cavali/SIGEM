@@ -20,18 +20,7 @@ import java.util.Map;
 
 public class CategoriaEventoControl {
 
-    private static CategoriaEventoControl instancia;
-
-    private CategoriaEventoControl() {}
-
-    public static CategoriaEventoControl getInstancia() {
-
-        if (instancia == null) {
-            instancia = new CategoriaEventoControl();
-        }
-
-        return instancia;
-    }
+    public CategoriaEventoControl() {}
 
     private String emailDoToken(String auth) {
 
