@@ -39,35 +39,35 @@ public class InvestimentoRouter implements HttpHandler {
 
                 if ("POST".equalsIgnoreCase(metodo) && "/api/investimentos".equals(path)) {
                     String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-                    r = controller.registrarInvestimento(auth, json);
+                    r = control.registrarInvestimento(auth, json);
                 } else if ("GET".equalsIgnoreCase(metodo) && "/api/investimentos".equals(path)) {
-                    r = controller.listarInvestimentos(auth, exchange.getRequestURI().getQuery());
+                    r = control.listarInvestimentos(auth, exchange.getRequestURI().getQuery());
                 } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/investimentos/\\d+")) {
                     int id = extrairId(path);
-                    r = controller.buscarInvestimento(auth, id);
+                    r = control.buscarInvestimento(auth, id);
                 } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/investimentos/\\d+")) {
                     int id = extrairId(path);
                     String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-                    r = controller.atualizarInvestimento(auth, id, json);
+                    r = control.atualizarInvestimento(auth, id, json);
                 } else if ("GET".equalsIgnoreCase(metodo) && (path.matches("/api/investimentos/\\d+/aportes") || path.matches("/api/investimentos/\\d+/aporte"))) {
                     int id = extrairId(path);
-                    r = controller.listarAportes(auth, id);
+                    r = control.listarAportes(auth, id);
                 } else if ("POST".equalsIgnoreCase(metodo) && (path.matches("/api/investimentos/\\d+/aportes") || path.matches("/api/investimentos/\\d+/aporte"))) {
                     int id = extrairId(path);
                     String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-                    r = controller.lancarAporte(auth, id, json);
+                    r = control.lancarAporte(auth, id, json);
                 } else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/investimentos/\\d+")) {
                     int id = extrairId(path);
-                    r = controller.removerInvestimento(auth, id);
+                    r = control.removerInvestimento(auth, id);
                 } else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/investimentos/\\d+/aportes/\\d+")) {
                     String[] p = path.split("/");
                     int aporteId = Integer.parseInt(p[p.length - 1]);
-                    r = controller.removerAporte(auth, aporteId);
+                    r = control.removerAporte(auth, aporteId);
                 } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/investimentos/\\d+/aportes/\\d+")) {
                     String[] p = path.split("/");
                     int aporteId = Integer.parseInt(p[p.length - 1]);
                     String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-                    r = controller.atualizarAporte(auth, aporteId, json);
+                    r = control.atualizarAporte(auth, aporteId, json);
                 } else {
                     r = new Resposta(404, "{\"erro\":\"Rota não encontrada\"}");
                 }

@@ -38,14 +38,14 @@ public class ColaboradorRouter implements HttpHandler {
                 Resposta r;
 
                 if ("GET".equalsIgnoreCase(metodo) && "/api/colaboradores".equals(path)) {
-                    r = controller.listar(auth, exchange.getRequestURI().getQuery());
+                    r = control.listar(auth, exchange.getRequestURI().getQuery());
                 } else if ("GET".equalsIgnoreCase(metodo) && path.matches("/api/colaboradores/\\d+")) {
                     int id = Integer.parseInt(path.split("/")[3]);
-                    r = controller.buscarPorId(auth, id);
+                    r = control.buscarPorId(auth, id);
                 } else if ("PUT".equalsIgnoreCase(metodo) && path.matches("/api/colaboradores/\\d+")) {
                     int id = Integer.parseInt(path.split("/")[3]);
                     String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-                    r = controller.atualizar(auth, id, json);
+                    r = control.atualizar(auth, id, json);
                 } else {
                     r = new Resposta(404, "{\"erro\":\"Rota não encontrada\"}");
                 }
