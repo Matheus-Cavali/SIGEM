@@ -11,8 +11,8 @@ public class ParametrizacaoIgrejaDao {
 
     public boolean cadastrar(Connection conn, ParametrizacaoIgreja p){
         String sql = "INSERT INTO parametrizacao_igreja " +
-                "(nome_fantasia, razao_social, cnpj, caminho_logo, cor_primaria, cor_secundaria, telefone, email, site, endereco_completo) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                "(nome_fantasia, razao_social, cnpj, caminho_logo, caminho_logo_grande, cor_primaria, cor_secundaria, telefone, email, site, endereco_id) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try(PreparedStatement stmt = conn.prepareStatement(sql)){
             preencherStatement(stmt, p);
@@ -24,12 +24,12 @@ public class ParametrizacaoIgrejaDao {
     }
 
     public boolean atualizar(Connection conn, ParametrizacaoIgreja p){
-        String sql = "UPDATE parametrizacao_igreja SET nome_fantasia = ?, razao_social = ?, cnpj = ?, caminho_logo = ?, cor_primaria = ?, " +
-                "cor_secundaria = ?, telefone = ?, email = ?, site = ?, endereco_completo = ? WHERE id = ?";
+        String sql = "UPDATE parametrizacao_igreja SET nome_fantasia = ?, razao_social = ?, cnpj = ?, caminho_logo = ?, " +
+                "caminho_logo_grande = ?, cor_primaria = ?, cor_secundaria = ?, telefone = ?, email = ?, site = ?, endereco_id = ? WHERE id = ?";
 
         try(PreparedStatement stmt = conn.prepareStatement(sql)){
             preencherStatement(stmt, p);
-            stmt.setInt(11, p.getId());
+            stmt.setInt(12, p.getId());
 
             return stmt.executeUpdate() == 1;
         }
@@ -134,12 +134,13 @@ public class ParametrizacaoIgrejaDao {
         p.setRazaoSocial(rs.getString("razao_social"));
         p.setCnpj(rs.getString("cnpj"));
         p.setCaminhoLogo(rs.getString("caminho_logo"));
+        p.setCaminhoLogoGrande(rs.getString("caminho_logo_grande"));
         p.setCorPrimaria(rs.getString("cor_primaria"));
         p.setCorSecundaria(rs.getString("cor_secundaria"));
         p.setTelefone(rs.getString("telefone"));
         p.setEmail(rs.getString("email"));
         p.setSite(rs.getString("site"));
-        p.setEndereco(rs.getString("endereco_completo"));
+        p.setEnderecoId(rs.getObject("endereco_id", Integer.class));
         return p;
     }
 
@@ -148,11 +149,15 @@ public class ParametrizacaoIgrejaDao {
         stmt.setString(2, p.getRazaoSocial());
         stmt.setString(3, p.getCnpj());
         stmt.setString(4, p.getCaminhoLogo());
-        stmt.setString(5, p.getCorPrimaria());
-        stmt.setString(6, p.getCorSecundaria());
-        stmt.setString(7, p.getTelefone());
-        stmt.setString(8, p.getEmail());
-        stmt.setString(9, p.getSite());
-        stmt.setString(10, p.getEndereco());
+        stmt.setString(5, p.getCaminhoLogoGrande());
+        stmt.setString(6, p.getCorPrimaria());
+        stmt.setString(7, p.getCorSecundaria());
+        stmt.setString(8, p.getTelefone());
+        stmt.setString(9, p.getEmail());
+        stmt.setString(10, p.getSite());
+        if (p.getEnderecoId() != null)
+            stmt.setInt(11, p.getEnderecoId());
+        else
+            stmt.setNull(11, Types.INTEGER);
     }
 }
