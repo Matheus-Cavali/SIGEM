@@ -128,15 +128,24 @@ export default function Configuracoes() {
   function validate() {
     const erros = {}
     if (!form.nomeFantasia.trim()) erros.nomeFantasia = 'Nome fantasia é obrigatório'
-    if (!form.cnpj.trim()) erros.cnpj = 'CNPJ é obrigatório'
-    if (!form.telefone.trim()) erros.telefone = 'Telefone é obrigatório'
+    const cnpjDigitos = form.cnpj.replace(/\D/g, '')
+    if (!cnpjDigitos) erros.cnpj = 'CNPJ é obrigatório'
+    else if (cnpjDigitos.length !== 14) erros.cnpj = 'CNPJ deve ter 14 dígitos'
+    const telDigitos = form.telefone.replace(/\D/g, '')
+    if (!telDigitos) erros.telefone = 'Telefone é obrigatório'
+    else if (telDigitos.length < 10 || telDigitos.length > 11) erros.telefone = 'Telefone deve ter 10 ou 11 dígitos'
     if (!form.email.trim()) erros.email = 'E-mail é obrigatório'
-    const temEndereco = form.endereco.cep || form.endereco.logradouro || form.endereco.numero
-    if (temEndereco) {
-      const addrLabels = { cep: 'CEP', logradouro: 'Logradouro', numero: 'Número', bairro: 'Bairro', cidade: 'Cidade', uf: 'UF' }
-      for (const [key, label] of Object.entries(addrLabels)) {
-        if (!form.endereco[key]?.toString().trim()) erros[`endereco.${key}`] = `${label} é obrigatório`
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) erros.email = 'E-mail inválido'
+    const addrLabels = { cep: 'CEP', logradouro: 'Logradouro', numero: 'Número', bairro: 'Bairro', cidade: 'Cidade', uf: 'UF' }
+    for (const [key, label] of Object.entries(addrLabels)) {
+      if (!form.endereco[key]?.toString().trim()) {
+        erros[`endereco.${key}`] = `${label} é obrigatório`
       }
+    }
+
+    const cepDigitos = form.endereco.cep.replace(/\D/g, '')
+    if (form.endereco.cep && cepDigitos.length !== 8) {
+      erros['endereco.cep'] = 'CEP deve ter 8 dígitos'
     }
     return erros
   }
@@ -171,17 +180,13 @@ export default function Configuracoes() {
         }
       }
 
-      const endereco = form.endereco.cep || form.endereco.logradouro || form.endereco.numero
-        ? form.endereco
-        : null
-
       const payload = {
         nomeFantasia: form.nomeFantasia,
         cnpj: form.cnpj,
         telefone: form.telefone,
         email: form.email,
         site: form.site,
-        endereco,
+        endereco: form.endereco,
         corPrimaria: form.corPrimaria,
         corSecundaria: form.corSecundaria,
         caminhoLogo: logoPath,
@@ -210,7 +215,7 @@ export default function Configuracoes() {
         setLogoGrandePreview('')
       }
 
-      setEditing(configured)
+      setEditing(false)
       setMessage('Configurações salvas com sucesso.')
       if (onboarding) {
         setTimeout(() => navigate('/investimentos'), 300)

@@ -38,12 +38,35 @@ public class ParametrizacaoIgreja {
         Map<String, String> erros = new LinkedHashMap<>();
         if(p.getNomeFantasia() == null || p.getNomeFantasia().trim().isEmpty())
             erros.put("nomeFantasia", "Nome fantasia é obrigatório");
-        if(p.getCnpj() == null || p.getCnpj().trim().isEmpty())
+        String cnpj = p.getCnpj();
+        if(cnpj == null || cnpj.trim().isEmpty())
             erros.put("cnpj", "CNPJ é obrigatório");
-        if(p.getTelefone() == null || p.getTelefone().trim().isEmpty())
+        else if(cnpj.replaceAll("\\D", "").length() != 14)
+            erros.put("cnpj", "CNPJ deve ter 14 dígitos");
+        String telefone = p.getTelefone();
+        if(telefone == null || telefone.trim().isEmpty())
             erros.put("telefone", "Telefone é obrigatório");
-        if(p.getEmail() == null || p.getEmail().trim().isEmpty())
+        else {
+            int len = telefone.replaceAll("\\D", "").length();
+            if(len < 10 || len > 11)
+                erros.put("telefone", "Telefone deve ter 10 ou 11 dígitos");
+        }
+        String email = p.getEmail();
+        if(email == null || email.trim().isEmpty())
             erros.put("email", "E-mail é obrigatório");
+        else if(!email.trim().contains("@") || !email.trim().substring(email.trim().indexOf("@")).contains("."))
+            erros.put("email", "E-mail inválido");
+        if(p.getEndereco() == null && p.getEnderecoId() == null) {
+            erros.put("cep", "CEP é obrigatório");
+            erros.put("logradouro", "Logradouro é obrigatório");
+            erros.put("numero", "Número é obrigatório");
+            erros.put("bairro", "Bairro é obrigatório");
+            erros.put("cidade", "Cidade é obrigatória");
+            erros.put("uf", "UF é obrigatória");
+        }
+        else if(p.getEndereco() != null) {
+            erros.putAll(Endereco.validarEndereco(p.getEndereco()));
+        }
         return erros;
     }
 
@@ -64,6 +87,11 @@ public class ParametrizacaoIgreja {
     }
 
     public void salvar(Connection conn, ParametrizacaoIgreja p){
+        aplicarDefaults(p);
+        Map<String, String> erros = validarParametrizacao(p);
+        if(!erros.isEmpty())
+            throw new RuntimeException(new Gson().toJson(Map.of("erros", erros)));
+
         if (p.getEndereco() != null) {
             Endereco e = new Endereco();
             e.setId(p.getEndereco().getId());

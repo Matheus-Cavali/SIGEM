@@ -57,7 +57,7 @@ export function ParametersProvider({ children }) {
     setError('')
     const data = await put('/api/parameters', payload)
     setParameters({ ...emptyParameters, ...(data || {}) })
-    setConfigured(true)
+    setConfigured(!!(data && data.id))
     return data
   }
 
