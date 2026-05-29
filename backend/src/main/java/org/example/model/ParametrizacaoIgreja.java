@@ -38,6 +38,12 @@ public class ParametrizacaoIgreja {
         Map<String, String> erros = new LinkedHashMap<>();
         if(p.getNomeFantasia() == null || p.getNomeFantasia().trim().isEmpty())
             erros.put("nomeFantasia", "Nome fantasia é obrigatório");
+        if(p.getCnpj() == null || p.getCnpj().trim().isEmpty())
+            erros.put("cnpj", "CNPJ é obrigatório");
+        if(p.getTelefone() == null || p.getTelefone().trim().isEmpty())
+            erros.put("telefone", "Telefone é obrigatório");
+        if(p.getEmail() == null || p.getEmail().trim().isEmpty())
+            erros.put("email", "E-mail é obrigatório");
         return erros;
     }
 
@@ -85,7 +91,7 @@ public class ParametrizacaoIgreja {
     public void salvarLogo(Connection conn, String caminhoLogo){
         ParametrizacaoIgreja atual = buscar(conn);
         if(atual == null)
-            atual = parametrosPadrao();
+            throw new IllegalStateException("Configure os parâmetros da igreja antes de enviar o logotipo.");
         atual.setCaminhoLogo(caminhoLogo);
         salvar(conn, atual);
     }
@@ -93,7 +99,7 @@ public class ParametrizacaoIgreja {
     public void salvarLogoGrande(Connection conn, String caminhoLogoGrande){
         ParametrizacaoIgreja atual = buscar(conn);
         if(atual == null)
-            atual = parametrosPadrao();
+            throw new IllegalStateException("Configure os parâmetros da igreja antes de enviar o logotipo.");
         atual.setCaminhoLogoGrande(caminhoLogoGrande);
         salvar(conn, atual);
     }
@@ -116,10 +122,8 @@ public class ParametrizacaoIgreja {
 
     public ParametrizacaoIgreja buscar(Connection conn){
         ParametrizacaoIgreja parametros = getDao().buscar(conn);
-        if(parametros == null)
-            return parametrosPadrao();
 
-        if (parametros.getEnderecoId() != null)
+        if (parametros != null && parametros.getEnderecoId() != null)
             parametros.setEndereco(new Endereco().buscarPorId(conn, parametros.getEnderecoId()));
 
         return parametros;
