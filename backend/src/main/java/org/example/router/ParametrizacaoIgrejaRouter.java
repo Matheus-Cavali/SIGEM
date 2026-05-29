@@ -49,8 +49,12 @@ public class ParametrizacaoIgrejaRouter implements HttpHandler {
                 r = getControl().salvar(auth, json);
             }
             else if("POST".equalsIgnoreCase(metodo) && "/api/parameters/logo".equals(path)){
-                String caminhoLogo = salvarUpload(exchange);
+                String caminhoLogo = salvarUpload(exchange, "logo");
                 r = getControl().salvarLogo(auth, caminhoLogo);
+            }
+            else if("POST".equalsIgnoreCase(metodo) && "/api/parameters/logo-grande".equals(path)){
+                String caminhoLogoGrande = salvarUpload(exchange, "logoGrande");
+                r = getControl().salvarLogoGrande(auth, caminhoLogoGrande);
             }
             else{
                 r = new Resposta(404, "{\"erro\":\"Rota não encontrada\"}");
@@ -64,7 +68,7 @@ public class ParametrizacaoIgrejaRouter implements HttpHandler {
         }
     }
 
-    private String salvarUpload(HttpExchange exchange) throws IOException {
+    private String salvarUpload(HttpExchange exchange, String fieldName) throws IOException {
         String contentType = exchange.getRequestHeaders().getFirst("Content-Type");
 
         if (contentType == null || !contentType.contains("multipart/form-data")) {
@@ -87,7 +91,7 @@ public class ParametrizacaoIgrejaRouter implements HttpHandler {
             if (nextBoundary < 0) break;
 
             int dataEnd = nextBoundary - 2;
-            if (headers.contains("name=\"logo\"")) {
+            if (headers.contains("name=\"" + fieldName + "\"")) {
                 String filename = extrairFilename(headers);
                 String extension = extrairExtensao(filename);
                 Path uploadDir = Path.of("uploads", "parameters").toAbsolutePath().normalize();
