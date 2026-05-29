@@ -11,14 +11,15 @@ import java.nio.charset.StandardCharsets;
 
 public class ColaboradorRouter implements HttpHandler {
 
-    private static ColaboradorRouter instancia;
-    private ColaboradorRouter() {}
-    public static ColaboradorRouter getInstancia() {
-        if (instancia == null) instancia = new ColaboradorRouter();
-        return instancia;
+    private ColaboradorControl control;
+
+    public ColaboradorRouter() {
+        control = new ColaboradorControl();
     }
 
-    private ColaboradorControl controller = ColaboradorControl.getInstancia();
+    public ColaboradorControl getControl() {
+        return control;
+    }
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {

@@ -1,6 +1,6 @@
 import BaseField from '../BaseField'
 
-export default function TextField({ value, setValue, label, placeholder, disabled, required, error }) {
+export default function TextField({ value, setValue, label, placeholder, disabled, required, error, maxLength }) {
   return (
     <BaseField label={label} required={required} error={error}>
       <input
@@ -9,6 +9,7 @@ export default function TextField({ value, setValue, label, placeholder, disable
         value={value || ''}
         disabled={disabled}
         placeholder={placeholder}
+        maxLength={maxLength}
         onChange={(event) => setValue(event.target.value)}
       />
     </BaseField>

@@ -2,8 +2,7 @@ package org.example.controller;
 
 import com.google.gson.Gson;
 import org.example.conexao.Conexao;
-import org.example.dao.RecursoSistemaDao;
-import org.example.dao.UsuarioDao;
+
 import org.example.model.CategoriaDocumento;
 import org.example.model.RecursoSistema;
 import org.example.model.Resposta;
@@ -38,13 +37,11 @@ public class CategoriaDocumentoControl {
         String email = emailDoToken(auth);
         if (email != null) {
             try{
-                UsuarioDao uDao = new UsuarioDao();
                 Connection conn = Conexao.getConexao();
-                Usuario u = uDao.buscarPorEmail(conn, email);
+                Usuario u = Usuario.buscarPorEmail(conn, email);
                 if (u != null) {
                     if (u.getNivelAcesso() == 1) return true;
-                    RecursoSistemaDao rDao = new RecursoSistemaDao();
-                    for (RecursoSistema r : rDao.listarPorUsuario(conn, u.getId())) {
+                    for (RecursoSistema r : RecursoSistema.listarPorUsuario(conn, u.getId())) {
                         if (r.getNome().equals(recursoNome)) return true;
                     }
                 }
@@ -57,7 +54,7 @@ public class CategoriaDocumentoControl {
     }
 
     public Resposta cadastrar(String auth, String json){
-        if (!usuarioTemPermissao(auth, "GESTAO_DOACOES")) {
+        if (!usuarioTemPermissao(auth, "GESTAO_DOCUMENTOS")) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
         try{
@@ -96,7 +93,7 @@ public class CategoriaDocumentoControl {
     }
 
     public Resposta atualizar(String auth, int id, String json){
-        if (!usuarioTemPermissao(auth, "GESTAO_DOACOES")) {
+        if (!usuarioTemPermissao(auth, "GESTAO_DOCUMENTOS")) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
         try{
@@ -115,7 +112,7 @@ public class CategoriaDocumentoControl {
     }
 
     public Resposta excluir(String auth, int id){
-        if (!usuarioTemPermissao(auth, "GESTAO_DOACOES")) {
+        if (!usuarioTemPermissao(auth, "GESTAO_DOCUMENTOS")) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
         try{

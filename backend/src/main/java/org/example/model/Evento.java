@@ -6,6 +6,7 @@ import org.example.dao.EventoDao;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,11 +80,18 @@ public class Evento {
         if (evento.getDataFim() == null)
             erros.put("dataFim", "Data de fim é obrigatória");
 
-        if (evento.getDataInicio() != null &&
-                evento.getDataFim() != null &&
-                evento.getDataFim().before(evento.getDataInicio())) {
+    if (evento.getDataInicio() != null &&
+            evento.getDataFim() != null &&
+            evento.getDataFim().before(evento.getDataInicio())) {
 
             erros.put("dataFim", "Data de fim não pode ser menor que a data de início");
+        }
+
+        if (evento.getDataInicio() != null &&
+                evento.getDataInicio().toLocalDateTime().toLocalDate()
+                        .isBefore(java.time.LocalDate.now())) {
+
+            erros.put("dataInicio", "Data de início não pode ser no passado");
         }
 
         return erros;
@@ -138,7 +146,10 @@ public class Evento {
         if (evento.getCoordenadorId() == null)
             throw new IllegalArgumentException("Não é possível abrir um evento sem coordenador.");
 
-        getDao().alterarStatus(conn, id, "ABERTO");
+        if (!evento.getDataInicio().toLocalDateTime().toLocalDate().equals(LocalDate.now()))
+            throw new IllegalArgumentException("Só é possível abrir o evento na data agendada.");
+
+        getDao().abrirEvento(conn, id, new Timestamp(System.currentTimeMillis()));
     }
 
     public void cancelar(Connection conn, Integer id) {
@@ -173,8 +184,12 @@ public class Evento {
         if (!"ABERTO".equals(evento.getStatus()))
             throw new IllegalArgumentException("Somente eventos abertos podem ser encerrados.");
 
+        if (resultadoFinanceiro == null)
+            throw new IllegalArgumentException("Resultado financeiro é obrigatório.");
+
         getDao().encerrarEvento(conn,
                 id,
+                new Timestamp(System.currentTimeMillis()),
                 observacoesHistorico,
                 resultadoFinanceiro);
     }

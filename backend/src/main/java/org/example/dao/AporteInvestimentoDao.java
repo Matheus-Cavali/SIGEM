@@ -60,8 +60,7 @@ public class AporteInvestimentoDao {
         String sql = "DELETE FROM aporte_investimento WHERE investimento_futuro_id = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, investimentoId);
-            stmt.executeUpdate();
-            return true;
+            return stmt.executeUpdate() > 0;
         } catch (SQLException e) {
             throw new DatabaseException("Erro ao deletar aportes por investimento", e);
         }

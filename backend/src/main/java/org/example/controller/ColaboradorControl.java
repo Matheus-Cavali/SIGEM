@@ -2,9 +2,7 @@ package org.example.controller;
 
 import com.google.gson.*;
 import org.example.conexao.Conexao;
-import org.example.dao.ColaboradorDao;
-import org.example.dao.RecursoSistemaDao;
-import org.example.dao.UsuarioDao;
+
 import org.example.model.Colaborador;
 import org.example.model.RecursoSistema;
 import org.example.model.Resposta;
@@ -13,26 +11,18 @@ import org.example.model.Usuario;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class ColaboradorControl {
 
-    private static ColaboradorControl instancia;
-
-    private ColaboradorControl() {}
-
-    public static ColaboradorControl getInstancia() {
-        if (instancia == null) instancia = new ColaboradorControl();
-        return instancia;
-    }
-
     private final Gson gson = new GsonBuilder()
             .registerTypeAdapter(LocalDate.class, (JsonSerializer<LocalDate>) (src, typeOfSrc, context) ->
                     new JsonPrimitive(src.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))))
             .create();
+
+    public ColaboradorControl() {}
 
     private String emailDoToken(String auth) {
         if (auth != null && auth.startsWith("Bearer ")) {
@@ -42,31 +32,30 @@ public class ColaboradorControl {
     }
 
     private boolean usuarioTemPermissao(String auth, String recursoNome) {
-        boolean permitido = false;
         String email = emailDoToken(auth);
         if (email != null) {
-            try (Connection conn = Conexao.getConexao()) {
-                UsuarioDao uDao = new UsuarioDao();
-                Usuario u = uDao.buscarPorEmail(conn, email);
+            try {
+                Connection conn = Conexao.getConexao();
+                Usuario u = Usuario.buscarPorEmail(conn, email);
                 if (u != null) {
                     if (u.getNivelAcesso() == 1) return true;
-                    RecursoSistemaDao rDao = new RecursoSistemaDao();
-                    for (RecursoSistema r : rDao.listarPorUsuario(conn, u.getId())) {
+                    for (RecursoSistema r : RecursoSistema.listarPorUsuario(conn, u.getId())) {
                         if (r.getNome().equals(recursoNome)) return true;
                     }
                 }
-            } catch (SQLException e) {
-                System.err.println("Erro ao verificar permissao: " + e.getMessage());
+            } catch (Exception e) {
+                return false;
             }
         }
-        return permitido;
+        return false;
     }
 
     public Resposta listar(String auth, String query) {
-        if (!usuarioTemPermissao(auth, "GESTAO_COLABORADORES")) {
+        if (!usuarioTemPermissao(auth, "GESTAO_USUARIOS")) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
-        try (Connection conn = Conexao.getConexao()) {
+        try {
+            Connection conn = Conexao.getConexao();
             String nome = null, email = null;
             if (query != null) {
                 for (String p : query.split("&")) {
@@ -77,49 +66,47 @@ public class ColaboradorControl {
                     }
                 }
             }
-            List<Colaborador> lista = new ColaboradorDao().listar(conn, nome, email);
-            lista.forEach(c -> c.setSenha(null)); // Protegendo a senha
+            List<Colaborador> lista = Colaborador.listar(conn, nome, email);
+            lista.forEach(c -> c.setSenha(null));
             return new Resposta(200, gson.toJson(lista));
-        } catch (SQLException e) {
+        } catch (Exception e) {
             return new Resposta(500, "{\"erro\":\"Falha ao listar colaboradores.\"}");
         }
     }
 
     public Resposta buscarPorId(String auth, int id) {
-        if (!usuarioTemPermissao(auth, "GESTAO_COLABORADORES")) {
+        if (!usuarioTemPermissao(auth, "GESTAO_USUARIOS")) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
-        try (Connection conn = Conexao.getConexao()) {
-            Colaborador c = new ColaboradorDao().buscarPorId(conn, id);
+        try {
+            Connection conn = Conexao.getConexao();
+            Colaborador c = Colaborador.buscarPorId(conn, id);
             if (c == null) return new Resposta(404, "{\"erro\":\"Colaborador não encontrado\"}");
 
-            c.setSenha(null); // Protegendo a senha
+            c.setSenha(null);
             return new Resposta(200, gson.toJson(c));
-        } catch (SQLException e) {
+        } catch (Exception e) {
             return new Resposta(500, "{\"erro\":\"Falha ao buscar colaborador.\"}");
         }
     }
 
     public Resposta atualizar(String auth, int id, String jsonBody) {
-        if (!usuarioTemPermissao(auth, "GESTAO_COLABORADORES")) {
+        if (!usuarioTemPermissao(auth, "GESTAO_USUARIOS")) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
-        try (Connection conn = Conexao.getConexao()) {
-            Colaborador body = gson.fromJson(jsonBody, Colaborador.class);
-            ColaboradorDao dao = new ColaboradorDao();
-            Colaborador c = dao.buscarPorId(conn, id);
+        try {
+            Connection conn = Conexao.getConexao();
+            JsonObject body = gson.fromJson(jsonBody, JsonObject.class);
+            Colaborador c = Colaborador.buscarPorId(conn, id);
 
             if (c == null) return new Resposta(404, "{\"erro\":\"Colaborador não encontrado\"}");
 
-            if (body.getNome() != null) c.setNome(body.getNome());
-            if (body.getEmail() != null) c.setEmail(body.getEmail());
-            if (body.getCelular() != null) c.setCelular(body.getCelular());
+            if (body.has("nome") && !body.get("nome").isJsonNull()) c.setNome(body.get("nome").getAsString());
+            if (body.has("email") && !body.get("email").isJsonNull()) c.setEmail(body.get("email").getAsString());
+            if (body.has("celular") && !body.get("celular").isJsonNull()) c.setCelular(body.get("celular").getAsString());
 
-            if (dao.atualizar(conn, c)) {
-                return new Resposta(200, "{\"mensagem\":\"Colaborador atualizado\"}");
-            } else {
-                return new Resposta(500, "{\"erro\":\"Erro ao atualizar colaborador\"}");
-            }
+            Colaborador.atualizar(conn, c);
+            return new Resposta(200, "{\"mensagem\":\"Colaborador atualizado\"}");
         } catch (Exception e) {
             return new Resposta(500, "{\"erro\":\"Falha ao atualizar colaborador.\"}");
         }

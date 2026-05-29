@@ -11,14 +11,15 @@ import java.nio.charset.StandardCharsets;
 
 public class VoluntarioRouter implements HttpHandler {
 
-    private static VoluntarioRouter instancia;
-    private VoluntarioRouter() {}
-    public static VoluntarioRouter getInstancia() {
-        if (instancia == null) instancia = new VoluntarioRouter();
-        return instancia;
+    private VoluntarioControl control;
+
+    public VoluntarioRouter() {
+        control = new VoluntarioControl();
     }
 
-    private VoluntarioControl controller = VoluntarioControl.getInstancia();
+    public VoluntarioControl getControl() {
+        return control;
+    }
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {

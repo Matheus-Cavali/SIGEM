@@ -2,8 +2,7 @@ package org.example.controller;
 
 import com.google.gson.Gson;
 import org.example.conexao.Conexao;
-import org.example.dao.RecursoSistemaDao;
-import org.example.dao.UsuarioDao;
+
 import org.example.model.ParametrizacaoIgreja;
 import org.example.model.RecursoSistema;
 import org.example.model.Resposta;
@@ -35,13 +34,11 @@ public class ParametrizacaoIgrejaControl {
         String email = emailDoToken(auth);
         if (email != null) {
             try{
-                UsuarioDao uDao = new UsuarioDao();
                 Connection conn = Conexao.getConexao();
-                Usuario u = uDao.buscarPorEmail(conn, email);
+                Usuario u = Usuario.buscarPorEmail(conn, email);
                 if (u != null) {
                     if (u.getNivelAcesso() == 1) return true;
-                    RecursoSistemaDao rDao = new RecursoSistemaDao();
-                    for (RecursoSistema r : rDao.listarPorUsuario(conn, u.getId())) {
+                    for (RecursoSistema r : RecursoSistema.listarPorUsuario(conn, u.getId())) {
                         if (r.getNome().equals(recursoNome)) return true;
                     }
                 }
@@ -96,6 +93,24 @@ public class ParametrizacaoIgrejaControl {
                 return new Resposta(400, msg);
             }
             return new Resposta(400, "{\"erro\":\"Erro ao salvar logo da igreja\"}");
+        }
+    }
+
+    public Resposta salvarLogoGrande(String auth, String caminhoLogoGrande){
+        if (!usuarioTemPermissao(auth, "GESTAO_DOACOES")) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
+        try{
+            Connection conn = Conexao.getConexao();
+            getParametrizacaoIgreja().salvarLogoGrande(conn, caminhoLogoGrande);
+            return new Resposta(200, gson.toJson(getParametrizacaoIgreja().buscar(conn)));
+        }
+        catch (Exception e){
+            String msg = e.getMessage();
+            if(msg != null && msg.contains("\"erros\"")){
+                return new Resposta(400, msg);
+            }
+            return new Resposta(400, "{\"erro\":\"Erro ao salvar logo grande da igreja\"}");
         }
     }
 }

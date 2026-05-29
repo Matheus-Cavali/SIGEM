@@ -11,14 +11,15 @@ import java.nio.charset.StandardCharsets;
 
 public class UsuarioRouter implements HttpHandler {
 
-    private static UsuarioRouter instancia;
-    private UsuarioRouter() {}
-    public static UsuarioRouter getInstancia() {
-        if (instancia == null) instancia = new UsuarioRouter();
-        return instancia;
+    private UsuarioControl control;
+
+    public UsuarioRouter() {
+        control = new UsuarioControl();
     }
 
-    private UsuarioControl controller = UsuarioControl.getInstancia();
+    public UsuarioControl getControl() {
+        return control;
+    }
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
@@ -70,33 +71,33 @@ public class UsuarioRouter implements HttpHandler {
 
     private void processarLogin(HttpExchange exchange) throws IOException {
         String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-        Resposta r = controller.processarLogin(json);
+        Resposta r = control.processarLogin(json);
         enviarResposta(exchange, r.body, r.status);
     }
 
     private void processarAlteracaoSenha(HttpExchange exchange) throws IOException {
         String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-        Resposta r = controller.processarAlteracaoSenha(json);
+        Resposta r = control.processarAlteracaoSenha(json);
         enviarResposta(exchange, r.body, r.status);
     }
 
     private void processarCadastroInterno(HttpExchange exchange) throws IOException {
         String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
         String auth = exchange.getRequestHeaders().getFirst("Authorization");
-        Resposta r = controller.processarCadastroInterno(json, auth);
+        Resposta r = control.processarCadastroInterno(json, auth);
         enviarResposta(exchange, r.body, r.status);
     }
 
     private void listarUsuarios(HttpExchange exchange, String auth) throws IOException {
         String query = exchange.getRequestURI().getQuery();
-        Resposta r = controller.listarUsuarios(auth, query);
+        Resposta r = control.listarUsuarios(auth, query);
         enviarResposta(exchange, r.body, r.status);
     }
 
     private void buscarUsuario(HttpExchange exchange, String auth) throws IOException {
         String[] p = exchange.getRequestURI().getPath().split("/");
         int id = Integer.parseInt(p[3]);
-        Resposta r = controller.buscarUsuario(auth, id);
+        Resposta r = control.buscarUsuario(auth, id);
         enviarResposta(exchange, r.body, r.status);
     }
 
@@ -105,7 +106,7 @@ public class UsuarioRouter implements HttpHandler {
         String[] p = exchange.getRequestURI().getPath().split("/");
         int id = Integer.parseInt(p[3]);
         String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-        Resposta r = controller.alterarStatusUsuario(auth, id, json);
+        Resposta r = control.alterarStatusUsuario(auth, id, json);
         enviarResposta(exchange, r.body, r.status);
     }
 
@@ -114,7 +115,7 @@ public class UsuarioRouter implements HttpHandler {
         String[] p = exchange.getRequestURI().getPath().split("/");
         int id = Integer.parseInt(p[3]);
         String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-        Resposta r = controller.atualizarUsuario(auth, id, json);
+        Resposta r = control.atualizarUsuario(auth, id, json);
         enviarResposta(exchange, r.body, r.status);
     }
 
@@ -122,19 +123,33 @@ public class UsuarioRouter implements HttpHandler {
         String auth = exchange.getRequestHeaders().getFirst("Authorization");
         String[] p = exchange.getRequestURI().getPath().split("/");
         int id = Integer.parseInt(p[3]);
-        Resposta r = controller.removerUsuario(auth, id);
+        Resposta r = control.removerUsuario(auth, id);
         enviarResposta(exchange, r.body, r.status);
     }
 
     private void listarTodosRecursos(HttpExchange exchange, String auth) throws IOException {
-        Resposta r = controller.listarTodosRecursos(auth);
+        Resposta r = control.listarTodosRecursos(auth);
+        enviarResposta(exchange, r.body, r.status);
+    }
+
+    private void listarUsuariosPorPermissao(HttpExchange exchange, String auth) throws IOException {
+        String query = exchange.getRequestURI().getQuery();
+        String permissao = null;
+        if (query != null) {
+            for (String p : query.split("&")) {
+                String[] kv = p.split("=", 2);
+                if (kv.length == 2 && "permissao".equalsIgnoreCase(kv[0]))
+                    permissao = java.net.URLDecoder.decode(kv[1], StandardCharsets.UTF_8);
+            }
+        }
+        Resposta r = control.listarUsuariosPorPermissao(auth, permissao);
         enviarResposta(exchange, r.body, r.status);
     }
 
     private void listarPermissoes(HttpExchange exchange, String auth) throws IOException {
         String[] p = exchange.getRequestURI().getPath().split("/");
         int usuarioId = Integer.parseInt(p[3]);
-        Resposta r = controller.listarPermissoes(auth, usuarioId);
+        Resposta r = control.listarPermissoes(auth, usuarioId);
         enviarResposta(exchange, r.body, r.status);
     }
 
@@ -142,7 +157,7 @@ public class UsuarioRouter implements HttpHandler {
         String[] p = exchange.getRequestURI().getPath().split("/");
         int usuarioId = Integer.parseInt(p[3]);
         String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-        Resposta r = controller.atualizarPermissoes(auth, usuarioId, json);
+        Resposta r = control.atualizarPermissoes(auth, usuarioId, json);
         enviarResposta(exchange, r.body, r.status);
     }
 

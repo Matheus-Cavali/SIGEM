@@ -34,7 +34,7 @@ export default function Documentos() {
   const [filtroTitulo, setFiltroTitulo] = useState('')
   const [filtroCategoria, setFiltroCategoria] = useState('')
   const { can } = useAuth()
-  const canManage = can('GESTAO_DOACOES')
+  const canManage = can('GESTAO_DOCUMENTOS')
 
   const loadCategorias = async () => {
     try {

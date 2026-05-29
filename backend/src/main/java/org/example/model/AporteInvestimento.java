@@ -1,12 +1,13 @@
 package org.example.model;
 
+import com.google.gson.Gson;
 import org.example.dao.AporteInvestimentoDao;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class AporteInvestimento {
@@ -36,16 +37,32 @@ public class AporteInvestimento {
         return erros;
     }
 
-    public static int salvar(Connection conn, AporteInvestimento aporte) throws SQLException {
-        return getAporteInvestimentoDao().inserir(conn, aporte);
+    public void cadastrar(Connection conn, AporteInvestimento aporte) {
+        Map<String, String> erros = aporte.validar();
+        if (!erros.isEmpty())
+            throw new RuntimeException(new Gson().toJson(Map.of("erros", erros)));
+        int id = getAporteInvestimentoDao().inserir(conn, aporte);
+        aporte.setId(id);
     }
 
-    public static boolean atualizar(Connection conn, int id, AporteInvestimento aporte) throws SQLException {
-        return getAporteInvestimentoDao().atualizar(conn, id, aporte);
+    public void alterar(Connection conn, int id, AporteInvestimento aporte) {
+        Map<String, String> erros = aporte.validar();
+        if (!erros.isEmpty())
+            throw new RuntimeException(new Gson().toJson(Map.of("erros", erros)));
+        getAporteInvestimentoDao().atualizar(conn, id, aporte);
     }
 
-    public static boolean deletar(Connection conn, int id) throws SQLException {
-        return getAporteInvestimentoDao().deletar(conn, id);
+    public void excluir(Connection conn, int id) {
+        if (id <= 0) throw new IllegalArgumentException("ID inválido.");
+        getAporteInvestimentoDao().deletar(conn, id);
+    }
+
+    public void excluirPorInvestimento(Connection conn, int investimentoId) {
+        getAporteInvestimentoDao().deletarPorInvestimento(conn, investimentoId);
+    }
+
+    public List<AporteInvestimento> filtrarPorInvestimento(Connection conn, int investimentoId) {
+        return getAporteInvestimentoDao().listarPorInvestimento(conn, investimentoId);
     }
 
     public int getId() { return id; }

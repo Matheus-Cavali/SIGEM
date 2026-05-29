@@ -44,6 +44,7 @@ export default function App() {
         <Route path="categorias-documentos" element={<CategoriasDocumentos />} />
         <Route path="usuarios" element={<Usuarios />} />
         <Route path="permissoes" element={<Permissoes />} />
+        <Route path="configuracoes" element={<Configuracoes />} />
       </Route>
       <Route path="*" element={<Navigate to="/investimentos" replace />} />
     </Routes>

@@ -2,7 +2,7 @@ package org.example.controller;
 
 import com.google.gson.*;
 import org.example.conexao.Conexao;
-import org.example.dao.RecursoSistemaDao;
+
 import org.example.model.DoacaoMaterial;
 import org.example.model.RecursoSistema;
 import org.example.model.Resposta;
@@ -48,8 +48,7 @@ public class DoacaoMaterialControl {
                 if (u != null) {
                     if (u.getNivelAcesso() == 1)
                         return true;
-                    RecursoSistemaDao rDao = new RecursoSistemaDao();
-                    for (RecursoSistema r : rDao.listarPorUsuario(conn, u.getId())) {
+                    for (RecursoSistema r : RecursoSistema.listarPorUsuario(conn, u.getId())) {
                         if (r.getNome().equals(recursoNome))
                             return true;
                     }

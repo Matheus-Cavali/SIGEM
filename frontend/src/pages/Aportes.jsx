@@ -17,15 +17,16 @@ export default function Aportes() {
   const [editing, setEditing] = useState(null)
   const [erro, setErro] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
-  const [filtroNome, setFiltroNome] = useState('')
+  const [usuariosPerm, setUsuariosPerm] = useState([])
+  const [filtroInvestimento, setFiltroInvestimento] = useState('')
   const [filtroColaborador, setFiltroColaborador] = useState('')
   const { user, can } = useAuth()
   const canManage = can(['LANCAR_APORTE', 'REGISTRAR_INVESTIMENTO'])
 
   const filtered = aportes.filter(a => {
-    const matchNome = !filtroNome || (a.investimentoNome || '').toLowerCase().includes(filtroNome.toLowerCase())
-    const matchColab = !filtroColaborador || (a.colaboradorNome || '').toLowerCase().includes(filtroColaborador.toLowerCase())
-    return matchNome && matchColab
+    const matchInv = !filtroInvestimento || a.investimentoId === Number(filtroInvestimento)
+    const matchColab = !filtroColaborador || a.colaboradorId === Number(filtroColaborador)
+    return matchInv && matchColab
   })
 
   const load = async () => {
@@ -44,6 +45,9 @@ export default function Aportes() {
 
       setInvestimentos(safeInvs)
       setAportes(flat)
+
+      const usuarios = await get('/api/recurso/usuarios?permissao=LANCAR_APORTE')
+      setUsuariosPerm(Array.isArray(usuarios) ? usuarios : [])
     } catch (error) {
       if (!error.fieldErrors) setErro(error.message)
     }
@@ -62,7 +66,7 @@ export default function Aportes() {
   const openEdit = (item) => {
     setForm({
       investimentoId: String(item.investimentoId),
-      valorAporte: String(item.valorAporte || '').replace('.', ','),
+      valorAporte: String(Math.round(Number(item.valorAporte || 0) * 100)),
       dataAporte: item.dataAporte || '',
     })
     setEditing(item)
@@ -76,6 +80,18 @@ export default function Aportes() {
     if (!form.investimentoId) erros.investimentoId = 'Selecione um investimento'
     if (!form.valorAporte || !valorParaNumero(form.valorAporte)) erros.valorAporte = 'Valor do aporte deve ser maior que zero'
     if (!form.dataAporte.trim()) erros.dataAporte = 'Data do aporte é obrigatória'
+    if (form.dataAporte.trim()) {
+      const partes = form.dataAporte.split('/')
+      if (partes.length === 3) {
+        const dia = parseInt(partes[0], 10)
+        const mes = parseInt(partes[1], 10) - 1
+        const ano = parseInt(partes[2], 10)
+        const data = new Date(ano, mes, dia)
+        const hoje = new Date()
+        hoje.setHours(0, 0, 0, 0)
+        if (data < hoje) erros.dataAporte = 'Não é permitido lançar aporte com data anterior à data atual'
+      }
+    }
     return erros
   }
 
@@ -137,10 +153,22 @@ export default function Aportes() {
       <PageHeader title="Aportes" subtitle="Registre os aportes realizados para cada investimento" actionLabel={canManage ? 'Adicionar Aporte' : ''} onAction={openNew} />
 
       <section className="filter-bar">
-        <input placeholder="Filtrar por investimento..." value={filtroNome}
-               onChange={e => setFiltroNome(e.target.value)} />
-        <input placeholder="Filtrar por quem lançou..." value={filtroColaborador}
-               onChange={e => setFiltroColaborador(e.target.value)} />
+        <div className="field-container">
+          <select className="field-control" value={filtroInvestimento} onChange={e => setFiltroInvestimento(e.target.value)}>
+            <option value="">Todos os investimentos</option>
+            {investimentos.map(inv => (
+              <option key={inv.id} value={inv.id}>{inv.nome}</option>
+            ))}
+          </select>
+        </div>
+        <div className="field-container">
+          <select className="field-control" value={filtroColaborador} onChange={e => setFiltroColaborador(e.target.value)}>
+            <option value="">Todos os lançadores</option>
+            {usuariosPerm.map(u => (
+              <option key={u.id} value={u.id}>{u.nome}</option>
+            ))}
+          </select>
+        </div>
       </section>
 
       {formOpen && (

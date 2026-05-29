@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { del, get, patch, post, put } from '../api/http'
 import { useAuth } from '../state/AuthContext'
 import PageHeader from '../components/PageHeader'
-import { DateTimeField } from '../components/form'
+import { DateTimeField, CurrencyField } from '../components/form'
+import { moeda, valorParaNumero } from '../utils/format'
 import Icon from '../components/Icon'
 import '../components/form/BaseField/BaseField.scss'
 
@@ -74,6 +75,8 @@ export default function Eventos() {
   const [success, setSuccess] = useState('')
 
   const [fieldErrors, setFieldErrors] = useState({})
+
+  const [encerramentoFieldErrors, setEncerramentoFieldErrors] = useState({})
 
   const [filtroNome, setFiltroNome] = useState('')
   const [filtroStatus, setFiltroStatus] = useState('')
@@ -226,12 +229,26 @@ export default function Eventos() {
       erros.dataInicio = 'Data de início é obrigatória'
     } else if (!/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/.test(form.dataInicio)) {
       erros.dataInicio = 'Data de início inválida'
+    } else {
+      const dataInicioISO = toISO(form.dataInicio)
+      if (isNaN(new Date(dataInicioISO).getTime())) {
+        erros.dataInicio = 'Data de início inválida'
+      } else {
+        const hoje = new Date()
+        hoje.setHours(0, 0, 0, 0)
+        if (new Date(dataInicioISO) < hoje)
+          erros.dataInicio = 'Data de início não pode ser no passado'
+      }
     }
 
     if (!form.dataFim) {
       erros.dataFim = 'Data de fim é obrigatória'
     } else if (!/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/.test(form.dataFim)) {
       erros.dataFim = 'Data de fim inválida'
+    } else {
+      const dataFimISO = toISO(form.dataFim)
+      if (isNaN(new Date(dataFimISO).getTime()))
+        erros.dataFim = 'Data de fim inválida'
     }
 
     return erros
@@ -350,13 +367,20 @@ export default function Eventos() {
 
     setEncerramento(initialEncerramento)
 
+    setEncerramentoFieldErrors({})
+
     setEncerrarOpen(true)
   }
 
   const encerrarEvento = async () => {
 
+    if (!encerramento.resultadoFinanceiro) {
+      setEncerramentoFieldErrors({ resultadoFinanceiro: 'Resultado financeiro é obrigatório' })
+      return
+    }
+
     const confirmed = window.confirm(
-      'Tem certeza que deseja encerrar este evento?'
+      'Tem certeza que deseja encerrar este evento?\nAs informações de encerramento não poderão ser alteradas depois.'
     )
 
     if (confirmed) {
@@ -370,7 +394,7 @@ export default function Eventos() {
               encerramento.observacoesHistorico || null,
 
             resultadoFinanceiro:
-              encerramento.resultadoFinanceiro || null
+              valorParaNumero(encerramento.resultadoFinanceiro)
           }
         )
 
@@ -685,23 +709,16 @@ export default function Eventos() {
 
           <div className="inline-form">
 
-            <div className="field-container">
-              <label className="field-label">
-                <span>Resultado Financeiro</span>
-              </label>
-
-              <input
-                type="number"
-                step="0.01"
-                value={encerramento.resultadoFinanceiro}
-                onChange={e =>
-                  setEncerramento(prev => ({
-                    ...prev,
-                    resultadoFinanceiro: e.target.value
-                  }))
-                }
-              />
-            </div>
+            <CurrencyField
+              label="Resultado Financeiro"
+              required
+              value={encerramento.resultadoFinanceiro}
+              setValue={v => {
+                setEncerramento(prev => ({ ...prev, resultadoFinanceiro: v }))
+                setEncerramentoFieldErrors(prev => ({ ...prev, resultadoFinanceiro: '' }))
+              }}
+              error={encerramentoFieldErrors.resultadoFinanceiro}
+            />
 
             <div className="field-container">
               <label className="field-label">
@@ -798,17 +815,21 @@ export default function Eventos() {
                       {getCoordenadorNome(item.coordenadorId) || '-'}
                     </span>
 
-                    <span>
-                      <strong>Resultado:</strong>
-                      {' '}
-                      {item.resultadoFinanceiro || '-'}
-                    </span>
+                    {item.status === 'ENCERRADO' && (
+                      <>
+                      <span>
+                        <strong>Resultado:</strong>
+                        {' '}
+                        {moeda(item.resultadoFinanceiro)}
+                      </span>
 
-                    <span>
-                      <strong>Observações:</strong>
-                      {' '}
-                      {item.observacoesHistorico || '-'}
-                    </span>
+                      <span>
+                        <strong>Observações:</strong>
+                        {' '}
+                        {item.observacoesHistorico || '-'}
+                      </span>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

@@ -11,21 +11,8 @@ import java.nio.charset.StandardCharsets;
 
 public class CategoriaEventoRouter implements HttpHandler {
 
-    private static CategoriaEventoRouter instancia;
-
-    private CategoriaEventoRouter() {}
-
-    public static CategoriaEventoRouter getInstancia() {
-
-        if (instancia == null) {
-            instancia = new CategoriaEventoRouter();
-        }
-
-        return instancia;
-    }
-
     private CategoriaEventoControl controller =
-            CategoriaEventoControl.getInstancia();
+            new CategoriaEventoControl();
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {

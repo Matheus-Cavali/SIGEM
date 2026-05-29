@@ -14,12 +14,14 @@ public class ParametrizacaoIgreja {
     private String razaoSocial;
     private String cnpj;
     private String caminhoLogo;
+    private String caminhoLogoGrande;
     private String corPrimaria;
     private String corSecundaria;
     private String telefone;
     private String email;
     private String site;
-    private String endereco;
+    private Integer enderecoId;
+    private Endereco endereco;
 
     private static ParametrizacaoIgrejaDao dao;
 
@@ -36,6 +38,35 @@ public class ParametrizacaoIgreja {
         Map<String, String> erros = new LinkedHashMap<>();
         if(p.getNomeFantasia() == null || p.getNomeFantasia().trim().isEmpty())
             erros.put("nomeFantasia", "Nome fantasia é obrigatório");
+        String cnpj = p.getCnpj();
+        if(cnpj == null || cnpj.trim().isEmpty())
+            erros.put("cnpj", "CNPJ é obrigatório");
+        else if(cnpj.replaceAll("\\D", "").length() != 14)
+            erros.put("cnpj", "CNPJ deve ter 14 dígitos");
+        String telefone = p.getTelefone();
+        if(telefone == null || telefone.trim().isEmpty())
+            erros.put("telefone", "Telefone é obrigatório");
+        else {
+            int len = telefone.replaceAll("\\D", "").length();
+            if(len < 10 || len > 11)
+                erros.put("telefone", "Telefone deve ter 10 ou 11 dígitos");
+        }
+        String email = p.getEmail();
+        if(email == null || email.trim().isEmpty())
+            erros.put("email", "E-mail é obrigatório");
+        else if(!email.trim().contains("@") || !email.trim().substring(email.trim().indexOf("@")).contains("."))
+            erros.put("email", "E-mail inválido");
+        if(p.getEndereco() == null && p.getEnderecoId() == null) {
+            erros.put("cep", "CEP é obrigatório");
+            erros.put("logradouro", "Logradouro é obrigatório");
+            erros.put("numero", "Número é obrigatório");
+            erros.put("bairro", "Bairro é obrigatório");
+            erros.put("cidade", "Cidade é obrigatória");
+            erros.put("uf", "UF é obrigatória");
+        }
+        else if(p.getEndereco() != null) {
+            erros.putAll(Endereco.validarEndereco(p.getEndereco()));
+        }
         return erros;
     }
 
@@ -56,6 +87,26 @@ public class ParametrizacaoIgreja {
     }
 
     public void salvar(Connection conn, ParametrizacaoIgreja p){
+        aplicarDefaults(p);
+        Map<String, String> erros = validarParametrizacao(p);
+        if(!erros.isEmpty())
+            throw new RuntimeException(new Gson().toJson(Map.of("erros", erros)));
+
+        if (p.getEndereco() != null) {
+            Endereco e = new Endereco();
+            e.setId(p.getEndereco().getId());
+            e.setCep(p.getEndereco().getCep());
+            e.setLogradouro(p.getEndereco().getLogradouro());
+            e.setNumero(p.getEndereco().getNumero());
+            e.setComplemento(p.getEndereco().getComplemento());
+            e.setBairro(p.getEndereco().getBairro());
+            e.setCidade(p.getEndereco().getCidade());
+            e.setUf(p.getEndereco().getUf());
+            e.salvar(conn, e);
+            p.setEnderecoId(e.getId());
+            p.setEndereco(null);
+        }
+
         ParametrizacaoIgreja atual = buscar(conn);
         if(atual == null || atual.getId() == null)
             cadastrar(conn, p);
@@ -68,8 +119,16 @@ public class ParametrizacaoIgreja {
     public void salvarLogo(Connection conn, String caminhoLogo){
         ParametrizacaoIgreja atual = buscar(conn);
         if(atual == null)
-            atual = parametrosPadrao();
+            throw new IllegalStateException("Configure os parâmetros da igreja antes de enviar o logotipo.");
         atual.setCaminhoLogo(caminhoLogo);
+        salvar(conn, atual);
+    }
+
+    public void salvarLogoGrande(Connection conn, String caminhoLogoGrande){
+        ParametrizacaoIgreja atual = buscar(conn);
+        if(atual == null)
+            throw new IllegalStateException("Configure os parâmetros da igreja antes de enviar o logotipo.");
+        atual.setCaminhoLogoGrande(caminhoLogoGrande);
         salvar(conn, atual);
     }
 
@@ -91,8 +150,10 @@ public class ParametrizacaoIgreja {
 
     public ParametrizacaoIgreja buscar(Connection conn){
         ParametrizacaoIgreja parametros = getDao().buscar(conn);
-        if(parametros == null)
-            return parametrosPadrao();
+
+        if (parametros != null && parametros.getEnderecoId() != null)
+            parametros.setEndereco(new Endereco().buscarPorId(conn, parametros.getEnderecoId()));
+
         return parametros;
     }
 
@@ -134,6 +195,9 @@ public class ParametrizacaoIgreja {
     public String getCaminhoLogo() { return caminhoLogo; }
     public void setCaminhoLogo(String caminhoLogo) { this.caminhoLogo = caminhoLogo; }
 
+    public String getCaminhoLogoGrande() { return caminhoLogoGrande; }
+    public void setCaminhoLogoGrande(String caminhoLogoGrande) { this.caminhoLogoGrande = caminhoLogoGrande; }
+
     public String getCorPrimaria() { return corPrimaria; }
     public void setCorPrimaria(String corPrimaria) { this.corPrimaria = corPrimaria; }
 
@@ -149,6 +213,9 @@ public class ParametrizacaoIgreja {
     public String getSite() { return site; }
     public void setSite(String site) { this.site = site; }
 
-    public String getEndereco() { return endereco; }
-    public void setEndereco(String endereco) { this.endereco = endereco; }
+    public Integer getEnderecoId() { return enderecoId; }
+    public void setEnderecoId(Integer enderecoId) { this.enderecoId = enderecoId; }
+
+    public Endereco getEndereco() { return endereco; }
+    public void setEndereco(Endereco endereco) { this.endereco = endereco; }
 }

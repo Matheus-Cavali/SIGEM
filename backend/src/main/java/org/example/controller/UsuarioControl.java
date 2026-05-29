@@ -2,10 +2,6 @@ package org.example.controller;
 
 import com.google.gson.*;
 import org.example.conexao.Conexao;
-import org.example.dao.ColaboradorDao;
-import org.example.dao.RecursoSistemaDao;
-import org.example.dao.UsuarioDao;
-import org.example.dao.VoluntarioDao;
 import org.example.exception.DatabaseException;
 import org.example.model.*;
 import org.example.util.Criptografia;
@@ -22,19 +18,18 @@ import java.util.*;
 
 public class UsuarioControl {
 
-    private static UsuarioControl instancia;
-
-    private UsuarioControl() {}
-
-    public static UsuarioControl getInstancia() {
-        if (instancia == null) instancia = new UsuarioControl();
-        return instancia;
-    }
-
+    private static Usuario usuario;
     private final Gson gson = new GsonBuilder()
             .registerTypeAdapter(LocalDate.class, (JsonSerializer<LocalDate>) (src, typeOfSrc, context) ->
                     new JsonPrimitive(src.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))))
             .create();
+
+    public static synchronized Usuario getUsuario() {
+        if (usuario == null) usuario = new Usuario();
+        return usuario;
+    }
+
+    public UsuarioControl() {}
 
     private String emailDoToken(String auth) {
         if (auth != null && auth.startsWith("Bearer ")) return Token.validarToken(auth.substring(7));
@@ -48,14 +43,15 @@ public class UsuarioControl {
 
             String email = Token.validarToken(token);
             if (email != null) {
-                try (Connection conn = Conexao.getConexao()) {
+                try {
+                    Connection conn = Conexao.getConexao();
                     Usuario u = Usuario.buscarPorEmail(conn, email);
                     if (u != null) {
-                        for (RecursoSistema r : new RecursoSistemaDao().listarPorUsuario(conn, u.getId())) {
+                        for (RecursoSistema r : RecursoSistema.listarPorUsuario(conn, u.getId())) {
                             if (r.getNome().equals(recursoNome)) return true;
                         }
                     }
-                } catch (SQLException ignored) {}
+                } catch (Exception ignored) {}
             }
         }
         return false;
@@ -100,53 +96,50 @@ public class UsuarioControl {
                 return new Resposta(400, "{\"erro\":\"Email ou CPF é obrigatório\"}");
             }
 
-            try (Connection conn = Conexao.getConexao()) {
-                UsuarioDao dao = new UsuarioDao();
-                Usuario usuarioDoBanco;
-                String loginInput = usuarioLogin.getEmail().trim();
+            Connection conn = Conexao.getConexao();
+            Usuario usuarioDoBanco;
+            String loginInput = usuarioLogin.getEmail().trim();
 
-                if (loginInput.contains("@")) {
-                    usuarioDoBanco = dao.buscarPorEmail(conn, loginInput);
-                } else {
-                    String cpfLimpo = loginInput.replaceAll("[^0-9]", "");
-                    usuarioDoBanco = cpfLimpo.length() == 11 ? dao.buscarPorCPF(conn, cpfLimpo) : null;
-                }
+            if (loginInput.contains("@")) {
+                usuarioDoBanco = Usuario.buscarPorEmail(conn, loginInput);
+            } else {
+                String cpfLimpo = loginInput.replaceAll("[^0-9]", "");
+                usuarioDoBanco = cpfLimpo.length() == 11 ? Usuario.buscarPorCPF(conn, cpfLimpo) : null;
+            }
 
-                if (usuarioDoBanco == null || !Criptografia.verificarSenha(usuarioLogin.getSenha(), usuarioDoBanco.getSenha())) {
-                    String campo = loginInput.contains("@") ? "E-mail" : "CPF";
-                    return new Resposta(401, "{\"erro\":\"" + campo + " ou senha incorretos\"}");
-                } else if (!usuarioDoBanco.isStatusAtivo()) {
-                    return new Resposta(403, "{\"erro\":\"Usuário desativado. Contate um administrador.\"}");
-                } else if ("voluntario".equalsIgnoreCase(usuarioDoBanco.getTipoUsuario())) {
-                    return new Resposta(403, "{\"erro\":\"Voluntários não podem acessar o sistema. Apenas colaboradores.\"}");
-                } else if (usuarioDoBanco.isPrimeiroAcesso()) {
-                    JsonObject resp = new JsonObject();
-                    resp.addProperty("status", "TROCA_OBRIGATORIA");
-                    resp.addProperty("mensagem", "Primeiro acesso detectado. Altere a sua senha.");
-                    resp.addProperty("cpf", usuarioDoBanco.getCpf());
-                    return new Resposta(200, resp.toString());
-                } else {
-                    RecursoSistemaDao recDao = new RecursoSistemaDao();
-                    List<RecursoSistema> permissoes = usuarioDoBanco.getNivelAcesso() == 1
-                            ? recDao.listarTodos(conn) : recDao.listarPorUsuario(conn, usuarioDoBanco.getId());
+            if (usuarioDoBanco == null || !Criptografia.verificarSenha(usuarioLogin.getSenha(), usuarioDoBanco.getSenha())) {
+                String campo = loginInput.contains("@") ? "E-mail" : "CPF";
+                return new Resposta(401, "{\"erro\":\"" + campo + " ou senha incorretos\"}");
+            } else if (!usuarioDoBanco.isStatusAtivo()) {
+                return new Resposta(403, "{\"erro\":\"Usuário desativado. Contate um administrador.\"}");
+            } else if ("voluntario".equalsIgnoreCase(usuarioDoBanco.getTipoUsuario())) {
+                return new Resposta(403, "{\"erro\":\"Voluntários não podem acessar o sistema. Apenas colaboradores.\"}");
+            } else if (usuarioDoBanco.isPrimeiroAcesso()) {
+                JsonObject resp = new JsonObject();
+                resp.addProperty("status", "TROCA_OBRIGATORIA");
+                resp.addProperty("mensagem", "Primeiro acesso detectado. Altere a sua senha.");
+                resp.addProperty("cpf", usuarioDoBanco.getCpf());
+                return new Resposta(200, resp.toString());
+            } else {
+                List<RecursoSistema> permissoes = usuarioDoBanco.getNivelAcesso() == 1
+                        ? RecursoSistema.listarTodos(conn) : RecursoSistema.listarPorUsuario(conn, usuarioDoBanco.getId());
 
-                    JsonArray permArray = new JsonArray();
-                    for (RecursoSistema r : permissoes) permArray.add(r.getNome());
+                JsonArray permArray = new JsonArray();
+                for (RecursoSistema r : permissoes) permArray.add(r.getNome());
 
-                    String token = Token.gerarToken(usuarioDoBanco.getEmail(), usuarioDoBanco.getNivelAcesso(), usuarioDoBanco.getTipoUsuario());
-                    JsonObject resp = new JsonObject();
-                    resp.addProperty("token", token);
-                    resp.addProperty("mensagem", "Login realizado!");
-                    resp.addProperty("nivelAcesso", usuarioDoBanco.getNivelAcesso());
-                    resp.addProperty("statusAtivo", usuarioDoBanco.isStatusAtivo());
-                    resp.addProperty("tipoUsuario", usuarioDoBanco.getTipoUsuario());
-                    resp.addProperty("nome", usuarioDoBanco.getNome());
-                    resp.addProperty("email", usuarioDoBanco.getEmail());
-                    resp.addProperty("id", usuarioDoBanco.getId());
-                    resp.add("permissoes", permArray);
+                String token = Token.gerarToken(usuarioDoBanco.getEmail(), usuarioDoBanco.getNivelAcesso(), usuarioDoBanco.getTipoUsuario());
+                JsonObject resp = new JsonObject();
+                resp.addProperty("token", token);
+                resp.addProperty("mensagem", "Login realizado!");
+                resp.addProperty("nivelAcesso", usuarioDoBanco.getNivelAcesso());
+                resp.addProperty("statusAtivo", usuarioDoBanco.isStatusAtivo());
+                resp.addProperty("tipoUsuario", usuarioDoBanco.getTipoUsuario());
+                resp.addProperty("nome", usuarioDoBanco.getNome());
+                resp.addProperty("email", usuarioDoBanco.getEmail());
+                resp.addProperty("id", usuarioDoBanco.getId());
+                resp.add("permissoes", permArray);
 
-                    return new Resposta(200, resp.toString());
-                }
+                return new Resposta(200, resp.toString());
             }
         } catch (Exception e) {
             return new Resposta(500, "{\"erro\":\"Falha ao processar login. " + mensagemErroUsuario(e) + "\"}");
@@ -164,17 +157,15 @@ public class UsuarioControl {
                 return new Resposta(400, "{\"erro\":\"Senha deve ter no mínimo 4 caracteres\"}");
             }
 
-            try (Connection conn = Conexao.getConexao()) {
-                String cpfLimpo = dadosNovos.getCpf().replaceAll("[^0-9]", "");
-                UsuarioDao dao = new UsuarioDao();
+            Connection conn = Conexao.getConexao();
+            String cpfLimpo = dadosNovos.getCpf().replaceAll("[^0-9]", "");
 
-                if (dao.buscarPorCPF(conn, cpfLimpo) == null) {
-                    return new Resposta(404, "{\"erro\":\"CPF não encontrado no sistema\"}");
-                } else if (dao.mudarSenha(conn, cpfLimpo, Criptografia.hashSenha(dadosNovos.getSenha()))) {
-                    return new Resposta(200, "{\"mensagem\":\"Senha alterada! Faça login novamente.\"}");
-                } else {
-                    return new Resposta(500, "{\"erro\":\"Erro ao atualizar a senha.\"}");
-                }
+            if (Usuario.buscarPorCPF(conn, cpfLimpo) == null) {
+                return new Resposta(404, "{\"erro\":\"CPF não encontrado no sistema\"}");
+            } else if (Usuario.mudarSenha(conn, cpfLimpo, Criptografia.hashSenha(dadosNovos.getSenha()))) {
+                return new Resposta(200, "{\"mensagem\":\"Senha alterada! Faça login novamente.\"}");
+            } else {
+                return new Resposta(500, "{\"erro\":\"Erro ao atualizar a senha.\"}");
             }
         } catch (Exception e) {
             return new Resposta(500, "{\"erro\":\"Falha ao alterar senha. " + mensagemErroUsuario(e) + "\"}");
@@ -198,15 +189,12 @@ public class UsuarioControl {
             conn = Conexao.getConexao();
             conn.setAutoCommit(false);
 
-            UsuarioDao uDao = new UsuarioDao();
-            Usuario quemCadastra = uDao.buscarPorEmail(conn, email);
+            Usuario quemCadastra = Usuario.buscarPorEmail(conn, email);
             boolean isAdmin = quemCadastra != null && quemCadastra.getNivelAcesso() == 1;
 
             String tipo = dados.getTipoUsuario().trim();
             boolean podeCadastrar = isAdmin
-                    || usuarioTemPermissaoDb(auth, "GESTAO_USUARIOS")
-                    || ("colaborador".equalsIgnoreCase(tipo) && usuarioTemPermissaoDb(auth, "GESTAO_COLABORADORES"))
-                    || ("voluntario".equalsIgnoreCase(tipo) && usuarioTemPermissaoDb(auth, "GESTAO_VOLUNTARIOS"));
+                    || usuarioTemPermissaoDb(auth, "GESTAO_USUARIOS");
 
             if (!podeCadastrar) {
                 conn.rollback();
@@ -215,37 +203,35 @@ public class UsuarioControl {
 
             String senhaBanco = Criptografia.hashSenha(dados.getSenha());
             String cpfLimpo = dados.getCpf() != null ? dados.getCpf().replaceAll("[^0-9]", "") : "";
+            dados.setSenha(senhaBanco);
+            dados.setCpf(cpfLimpo);
+            dados.setNivelAcesso(dados.getNivelAcesso() > 0 ? dados.getNivelAcesso() : 2);
 
-            if (uDao.buscarPorEmail(conn, dados.getEmail()) != null) {
-                conn.rollback();
-                return new Resposta(409, "{\"erros\":{\"email\":\"Email já cadastrado\"}}");
-            } else if (uDao.buscarPorCPF(conn, cpfLimpo) != null) {
-                conn.rollback();
-                return new Resposta(409, "{\"erros\":{\"cpf\":\"CPF já cadastrado\"}}");
-            }
-
-            int idGerado = Usuario.cadastrar(conn, dados.getNome(), dados.getEmail(), senhaBanco, cpfLimpo, dados.getNivelAcesso(), tipo);
+            getUsuario().cadastrar(conn, dados);
 
             if ("colaborador".equalsIgnoreCase(tipo)) {
-                Colaborador.cadastrar(conn, idGerado, dados.getData());
+                Colaborador.cadastrar(conn, dados.getId(), dados.getData());
             } else if ("voluntario".equalsIgnoreCase(tipo)) {
-                Voluntario.cadastrar(conn, idGerado, dados.getData());
+                Voluntario.cadastrar(conn, dados.getId(), dados.getData());
             }
 
             conn.commit();
             return new Resposta(201, "{\"mensagem\":\"Cadastro realizado!\"}");
         } catch (Exception e) {
             if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
+            String msg = e.getMessage();
+            if (msg != null && msg.contains("\"erros\"")) return new Resposta(400, msg);
             return new Resposta(500, "{\"erro\":\"Falha ao cadastrar usuário. " + mensagemErroUsuario(e) + "\"}");
         } finally {
-            if (conn != null) try { conn.close(); } catch (SQLException ex) {}
+            if (conn != null) try { conn.setAutoCommit(true); } catch (SQLException ex) {}
         }
     }
 
     public Resposta listarUsuarios(String auth, String query) {
         if (!usuarioPodeGerenciar(auth)) return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
 
-        try (Connection conn = Conexao.getConexao()) {
+        try {
+            Connection conn = Conexao.getConexao();
             String nome = null, emailParam = null, tipo = null;
             if (query != null) {
                 for (String p : query.split("&")) {
@@ -255,8 +241,8 @@ public class UsuarioControl {
                     if (kv.length == 2 && "tipo".equalsIgnoreCase(kv[0])) tipo = URLDecoder.decode(kv[1], StandardCharsets.UTF_8);
                 }
             }
-            List<Usuario> usuarios = new UsuarioDao().listarTodos(conn, nome, emailParam, tipo);
-            usuarios.forEach(u -> u.setSenha(null)); // Removendo hash de senhas da resposta
+            List<Usuario> usuarios = getUsuario().filtrar(conn, nome, emailParam, tipo);
+            usuarios.forEach(u -> u.setSenha(null));
             return new Resposta(200, gson.toJson(usuarios));
         } catch (Exception e) {
             return new Resposta(500, "{\"erro\":\"Falha ao listar usuários. " + mensagemErroUsuario(e) + "\"}");
@@ -265,11 +251,12 @@ public class UsuarioControl {
 
     public Resposta buscarUsuario(String auth, int id) {
         if (!usuarioPodeGerenciar(auth)) return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
-        try (Connection conn = Conexao.getConexao()) {
-            Usuario u = new UsuarioDao().buscarPorId(conn, id);
+        try {
+            Connection conn = Conexao.getConexao();
+            Usuario u = Usuario.buscarPorId(conn, id);
             if (u == null) return new Resposta(404, "{\"erro\":\"Usuário não encontrado\"}");
 
-            u.setSenha(null); // Removendo hash da resposta
+            u.setSenha(null);
             return new Resposta(200, gson.toJson(u));
         } catch (Exception e) {
             return new Resposta(500, "{\"erro\":\"Falha ao buscar usuário. " + mensagemErroUsuario(e) + "\"}");
@@ -280,17 +267,16 @@ public class UsuarioControl {
         if (!usuarioPodeGerenciar(auth)) return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         Connection conn = null;
         try {
-            JsonObject body = gson.fromJson(jsonBody, JsonObject.class);
             conn = Conexao.getConexao();
             conn.setAutoCommit(false);
 
-            UsuarioDao dao = new UsuarioDao();
-            Usuario u = dao.buscarPorId(conn, id);
+            Usuario u = Usuario.buscarPorId(conn, id);
             if (u == null) {
                 conn.rollback();
                 return new Resposta(404, "{\"erro\":\"Usuário não encontrado\"}");
             }
 
+            JsonObject body = gson.fromJson(jsonBody, JsonObject.class);
             if (body.has("nome")) u.setNome(body.get("nome").getAsString());
             if (body.has("email")) u.setEmail(body.get("email").getAsString());
             if (body.has("cpf")) u.setCpf(body.get("cpf").getAsString().replaceAll("[^0-9]", ""));
@@ -304,18 +290,16 @@ public class UsuarioControl {
             if (body.has("nivelAcesso")) u.setNivelAcesso(body.get("nivelAcesso").getAsInt());
             if (body.has("tipoUsuario")) u.setTipoUsuario(body.get("tipoUsuario").getAsString());
 
-            if (dao.atualizar(conn, u)) {
-                conn.commit();
-                return new Resposta(200, "{\"mensagem\":\"Usuário atualizado com sucesso\"}");
-            } else {
-                conn.rollback();
-                return new Resposta(500, "{\"erro\":\"Erro ao atualizar usuário\"}");
-            }
+            getUsuario().alterar(conn, u);
+            conn.commit();
+            return new Resposta(200, "{\"mensagem\":\"Usuário atualizado com sucesso\"}");
         } catch (Exception e) {
             if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
+            String msg = e.getMessage();
+            if (msg != null && msg.contains("\"erros\"")) return new Resposta(400, msg);
             return new Resposta(500, "{\"erro\":\"Falha ao atualizar usuário. " + mensagemErroUsuario(e) + "\"}");
         } finally {
-            if (conn != null) try { conn.close(); } catch (SQLException ex) {}
+            if (conn != null) try { conn.setAutoCommit(true); } catch (SQLException ex) {}
         }
     }
 
@@ -329,49 +313,45 @@ public class UsuarioControl {
             conn = Conexao.getConexao();
             conn.setAutoCommit(false);
 
-            UsuarioDao dao = new UsuarioDao();
-            Usuario usuario = dao.buscarPorId(conn, id);
+            Usuario usuario = Usuario.buscarPorId(conn, id);
 
             if (usuario == null) {
                 conn.rollback();
                 return new Resposta(404, "{\"erro\":\"Usuário não encontrado\"}");
             } else if (!ativo && "colaborador".equalsIgnoreCase(usuario.getTipoUsuario()) && usuario.getNivelAcesso() == 1) {
-                if (dao.contarColaboradorAcessoTotalAtivo(conn) <= 1) {
+                if (getUsuario().contarColaboradorAcessoTotalAtivo(conn) <= 1) {
                     conn.rollback();
                     return new Resposta(400, "{\"erro\":\"Não é possível desativar o único colaborador com acesso total\"}");
                 }
             }
 
-            return processarAlteracaoStatus(conn, dao, id, usuario, ativo, body);
+            return processarAlteracaoStatus(conn, id, usuario, ativo, body);
         } catch (Exception e) {
             if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
             return new Resposta(500, "{\"erro\":\"Falha ao alterar status do usuário. " + mensagemErroUsuario(e) + "\"}");
         } finally {
-            if (conn != null) try { conn.close(); } catch (SQLException ex) {}
+            if (conn != null) try { conn.setAutoCommit(true); } catch (SQLException ex) {}
         }
     }
 
-    private Resposta processarAlteracaoStatus(Connection conn, UsuarioDao dao, int id, Usuario usuario, boolean ativo, JsonObject body) throws SQLException {
-        if (dao.alterarStatus(conn, id, ativo)) {
-            String dataStr = body.has("data_desligamento") && !body.get("data_desligamento").isJsonNull()
-                    ? body.get("data_desligamento").getAsString() : null;
+    private Resposta processarAlteracaoStatus(Connection conn, int id, Usuario usuario, boolean ativo, JsonObject body) throws SQLException {
+        getUsuario().alterarStatus(conn, id, ativo);
 
-            LocalDate dataDesligamento = null;
-            if (!ativo && dataStr != null) {
-                dataDesligamento = "SYSDATE".equalsIgnoreCase(dataStr) ? LocalDate.now() : Data.parseFlexivel(dataStr);
-            }
+        String dataStr = body.has("data_desligamento") && !body.get("data_desligamento").isJsonNull()
+                ? body.get("data_desligamento").getAsString() : null;
 
-            if ("colaborador".equalsIgnoreCase(usuario.getTipoUsuario())) {
-                new ColaboradorDao().atualizarDataDemissao(conn, id, !ativo ? dataDesligamento : null);
-            } else if ("voluntario".equalsIgnoreCase(usuario.getTipoUsuario())) {
-                new VoluntarioDao().atualizarDataDesligamento(conn, id, !ativo ? dataDesligamento : null);
-            }
-            conn.commit();
-            return new Resposta(200, "{\"mensagem\":\"Status atualizado com sucesso\"}");
-        } else {
-            conn.rollback();
-            return new Resposta(500, "{\"erro\":\"Erro ao atualizar status\"}");
+        LocalDate dataDesligamento = null;
+        if (!ativo && dataStr != null) {
+            dataDesligamento = "SYSDATE".equalsIgnoreCase(dataStr) ? LocalDate.now() : Data.parseFlexivel(dataStr);
         }
+
+        if ("colaborador".equalsIgnoreCase(usuario.getTipoUsuario())) {
+            Colaborador.atualizarDataDemissao(conn, id, !ativo ? dataDesligamento : null);
+        } else if ("voluntario".equalsIgnoreCase(usuario.getTipoUsuario())) {
+            Voluntario.atualizarDataDesligamento(conn, id, !ativo ? dataDesligamento : null);
+        }
+        conn.commit();
+        return new Resposta(200, "{\"mensagem\":\"Status atualizado com sucesso\"}");
     }
 
     public Resposta removerUsuario(String auth, int id) {
@@ -380,26 +360,21 @@ public class UsuarioControl {
         try {
             conn = Conexao.getConexao();
             conn.setAutoCommit(false);
-            UsuarioDao dao = new UsuarioDao();
-            Usuario usuario = dao.buscarPorId(conn, id);
+            Usuario usuario = Usuario.buscarPorId(conn, id);
 
             if (usuario == null) {
                 conn.rollback();
                 return new Resposta(404, "{\"erro\":\"Usuário não encontrado\"}");
             } else if ("colaborador".equalsIgnoreCase(usuario.getTipoUsuario()) && usuario.getNivelAcesso() == 1) {
-                if (dao.contarColaboradorAcessoTotalAtivo(conn) <= 1) {
+                if (getUsuario().contarColaboradorAcessoTotalAtivo(conn) <= 1) {
                     conn.rollback();
                     return new Resposta(400, "{\"erro\":\"Não é possível remover o único colaborador com acesso total\"}");
                 }
             }
 
-            if (dao.deletar(conn, id)) {
-                conn.commit();
-                return new Resposta(200, "{\"mensagem\":\"Usuário removido com sucesso\"}");
-            } else {
-                conn.rollback();
-                return new Resposta(500, "{\"erro\":\"Erro ao remover usuário\"}");
-            }
+            getUsuario().excluir(conn, id);
+            conn.commit();
+            return new Resposta(200, "{\"mensagem\":\"Usuário removido com sucesso\"}");
         } catch (Exception e) {
             if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
             if (e instanceof SQLException && "23503".equals(((SQLException) e).getSQLState())) {
@@ -407,31 +382,47 @@ public class UsuarioControl {
             }
             return new Resposta(500, "{\"erro\":\"Falha ao remover usuário. " + mensagemErroUsuario(e) + "\"}");
         } finally {
-            if (conn != null) try { conn.close(); } catch (SQLException ex) {}
+            if (conn != null) try { conn.setAutoCommit(true); } catch (SQLException ex) {}
         }
     }
 
     public Resposta listarTodosRecursos(String auth) {
         if (!usuarioTemPermissaoDb(auth, "GESTAO_PERMISSOES")) return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
-        try (Connection conn = Conexao.getConexao()) {
-            List<RecursoSistema> lista = new RecursoSistemaDao().listarTodos(conn);
+        try {
+            Connection conn = Conexao.getConexao();
+            List<RecursoSistema> lista = RecursoSistema.listarTodos(conn);
             return new Resposta(200, gson.toJson(lista));
-        } catch (SQLException e) {
+        } catch (Exception e) {
             return new Resposta(500, "{\"erro\":\"Falha ao listar recursos. " + mensagemErroUsuario(e) + "\"}");
+        }
+    }
+
+    public Resposta listarUsuariosPorPermissao(String auth, String permissao) {
+        if (emailDoToken(auth) == null) return new Resposta(401, "{\"erro\":\"Acesso negado. Faça login.\"}");
+        if (permissao == null || permissao.trim().isEmpty())
+            return new Resposta(400, "{\"erro\":\"Parâmetro 'permissao' é obrigatório\"}");
+        try {
+            Connection conn = Conexao.getConexao();
+            List<Usuario> usuarios = RecursoSistema.listarUsuariosPorPermissao(conn, permissao.trim());
+            usuarios.forEach(u -> u.setSenha(null));
+            return new Resposta(200, gson.toJson(usuarios));
+        } catch (Exception e) {
+            return new Resposta(500, "{\"erro\":\"Falha ao listar usuários por permissão. " + mensagemErroUsuario(e) + "\"}");
         }
     }
 
     public Resposta listarPermissoes(String auth, int usuarioId) {
         if (!usuarioTemPermissaoDb(auth, "GESTAO_PERMISSOES")) return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
-        try (Connection conn = Conexao.getConexao()) {
-            List<RecursoSistema> permissoes = new RecursoSistemaDao().listarPorUsuario(conn, usuarioId);
+        try {
+            Connection conn = Conexao.getConexao();
+            List<RecursoSistema> permissoes = RecursoSistema.listarPorUsuario(conn, usuarioId);
             JsonArray arr = new JsonArray();
             for (RecursoSistema r : permissoes) arr.add(r.getNome());
             JsonObject resp = new JsonObject();
             resp.addProperty("usuarioId", usuarioId);
             resp.add("permissoes", arr);
             return new Resposta(200, resp.toString());
-        } catch (SQLException e) {
+        } catch (Exception e) {
             return new Resposta(500, "{\"erro\":\"Falha ao listar permissões. " + mensagemErroUsuario(e) + "\"}");
         }
     }
@@ -448,7 +439,7 @@ public class UsuarioControl {
             conn = Conexao.getConexao();
             conn.setAutoCommit(false);
 
-            if (new RecursoSistemaDao().atualizarPermissoes(conn, usuarioId, ids)) {
+            if (RecursoSistema.atualizarPermissoes(conn, usuarioId, ids)) {
                 conn.commit();
                 return new Resposta(200, "{\"mensagem\":\"Permissões atualizadas\"}");
             } else {
@@ -459,7 +450,7 @@ public class UsuarioControl {
             if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
             return new Resposta(500, "{\"erro\":\"Falha ao atualizar permissões. " + mensagemErroUsuario(e) + "\"}");
         } finally {
-            if (conn != null) try { conn.close(); } catch (SQLException ex) {}
+            if (conn != null) try { conn.setAutoCommit(true); } catch (SQLException ex) {}
         }
     }
 }

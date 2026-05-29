@@ -7,8 +7,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializer;
 import org.example.conexao.Conexao;
-import org.example.dao.RecursoSistemaDao;
-import org.example.dao.UsuarioDao;
+
 import org.example.model.Documento;
 import org.example.model.RecursoSistema;
 import org.example.model.Resposta;
@@ -52,13 +51,11 @@ public class DocumentoControl {
         String email = emailDoToken(auth);
         if (email != null) {
             try{
-                UsuarioDao uDao = new UsuarioDao();
                 Connection conn = Conexao.getConexao();
-                Usuario u = uDao.buscarPorEmail(conn, email);
+                Usuario u = Usuario.buscarPorEmail(conn, email);
                 if (u != null) {
                     if (u.getNivelAcesso() == 1) return true;
-                    RecursoSistemaDao rDao = new RecursoSistemaDao();
-                    for (RecursoSistema r : rDao.listarPorUsuario(conn, u.getId())) {
+                    for (RecursoSistema r : RecursoSistema.listarPorUsuario(conn, u.getId())) {
                         if (r.getNome().equals(recursoNome)) return true;
                     }
                 }
@@ -71,14 +68,13 @@ public class DocumentoControl {
     }
 
     public Resposta cadastrar(String auth, String json){
-        if (!usuarioTemPermissao(auth, "GESTAO_DOACOES")) {
+        if (!usuarioTemPermissao(auth, "GESTAO_DOCUMENTOS")) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
         try{
             String email = emailDoToken(auth);
-            UsuarioDao uDao = new UsuarioDao();
             Connection conn = Conexao.getConexao();
-            Usuario colaborador = uDao.buscarPorEmail(conn, email);
+            Usuario colaborador = Usuario.buscarPorEmail(conn, email);
             if (colaborador == null) return new Resposta(401, "{\"erro\":\"Acesso negado.\"}");
 
             Documento d = montarDocumento(json, colaborador.getId());
@@ -94,7 +90,10 @@ public class DocumentoControl {
         }
     }
 
-    public Resposta listar(String query){
+    public Resposta listar(String auth, String query){
+        if (!usuarioTemPermissao(auth, "GESTAO_DOCUMENTOS")) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
         try{
             String titulo = null;
             Integer categoriaDocumentoId = null;
@@ -123,7 +122,10 @@ public class DocumentoControl {
         }
     }
 
-    public Resposta buscarPorId(int id){
+    public Resposta buscarPorId(String auth, int id){
+        if (!usuarioTemPermissao(auth, "GESTAO_DOCUMENTOS")) {
+            return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
+        }
         try{
             Documento d = getDocumento().buscarPorId(Conexao.getConexao(), id);
             if (d == null) return new Resposta(404, "{\"erro\":\"Documento não encontrado\"}");
@@ -135,14 +137,13 @@ public class DocumentoControl {
     }
 
     public Resposta atualizar(String auth, int id, String json){
-        if (!usuarioTemPermissao(auth, "GESTAO_DOACOES")) {
+        if (!usuarioTemPermissao(auth, "GESTAO_DOCUMENTOS")) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
         try{
             String email = emailDoToken(auth);
-            UsuarioDao uDao = new UsuarioDao();
             Connection conn = Conexao.getConexao();
-            Usuario colaborador = uDao.buscarPorEmail(conn, email);
+            Usuario colaborador = Usuario.buscarPorEmail(conn, email);
             if (colaborador == null) return new Resposta(401, "{\"erro\":\"Acesso negado.\"}");
 
             Documento existente = getDocumento().buscarPorId(conn, id);
@@ -163,7 +164,7 @@ public class DocumentoControl {
     }
 
     public Resposta excluir(String auth, int id){
-        if (!usuarioTemPermissao(auth, "GESTAO_DOACOES")) {
+        if (!usuarioTemPermissao(auth, "GESTAO_DOCUMENTOS")) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
         try{
@@ -176,7 +177,7 @@ public class DocumentoControl {
     }
 
     public Resposta autorizarUpload(String auth){
-        if (!usuarioTemPermissao(auth, "GESTAO_DOACOES")) {
+        if (!usuarioTemPermissao(auth, "GESTAO_DOCUMENTOS")) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
         return new Resposta(200, "{\"mensagem\":\"Upload autorizado\"}");

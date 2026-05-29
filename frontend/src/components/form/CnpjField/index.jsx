@@ -10,9 +10,9 @@ function formatCnpj(value) {
     .slice(0, 18)
 }
 
-export default function CnpjField({ value, setValue, label, placeholder, disabled, error }) {
+export default function CnpjField({ value, setValue, label, placeholder, disabled, error, required }) {
   return (
-    <BaseField label={label} error={error}>
+    <BaseField label={label} required={required} error={error}>
       <input
         className="field-control"
         value={value || ''}

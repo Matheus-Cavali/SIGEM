@@ -3,8 +3,7 @@ package org.example.controller;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.example.conexao.Conexao;
-import org.example.dao.RecursoSistemaDao;
-import org.example.dao.UsuarioDao;
+
 import org.example.model.Evento;
 import org.example.model.RecursoSistema;
 import org.example.model.Resposta;
@@ -52,20 +51,16 @@ public class EventoControl {
 
             try {
 
-                UsuarioDao uDao = new UsuarioDao();
-
                 Connection conn = Conexao.getConexao();
 
-                Usuario u = uDao.buscarPorEmail(conn, email);
+                Usuario u = Usuario.buscarPorEmail(conn, email);
 
                 if (u != null) {
 
                     if (u.getNivelAcesso() == 1)
                         return true;
 
-                    RecursoSistemaDao rDao = new RecursoSistemaDao();
-
-                    for (RecursoSistema r : rDao.listarPorUsuario(conn, u.getId())) {
+                    for (RecursoSistema r : RecursoSistema.listarPorUsuario(conn, u.getId())) {
 
                         if (r.getNome().equals(recursoNome))
                             return true;
@@ -103,7 +98,11 @@ public class EventoControl {
                     ts += " 00:00:00";
                 else if (ts.indexOf(":", ts.indexOf(":") + 1) == -1)
                     ts += ":00";
-                evento.setDataInicio(Timestamp.valueOf(ts));
+                try {
+                    evento.setDataInicio(Timestamp.valueOf(ts));
+                } catch (IllegalArgumentException e) {
+                    return new Resposta(400, "{\"erro\":\"Data de início inválida\"}");
+                }
             }
 
             if (df != null && !df.trim().isEmpty()) {
@@ -112,7 +111,11 @@ public class EventoControl {
                     ts += " 00:00:00";
                 else if (ts.indexOf(":", ts.indexOf(":") + 1) == -1)
                     ts += ":00";
-                evento.setDataFim(Timestamp.valueOf(ts));
+                try {
+                    evento.setDataFim(Timestamp.valueOf(ts));
+                } catch (IllegalArgumentException e) {
+                    return new Resposta(400, "{\"erro\":\"Data de fim inválida\"}");
+                }
             }
 
             Number localId = (Number) map.get("localId");
@@ -207,7 +210,11 @@ public class EventoControl {
                     ts += " 00:00:00";
                 else if (ts.indexOf(":", ts.indexOf(":") + 1) == -1)
                     ts += ":00";
-                evento.setDataInicio(Timestamp.valueOf(ts));
+                try {
+                    evento.setDataInicio(Timestamp.valueOf(ts));
+                } catch (IllegalArgumentException e) {
+                    return new Resposta(400, "{\"erro\":\"Data de início inválida\"}");
+                }
             }
 
             if (df != null && !df.trim().isEmpty()) {
@@ -216,7 +223,11 @@ public class EventoControl {
                     ts += " 00:00:00";
                 else if (ts.indexOf(":", ts.indexOf(":") + 1) == -1)
                     ts += ":00";
-                evento.setDataFim(Timestamp.valueOf(ts));
+                try {
+                    evento.setDataFim(Timestamp.valueOf(ts));
+                } catch (IllegalArgumentException e) {
+                    return new Resposta(400, "{\"erro\":\"Data de fim inválida\"}");
+                }
             }
 
             Number categoria = (Number) map.get("categoriaEventoId");
@@ -299,14 +310,13 @@ public class EventoControl {
 
             Map<?, ?> dados = gson.fromJson(json, Map.class);
 
-            BigDecimal resultadoFinanceiro = null;
+            if (dados.get("resultadoFinanceiro") == null)
+                return new Resposta(400,
+                        "{\"erro\":\"Resultado financeiro é obrigatório\"}");
 
-            if (dados.get("resultadoFinanceiro") != null) {
-
-                resultadoFinanceiro = BigDecimal.valueOf(
-                        ((Number) dados.get("resultadoFinanceiro")).doubleValue()
-                );
-            }
+            BigDecimal resultadoFinanceiro = BigDecimal.valueOf(
+                    ((Number) dados.get("resultadoFinanceiro")).doubleValue()
+            );
 
             String observacoesHistorico =
                     (String) dados.get("observacoesHistorico");

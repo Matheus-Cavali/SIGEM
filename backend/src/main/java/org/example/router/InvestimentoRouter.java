@@ -11,14 +11,15 @@ import java.nio.charset.StandardCharsets;
 
 public class InvestimentoRouter implements HttpHandler {
 
-    private static InvestimentoRouter instancia;
-    private InvestimentoRouter() {}
-    public static InvestimentoRouter getInstancia() {
-        if (instancia == null) instancia = new InvestimentoRouter();
-        return instancia;
+    private InvestimentoControl control;
+
+    public InvestimentoRouter() {
+        control = new InvestimentoControl();
     }
 
-    private InvestimentoControl controller = InvestimentoControl.getInstancia();
+    public InvestimentoControl getControl() {
+        return control;
+    }
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {

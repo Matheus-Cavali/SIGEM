@@ -2,10 +2,7 @@ package org.example.controller;
 
 import com.google.gson.*;
 import org.example.conexao.Conexao;
-import org.example.dao.AporteInvestimentoDao;
-import org.example.dao.InvestimentoFuturoDao;
-import org.example.dao.RecursoSistemaDao;
-import org.example.dao.UsuarioDao;
+
 import org.example.model.*;
 import org.example.util.Data;
 
@@ -22,14 +19,20 @@ import java.util.*;
 
 public class InvestimentoControl {
 
-    private static InvestimentoControl instancia;
+    private static InvestimentoFuturo investimentoFuturo;
+    private static AporteInvestimento aporteInvestimento;
 
-    private InvestimentoControl() {}
-
-    public static InvestimentoControl getInstancia() {
-        if (instancia == null) instancia = new InvestimentoControl();
-        return instancia;
+    public static synchronized InvestimentoFuturo getInvestimentoFuturo() {
+        if (investimentoFuturo == null) investimentoFuturo = new InvestimentoFuturo();
+        return investimentoFuturo;
     }
+
+    public static synchronized AporteInvestimento getAporteInvestimento() {
+        if (aporteInvestimento == null) aporteInvestimento = new AporteInvestimento();
+        return aporteInvestimento;
+    }
+
+    public InvestimentoControl() {}
 
     private final Gson gson = new GsonBuilder()
             .registerTypeAdapter(LocalDate.class, (JsonSerializer<LocalDate>) (src, typeOfSrc, context) ->
@@ -46,17 +49,17 @@ public class InvestimentoControl {
     private boolean usuarioTemPermissao(String auth, String recursoNome) {
         String email = emailDoToken(auth);
         if (email != null) {
-            try (Connection conn = Conexao.getConexao()) {
-                Usuario u = new UsuarioDao().buscarPorEmail(conn, email);
+            try {
+                Connection conn = Conexao.getConexao();
+                Usuario u = Usuario.buscarPorEmail(conn, email);
                 if (u != null) {
                     if (u.getNivelAcesso() == 1) return true;
-                    RecursoSistemaDao rDao = new RecursoSistemaDao();
-                    for (RecursoSistema r : rDao.listarPorUsuario(conn, u.getId())) {
+                    for (RecursoSistema r : RecursoSistema.listarPorUsuario(conn, u.getId())) {
                         if (r.getNome().equals(recursoNome)) return true;
                     }
                 }
-            } catch (SQLException e) {
-                System.err.println("Erro permissão: " + e.getMessage());
+            } catch (Exception e) {
+                return false;
             }
         }
         return false;
@@ -65,10 +68,11 @@ public class InvestimentoControl {
     private boolean usuarioPodeGerenciar(String auth) {
         String email = emailDoToken(auth);
         if (email != null) {
-            try (Connection conn = Conexao.getConexao()) {
-                Usuario u = new UsuarioDao().buscarPorEmail(conn, email);
+            try {
+                Connection conn = Conexao.getConexao();
+                Usuario u = Usuario.buscarPorEmail(conn, email);
                 if (u != null) return u.getNivelAcesso() == 1 || usuarioTemPermissao(auth, "REGISTRAR_INVESTIMENTO");
-            } catch (SQLException ignored) {}
+            } catch (Exception ignored) {}
         }
         return false;
     }
@@ -80,12 +84,14 @@ public class InvestimentoControl {
         Connection conn = null;
         try {
             JsonObject body = gson.fromJson(json, JsonObject.class);
+
+            if (body.get("nome") == null || body.get("valorMeta") == null || body.get("dataAbertura") == null || body.get("colaboradorId") == null) {
+                return new Resposta(400, "{\"erro\":\"Campos obrigatórios: nome, valorMeta, dataAbertura, colaboradorId\"}");
+            }
+
             InvestimentoFuturo inv = new InvestimentoFuturo();
             inv.setNome(body.get("nome").getAsString());
-
-            // Lendo o valor diretamente como BigDecimal nativo do JSON
             inv.setValorMeta(body.get("valorMeta").getAsBigDecimal());
-
             String dataStr = body.get("dataAbertura").getAsString();
             LocalDate dataAbertura = Data.parseFlexivel(dataStr);
             inv.setDataAbertura(dataAbertura);
@@ -93,37 +99,29 @@ public class InvestimentoControl {
 
             Resposta erroData = validarData(dataStr, dataAbertura, "dataAbertura");
             if (erroData != null) return erroData;
-
-            Map<String, String> erros = inv.validar();
-            if (!erros.isEmpty()) return new Resposta(400, gson.toJson(Collections.singletonMap("erros", erros)));
+            if (dataAbertura != null && dataAbertura.isBefore(LocalDate.now()))
+                return new Resposta(400, "{\"erros\":{\"dataAbertura\":\"Não é permitido lançar investimento com data anterior à data atual\"}}");
 
             conn = Conexao.getConexao();
             conn.setAutoCommit(false);
 
-            if (InvestimentoFuturo.buscarPorNome(conn, inv.getNome().trim()) != null) {
-                conn.rollback();
-                return new Resposta(409, "{\"erros\":{\"nome\":\"Já existe um investimento com este nome\"}}");
-            }
-
-            int id = InvestimentoFuturo.salvar(conn, inv);
-            if (id > 0) {
-                conn.commit();
-                return new Resposta(201, "{\"mensagem\":\"Investimento registrado com sucesso\",\"id\":" + id + "}");
-            } else {
-                conn.rollback();
-                return new Resposta(500, "{\"erro\":\"Erro ao registrar investimento\"}");
-            }
+            getInvestimentoFuturo().cadastrar(conn, inv);
+            conn.commit();
+            return new Resposta(201, "{\"mensagem\":\"Investimento registrado com sucesso\",\"id\":" + inv.getId() + "}");
         } catch (Exception e) {
             if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
+            String msg = e.getMessage();
+            if (msg != null && msg.contains("\"erros\"")) return new Resposta(400, msg);
             return new Resposta(500, "{\"erro\":\"Falha ao registrar investimento. " + mensagemErroUsuario(e) + "\"}");
         } finally {
-            if (conn != null) try { conn.close(); } catch (SQLException ex) {}
+            if (conn != null) try { conn.setAutoCommit(true); } catch (SQLException ex) {}
         }
     }
 
     public Resposta listarInvestimentos(String auth, String query) {
         if (emailDoToken(auth) == null) return new Resposta(401, "{\"erro\":\"Acesso negado. Faça login.\"}");
-        try (Connection conn = Conexao.getConexao()) {
+        try {
+            Connection conn = Conexao.getConexao();
             String nome = null, status = null;
             if (query != null) {
                 for (String p : query.split("&")) {
@@ -132,7 +130,7 @@ public class InvestimentoControl {
                     if (kv.length == 2 && "status".equalsIgnoreCase(kv[0])) status = URLDecoder.decode(kv[1], StandardCharsets.UTF_8);
                 }
             }
-            List<InvestimentoFuturo> lista = new InvestimentoFuturoDao().listar(conn, nome, status);
+            List<InvestimentoFuturo> lista = getInvestimentoFuturo().filtrar(conn, nome, status);
             return new Resposta(200, gson.toJson(lista));
         } catch (Exception e) {
             return new Resposta(500, "{\"erro\":\"Falha ao listar investimentos. " + mensagemErroUsuario(e) + "\"}");
@@ -141,8 +139,9 @@ public class InvestimentoControl {
 
     public Resposta buscarInvestimento(String auth, int id) {
         if (emailDoToken(auth) == null) return new Resposta(401, "{\"erro\":\"Acesso negado.\"}");
-        try (Connection conn = Conexao.getConexao()) {
-            InvestimentoFuturo inv = InvestimentoFuturo.buscarPorId(conn, id);
+        try {
+            Connection conn = Conexao.getConexao();
+            InvestimentoFuturo inv = getInvestimentoFuturo().buscarPorId(conn, id);
             if (inv == null) return new Resposta(404, "{\"erro\":\"Investimento não encontrado\"}");
             return new Resposta(200, gson.toJson(inv));
         } catch (Exception e) {
@@ -158,7 +157,7 @@ public class InvestimentoControl {
         try {
             conn = Conexao.getConexao();
             conn.setAutoCommit(false);
-            InvestimentoFuturo inv = InvestimentoFuturo.buscarPorId(conn, id);
+            InvestimentoFuturo inv = getInvestimentoFuturo().buscarPorId(conn, id);
 
             if (inv == null) {
                 conn.rollback();
@@ -169,18 +168,16 @@ public class InvestimentoControl {
             if (body.has("valorMeta")) inv.setValorMeta(body.get("valorMeta").getAsBigDecimal());
             if (body.has("status")) inv.setStatus(body.get("status").getAsString());
 
-            if (InvestimentoFuturo.atualizar(conn, inv)) {
-                conn.commit();
-                return new Resposta(200, "{\"mensagem\":\"Investimento atualizado\"}");
-            } else {
-                conn.rollback();
-                return new Resposta(500, "{\"erro\":\"Erro ao atualizar investimento\"}");
-            }
+            getInvestimentoFuturo().alterar(conn, inv);
+            conn.commit();
+            return new Resposta(200, "{\"mensagem\":\"Investimento atualizado\"}");
         } catch (Exception e) {
             if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
+            String msg = e.getMessage();
+            if (msg != null && msg.contains("\"erros\"")) return new Resposta(400, msg);
             return new Resposta(500, "{\"erro\":\"Falha ao atualizar investimento. " + mensagemErroUsuario(e) + "\"}");
         } finally {
-            if (conn != null) try { conn.close(); } catch (SQLException ex) {}
+            if (conn != null) try { conn.setAutoCommit(true); } catch (SQLException ex) {}
         }
     }
 
@@ -193,7 +190,12 @@ public class InvestimentoControl {
             conn = Conexao.getConexao();
             conn.setAutoCommit(false);
 
-            InvestimentoFuturo inv = InvestimentoFuturo.buscarPorId(conn, investimentoId);
+            if (body.get("valorAporte") == null || body.get("dataAporte") == null || body.get("colaboradorId") == null) {
+                conn.rollback();
+                return new Resposta(400, "{\"erro\":\"Campos obrigatórios: valorAporte, dataAporte, colaboradorId\"}");
+            }
+
+            InvestimentoFuturo inv = getInvestimentoFuturo().buscarPorId(conn, investimentoId);
             if (inv == null) {
                 conn.rollback();
                 return new Resposta(404, "{\"erro\":\"Investimento não encontrado\"}");
@@ -204,8 +206,6 @@ public class InvestimentoControl {
 
             AporteInvestimento aporte = new AporteInvestimento();
             aporte.setInvestimentoFuturoId(investimentoId);
-
-            // Lendo nativamente
             aporte.setValorAporte(body.get("valorAporte").getAsBigDecimal());
 
             String dataAporteStr = body.get("dataAporte").getAsString();
@@ -215,34 +215,28 @@ public class InvestimentoControl {
 
             Resposta erroData = validarData(dataAporteStr, dataAporte, "dataAporte");
             if (erroData != null) return erroData;
+            if (dataAporte != null && dataAporte.isBefore(LocalDate.now()))
+                return new Resposta(400, "{\"erros\":{\"dataAporte\":\"Não é permitido lançar aporte com data anterior à data atual\"}}");
 
-            Map<String, String> erros = aporte.validar();
-            if (!erros.isEmpty()) {
-                conn.rollback();
-                return new Resposta(400, gson.toJson(Collections.singletonMap("erros", erros)));
-            }
-
-            int id = AporteInvestimento.salvar(conn, aporte);
-            if (id > 0) {
-                BigDecimal saldo = InvestimentoFuturo.calcularSaldo(conn, investimentoId);
-                conn.commit();
-                return new Resposta(201, "{\"mensagem\":\"Aporte registrado com sucesso\",\"id\":" + id + ",\"saldoAtual\":" + saldo + "}");
-            } else {
-                conn.rollback();
-                return new Resposta(500, "{\"erro\":\"Erro ao registrar aporte\"}");
-            }
+            getAporteInvestimento().cadastrar(conn, aporte);
+            BigDecimal saldo = getInvestimentoFuturo().calcularSaldo(conn, investimentoId);
+            conn.commit();
+            return new Resposta(201, "{\"mensagem\":\"Aporte registrado com sucesso\",\"id\":" + aporte.getId() + ",\"saldoAtual\":" + saldo + "}");
         } catch (Exception e) {
             if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
+            String msg = e.getMessage();
+            if (msg != null && msg.contains("\"erros\"")) return new Resposta(400, msg);
             return new Resposta(500, "{\"erro\":\"Falha ao lançar aporte. " + mensagemErroUsuario(e) + "\"}");
         } finally {
-            if (conn != null) try { conn.close(); } catch (SQLException ex) {}
+            if (conn != null) try { conn.setAutoCommit(true); } catch (SQLException ex) {}
         }
     }
 
     public Resposta listarAportes(String auth, int investimentoId) {
         if (emailDoToken(auth) == null) return new Resposta(401, "{\"erro\":\"Acesso negado.\"}");
-        try (Connection conn = Conexao.getConexao()) {
-            List<AporteInvestimento> lista = new AporteInvestimentoDao().listarPorInvestimento(conn, investimentoId);
+        try {
+            Connection conn = Conexao.getConexao();
+            List<AporteInvestimento> lista = getAporteInvestimento().filtrarPorInvestimento(conn, investimentoId);
             return new Resposta(200, gson.toJson(lista));
         } catch (Exception e) {
             return new Resposta(500, "{\"erro\":\"Falha ao listar aportes. " + mensagemErroUsuario(e) + "\"}");
@@ -255,20 +249,15 @@ public class InvestimentoControl {
         try {
             conn = Conexao.getConexao();
             conn.setAutoCommit(false);
-            new AporteInvestimentoDao().deletarPorInvestimento(conn, id);
-
-            if (InvestimentoFuturo.deletar(conn, id)) {
-                conn.commit();
-                return new Resposta(200, "{\"mensagem\":\"Investimento removido\"}");
-            } else {
-                conn.rollback();
-                return new Resposta(500, "{\"erro\":\"Erro ao remover investimento\"}");
-            }
+            getAporteInvestimento().excluirPorInvestimento(conn, id);
+            getInvestimentoFuturo().excluir(conn, id);
+            conn.commit();
+            return new Resposta(200, "{\"mensagem\":\"Investimento removido\"}");
         } catch (Exception e) {
             if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
             return new Resposta(500, "{\"erro\":\"Falha ao remover investimento. " + mensagemErroUsuario(e) + "\"}");
         } finally {
-            if (conn != null) try { conn.close(); } catch (SQLException ex) {}
+            if (conn != null) try { conn.setAutoCommit(true); } catch (SQLException ex) {}
         }
     }
 
@@ -278,18 +267,14 @@ public class InvestimentoControl {
         try {
             conn = Conexao.getConexao();
             conn.setAutoCommit(false);
-            if (AporteInvestimento.deletar(conn, aporteId)) {
-                conn.commit();
-                return new Resposta(200, "{\"mensagem\":\"Aporte removido\"}");
-            } else {
-                conn.rollback();
-                return new Resposta(500, "{\"erro\":\"Erro ao remover aporte\"}");
-            }
+            getAporteInvestimento().excluir(conn, aporteId);
+            conn.commit();
+            return new Resposta(200, "{\"mensagem\":\"Aporte removido\"}");
         } catch (Exception e) {
             if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
             return new Resposta(500, "{\"erro\":\"Falha ao remover aporte. " + mensagemErroUsuario(e) + "\"}");
         } finally {
-            if (conn != null) try { conn.close(); } catch (SQLException ex) {}
+            if (conn != null) try { conn.setAutoCommit(true); } catch (SQLException ex) {}
         }
     }
 
@@ -298,9 +283,12 @@ public class InvestimentoControl {
         Connection conn = null;
         try {
             JsonObject body = gson.fromJson(json, JsonObject.class);
-            AporteInvestimento aporte = new AporteInvestimento();
 
-            // Lendo nativamente
+            if (body.get("valorAporte") == null || body.get("dataAporte") == null) {
+                return new Resposta(400, "{\"erro\":\"Campos obrigatórios: valorAporte, dataAporte\"}");
+            }
+
+            AporteInvestimento aporte = new AporteInvestimento();
             aporte.setValorAporte(body.get("valorAporte").getAsBigDecimal());
 
             String dataAporteStr = body.get("dataAporte").getAsString();
@@ -309,22 +297,22 @@ public class InvestimentoControl {
 
             Resposta erroData = validarData(dataAporteStr, dataAporte, "dataAporte");
             if (erroData != null) return erroData;
+            if (dataAporte != null && dataAporte.isBefore(LocalDate.now()))
+                return new Resposta(400, "{\"erros\":{\"dataAporte\":\"Não é permitido atualizar aporte com data anterior à data atual\"}}");
 
             conn = Conexao.getConexao();
             conn.setAutoCommit(false);
 
-            if (AporteInvestimento.atualizar(conn, aporteId, aporte)) {
-                conn.commit();
-                return new Resposta(200, "{\"mensagem\":\"Aporte atualizado\"}");
-            } else {
-                conn.rollback();
-                return new Resposta(500, "{\"erro\":\"Erro ao atualizar aporte\"}");
-            }
+            getAporteInvestimento().alterar(conn, aporteId, aporte);
+            conn.commit();
+            return new Resposta(200, "{\"mensagem\":\"Aporte atualizado\"}");
         } catch (Exception e) {
             if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
+            String msg = e.getMessage();
+            if (msg != null && msg.contains("\"erros\"")) return new Resposta(400, msg);
             return new Resposta(500, "{\"erro\":\"Falha ao atualizar aporte: " + e.getMessage() + "\"}");
         } finally {
-            if (conn != null) try { conn.close(); } catch (SQLException ex) {}
+            if (conn != null) try { conn.setAutoCommit(true); } catch (SQLException ex) {}
         }
     }
 
