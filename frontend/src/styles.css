@@ -326,6 +326,24 @@ select:focus {
   opacity: 0.65;
 }
 
+.ghost-action {
+  min-height: 33px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: transform 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.ghost-action:hover {
+  background: var(--bg);
+  border-color: var(--line-dark);
+  transform: scale(1.04);
+}
+
 .cards-list {
   width: 100%;
   display: flex;

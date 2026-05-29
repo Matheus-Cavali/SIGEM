@@ -6,6 +6,7 @@ import org.example.dao.MaterialDao;
 
 import java.sql.Connection;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class DoacaoMaterial extends Doacao {
@@ -27,16 +28,22 @@ public class DoacaoMaterial extends Doacao {
         super();
     }
 
-    public DoacaoMaterial(Integer id, LocalDate data, Integer colaboradorId, Integer materialId, int quantidade) {
+    public DoacaoMaterial(Integer id, LocalDate data, Integer colaboradorId, String colaboradorNome, Integer materialId, String materialNome, int quantidade) {
         super(id, data, colaboradorId);
         this.materialId = materialId;
         this.quantidade = quantidade;
+        this.colaboradorNome = colaboradorNome;
+        this.materialNome = materialNome;
+        this.dataFormatada = data.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
     }
 
-    public DoacaoMaterial(LocalDate data, Integer colaboradorId, Integer materialId, int quantidade) {
+    public DoacaoMaterial(LocalDate data, Integer colaboradorId, Integer materialId, int quantidade, String colaboradorNome, String materialNome) {
         super(data, colaboradorId);
         this.materialId = materialId;
         this.quantidade = quantidade;
+        this.colaboradorNome = colaboradorNome;
+        this.materialNome = materialNome;
+        this.dataFormatada = data.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
     }
 
     public static Map<String, String> validarDoacaoMaterial(DoacaoMaterial dm){

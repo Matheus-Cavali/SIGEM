@@ -110,8 +110,7 @@ public class DoacaoMaterialControl {
             dm.setId(id);
             dm.setMaterialId(jsonObj.get("materialId").getAsInt());
             dm.setQuantidade(jsonObj.get("quantidade").getAsInt());
-            if(jsonObj.has("data") && !jsonObj.get("data").getAsString().isEmpty())
-                dm.setData(Data.parseFlexivel(jsonObj.get("data").getAsString()));
+            dm.setData(LocalDate.now());
             dm.setColaboradorId(u.getId());
 
             getDoacaoMaterial().alterar(conn, dm);

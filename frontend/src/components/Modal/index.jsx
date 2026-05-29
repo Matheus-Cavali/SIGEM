@@ -8,7 +8,7 @@ const variantColors = {
   error: 'var(--red)',
 }
 
-export default function Modal({ open, title, variant = 'info', onClose, children, footer }) {
+export default function Modal({ open, title, variant = 'info', onClose, children, footer, hideCloseButton = false }) {
   const overlayRef = useRef(null)
 
   useEffect(() => {
@@ -42,9 +42,11 @@ export default function Modal({ open, title, variant = 'info', onClose, children
           <h2 className="modal-title" style={{ color: variantColors[variant] }}>
             {title}
           </h2>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Fechar">
-            <Icon name="close" size={18} />
-          </button>
+          {!hideCloseButton && (
+            <button type="button" className="modal-close" onClick={onClose} aria-label="Fechar">
+              <Icon name="close" size={18} />
+            </button>
+          )}
         </div>
         <div className="modal-body">
           {children}

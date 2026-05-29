@@ -5,7 +5,6 @@ import org.example.model.DoacaoMaterial;
 
 import java.sql.*;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -183,15 +182,14 @@ public class DoacaoMaterialDao {
     }
 
     private DoacaoMaterial extrair(ResultSet rs) throws SQLException{
-        DoacaoMaterial dm = new DoacaoMaterial();
-        dm.setId(rs.getInt("id"));
-        dm.setData(rs.getObject("data_doacao", LocalDate.class));
-        dm.setDataFormatada(dm.getData().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
-        dm.setColaboradorId(rs.getInt("colaborador_id"));
-        dm.setColaboradorNome(rs.getString("colaborador_nome"));
-        dm.setMaterialId(rs.getInt("material_id"));
-        dm.setMaterialNome(rs.getString("material_nome"));
-        dm.setQuantidade(rs.getInt("quantidade"));
-        return dm;
+        return new DoacaoMaterial(
+            rs.getInt("id"),
+            rs.getObject("data_doacao", LocalDate.class),
+            rs.getInt("colaborador_id"),
+            rs.getString("colaborador_nome"),
+            rs.getInt("material_id"),
+            rs.getString("material_nome"),
+            rs.getInt("quantidade")
+        );
     }
 }

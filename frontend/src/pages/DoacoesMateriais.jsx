@@ -11,7 +11,7 @@ import { dmyToISO } from '../utils/date'
 import '../components/form/BaseField/BaseField.scss'
 import '../components/Modal/Modal.scss'
 
-const initialForm = { materialId: '', quantidade: '', data: '' }
+const initialForm = { materialId: '', quantidade: '' }
 
 export default function DoacoesMateriais() {
   const [items, setItems] = useState([])
@@ -96,7 +96,7 @@ export default function DoacoesMateriais() {
   }, [filtroMaterial, filtroCategoria, filtroDataInicio, filtroDataFim])
 
   const openNew = () => {
-    setForm({ ...initialForm, data: new Date().toLocaleDateString('pt-BR') })
+    setForm({ ...initialForm })
     setEditing(null)
     setErro('')
     setFieldErrors({})
@@ -109,7 +109,6 @@ export default function DoacoesMateriais() {
     setForm({
       materialId: String(item.materialId),
       quantidade: String(item.quantidade),
-      data: item.data || '',
     })
     setEditing(item.id)
     setErro('')
@@ -132,9 +131,6 @@ export default function DoacoesMateriais() {
     } else if (parseInt(form.quantidade, 10) <= 0) {
       erros.quantidade = 'Quantidade deve ser maior que zero'
     }
-    if (!form.data) {
-      erros.data = 'Data é obrigatória'
-    }
     return erros
   }
 
@@ -155,7 +151,6 @@ export default function DoacoesMateriais() {
         const payload = {
           materialId: parseInt(form.materialId, 10),
           quantidade: parseInt(form.quantidade, 10),
-          data: dmyToISO(form.data),
         }
 
         if (editing) {
@@ -193,8 +188,12 @@ export default function DoacoesMateriais() {
     const erros = {}
     if (!novoMaterialForm.nome.trim()) erros.nome = 'Nome é obrigatório'
     if (!novoMaterialForm.descricao.trim()) erros.descricao = 'Descrição é obrigatória'
-    const qtd = parseInt(novoMaterialForm.quantidadeEstoque, 10)
-    if (qtd < 0) erros.quantidadeEstoque = 'Quantidade não pode ser negativa'
+    if (novoMaterialForm.quantidadeEstoque === '') {
+      erros.quantidadeEstoque = 'Quantidade em estoque é obrigatória'
+    } else {
+      const qtd = parseInt(novoMaterialForm.quantidadeEstoque, 10)
+      if (qtd < 0) erros.quantidadeEstoque = 'Quantidade não pode ser negativa'
+    }
     if (!novoMaterialForm.categoriaMaterialId) erros.categoriaMaterialId = 'Categoria é obrigatória'
 
     if (Object.keys(erros).length > 0) {
@@ -294,10 +293,14 @@ export default function DoacoesMateriais() {
       <Modal
         open={!!confirmDelete}
         title="Confirmar exclusão"
-        variant="warning"
+        variant="error"
+        hideCloseButton
         onClose={() => setConfirmDelete(null)}
         footer={
-          <button className="danger-action" onClick={handleConfirmDelete}>Excluir</button>
+          <>
+            <button className="ghost-action" onClick={() => setConfirmDelete(null)}>Cancelar</button>
+            <button className="danger-action" onClick={handleConfirmDelete}>Excluir</button>
+          </>
         }
       >
         <p>Excluir doação de "{confirmDelete?.materialNome}"?</p>
@@ -346,14 +349,6 @@ export default function DoacoesMateriais() {
                      value={form.quantidade} onChange={e => handleFieldChange('quantidade', e.target.value)} placeholder="0" type="number" min="1" />
               {fieldErrors.quantidade && <span className="field-error">{fieldErrors.quantidade}</span>}
             </div>
-
-            <DateField
-              label="Data"
-              required
-              value={form.data}
-              setValue={v => handleFieldChange('data', v)}
-              error={fieldErrors.data}
-            />
 
             {showNovoMaterial && (
               <div style={{
