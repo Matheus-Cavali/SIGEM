@@ -14,9 +14,9 @@ function formatPhone(value) {
     .replace(/(\d{5})(\d)/, '$1-$2')
 }
 
-export default function PhoneField({ value, setValue, label, placeholder, disabled, error }) {
+export default function PhoneField({ value, setValue, label, placeholder, disabled, error, required }) {
   return (
-    <BaseField label={label} error={error}>
+    <BaseField label={label} required={required} error={error}>
       <input
         className="field-control"
         value={value || ''}
