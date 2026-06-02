@@ -54,7 +54,7 @@ public class DespesaControl {
         if (email != null) {
             try (Connection conn = Conexao.getConexao()) {
                 Usuario u = new UsuarioDao().buscarPorEmail(conn, email);
-                if (u != null) return u.getNivelAcesso() == 1 || usuarioTemPermissao(auth, "GERENCIAR_DESPESA");
+                if (u != null) return u.getNivelAcesso() == 1 || usuarioTemPermissao(auth, "GESTAO_DESPESAS");
             } catch (Exception e) {
                 System.err.println("Erro ao verificar permissao: " + e.getMessage());
             }
@@ -171,7 +171,7 @@ public class DespesaControl {
     // ── Despesas ──────────────────────────────────────────────────────────────
 
     public Resposta lancarDespesa(String auth, String json) {
-        if (!usuarioTemPermissao(auth, "LANCAR_DESPESA") && !usuarioPodeGerenciar(auth)) {
+        if (!usuarioTemPermissao(auth, "GESTAO_DESPESAS") && !usuarioPodeGerenciar(auth)) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
 
@@ -217,7 +217,7 @@ public class DespesaControl {
     }
 
     public Resposta listarDespesas(String auth, String query) {
-        if (!usuarioTemPermissao(auth, "LANCAR_DESPESA") && !usuarioPodeGerenciar(auth)) {
+        if (!usuarioTemPermissao(auth, "GESTAO_DESPESAS") && !usuarioPodeGerenciar(auth)) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
         String descricao = null;
@@ -264,7 +264,7 @@ public class DespesaControl {
     }
 
     public Resposta buscarDespesa(String auth, int id) {
-        if (!usuarioTemPermissao(auth, "LANCAR_DESPESA") && !usuarioPodeGerenciar(auth)) {
+        if (!usuarioTemPermissao(auth, "GESTAO_DESPESAS") && !usuarioPodeGerenciar(auth)) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
         try (Connection conn = Conexao.getConexao()) {
@@ -344,7 +344,7 @@ public class DespesaControl {
     }
 
     public Resposta quitarDespesa(String auth, int id, String json) {
-        if (!usuarioTemPermissao(auth, "LANCAR_DESPESA") && !usuarioPodeGerenciar(auth)) {
+        if (!usuarioTemPermissao(auth, "GESTAO_DESPESAS") && !usuarioPodeGerenciar(auth)) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
         try (Connection conn = Conexao.getConexao()) {
@@ -384,7 +384,7 @@ public class DespesaControl {
     }
 
     public Resposta consultarSaldo(String auth) {
-        if (!usuarioTemPermissao(auth, "LANCAR_DESPESA") && !usuarioPodeGerenciar(auth)) {
+        if (!usuarioTemPermissao(auth, "GESTAO_DESPESAS") && !usuarioPodeGerenciar(auth)) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
         try (Connection conn = Conexao.getConexao()) {

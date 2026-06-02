@@ -62,7 +62,7 @@ public class CaixaControl {
     }
 
     public Resposta abrir(String auth, String json){
-        if(!usuarioTemPermissao(auth, "GESTAO_CAIXA")){
+        if(!usuarioTemPermissao(auth, "GESTAO_DOACOES")){
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
         try{
@@ -88,7 +88,7 @@ public class CaixaControl {
     }
 
     public Resposta fechar(String auth, int id, String json){
-        if(!usuarioTemPermissao(auth, "GESTAO_CAIXA")){
+        if(!usuarioTemPermissao(auth, "GESTAO_DOACOES")){
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
         try{
@@ -120,7 +120,7 @@ public class CaixaControl {
     }
 
     public Resposta movimentar(String auth, int id, String json){
-        if(!usuarioTemPermissao(auth, "GESTAO_CAIXA")){
+        if(!usuarioTemPermissao(auth, "GESTAO_DOACOES")){
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
         try{

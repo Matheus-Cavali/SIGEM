@@ -23,7 +23,7 @@ export default function CurrencyField({ value, setValue, label, placeholder, dis
     <BaseField label={label} error={error} required={required}>
       <input
         className="field-control"
-        value={value || ''}
+        value={formatCurrency(value || '')}
         disabled={disabled}
         placeholder={placeholder}
         inputMode="decimal"

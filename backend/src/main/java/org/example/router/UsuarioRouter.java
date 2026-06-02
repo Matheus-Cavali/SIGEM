@@ -57,6 +57,8 @@ public class UsuarioRouter implements HttpHandler {
                     atualizarPermissoes(exchange, auth);
                 } else if ("GET".equalsIgnoreCase(metodo) && "/api/recurso".equals(path)) {
                     listarTodosRecursos(exchange, auth);
+                } else if ("GET".equalsIgnoreCase(metodo) && "/api/recurso/usuarios".equals(path)) {
+                    listarUsuariosPorPermissao(exchange, auth);
                 } else if ("DELETE".equalsIgnoreCase(metodo) && path.matches("/api/usuarios/\\d+")) {
                     removerUsuario(exchange);
                 } else {

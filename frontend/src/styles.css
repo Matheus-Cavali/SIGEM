@@ -440,6 +440,11 @@ select:focus {
   color: var(--red);
 }
 
+.status.pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
 .amount {
   color: var(--red);
   font-size: 16px;

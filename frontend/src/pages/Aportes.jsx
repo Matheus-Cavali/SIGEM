@@ -29,6 +29,8 @@ export default function Aportes() {
   const [filtroInvestimento, setFiltroInvestimento] = useState('')
   const [filtroColaborador, setFiltroColaborador] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [confirmAntecipar, setConfirmAntecipar] = useState(null)
+  const [saving, setSaving] = useState(false)
   const { user, can } = useAuth()
   const canManage = can(['LANCAR_APORTE', 'REGISTRAR_INVESTIMENTO'])
 
@@ -113,32 +115,62 @@ export default function Aportes() {
     }
 
     if (!temErros) {
-      try {
-        const value = valorParaNumero(form.valorAporte)
+      const value = valorParaNumero(form.valorAporte)
+      const apiPath = '/api/investimentos/' + form.investimentoId
 
-        if (editing) {
-          await put('/api/investimentos/' + form.investimentoId + '/aportes/' + editing.id, { valorAporte: value, dataAporte: dataParaBackend(form.dataAporte) })
-        } else {
-          await post('/api/investimentos/' + form.investimentoId + '/aporte', { valorAporte: value, dataAporte: dataParaBackend(form.dataAporte), colaboradorId: user.id })
-        }
+      if (editing) {
+        setSaving(true)
+        try {
+          await put(apiPath + '/aportes/' + editing.id, { valorAporte: value, dataAporte: dataParaBackend(form.dataAporte) })
+          setFormOpen(false); setEditing(null); setForm(initialForm); load()
+        } catch (error) {
+          if (error.fieldErrors) setFieldErrors(error.fieldErrors)
+          else toast.error(error.message)
+        } finally { setSaving(false) }
+        return
+      }
 
-        setFormOpen(false)
-        setEditing(null)
-        setForm(initialForm)
-        load()
-      } catch (error) {
-        if (error.fieldErrors) {
-          setFieldErrors(error.fieldErrors)
-        } else {
-          toast.error(error.message)
+      const inv = investimentos.find(i => i.id === Number(form.investimentoId))
+      if (inv && inv.dataAbertura) {
+        const partes = form.dataAporte.split('/')
+        const aporteDate = new Date(parseInt(partes[2]), parseInt(partes[1]) - 1, parseInt(partes[0]))
+        const invPartes = inv.dataAbertura.split('/')
+        const invDate = new Date(parseInt(invPartes[2]), parseInt(invPartes[1]) - 1, parseInt(invPartes[0]))
+        aporteDate.setHours(0, 0, 0, 0)
+        invDate.setHours(0, 0, 0, 0)
+        if (aporteDate < invDate) {
+          setConfirmAntecipar({ invNome: inv.nome, dataAporte: form.dataAporte, value, apiPath })
+          return
         }
       }
+
+      enviarAporte(value, apiPath)
     }
+  }
+
+  const enviarAporte = async (value, apiPath, anteciparData) => {
+    setSaving(true)
+    try {
+      const body = { valorAporte: value, dataAporte: dataParaBackend(form.dataAporte), colaboradorId: user.id }
+      if (anteciparData) body.anteciparData = true
+      const resp = await post(apiPath + '/aporte', body)
+      if (resp && resp.aviso) toast.warning(resp.aviso)
+      setFormOpen(false); setEditing(null); setForm(initialForm); load()
+    } catch (error) {
+      if (error.fieldErrors) setFieldErrors(error.fieldErrors)
+      else toast.error(error.message)
+    } finally { setSaving(false) }
   }
 
   const handleFieldChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }))
     setFieldErrors(prev => ({ ...prev, [field]: '' }))
+  }
+
+  const handleConfirmAntecipar = () => {
+    if (!confirmAntecipar) return
+    enviarAporte(confirmAntecipar.value, confirmAntecipar.apiPath, true)
+    setConfirmAntecipar(null)
   }
 
   const remove = (item) => {
@@ -204,11 +236,28 @@ export default function Aportes() {
               setValue={v => handleFieldChange('valorAporte', v)} error={fieldErrors.valorAporte} required />
             <DateField label="Data" value={form.dataAporte} setValue={v => handleFieldChange('dataAporte', v)} error={fieldErrors.dataAporte} required minDate={hojeISO()} maxDate="2099-12-31" />
             <div className="form-submit">
-              <button className="primary-action">{editing ? 'Salvar Alteracoes' : 'Salvar Aporte'}</button>
+              <button className="primary-action" disabled={saving}>{saving ? 'Salvando...' : (editing ? 'Salvar Alteracoes' : 'Salvar Aporte')}</button>
             </div>
           </form>
         </section>
       )}
+
+      <Modal
+        open={!!confirmAntecipar}
+        title="Antecipar data do investimento"
+        variant="info"
+        hideCloseButton
+        onClose={() => setConfirmAntecipar(null)}
+        footer={
+          <>
+            <button className="ghost-action" onClick={() => setConfirmAntecipar(null)}>Cancelar</button>
+            <button className="primary-action" onClick={handleConfirmAntecipar}>Sim, antecipar</button>
+          </>
+        }
+      >
+        <p>A data do aporte ({confirmAntecipar?.dataAporte}) é anterior à data de abertura do investimento "{confirmAntecipar?.invNome}".</p>
+        <p>Deseja antecipar a data de abertura do investimento para {confirmAntecipar?.dataAporte}? Caso contrário, o aporte não será registrado.</p>
+      </Modal>
 
       <Modal
         open={!!confirmDelete}

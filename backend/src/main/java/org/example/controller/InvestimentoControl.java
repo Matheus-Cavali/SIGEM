@@ -167,6 +167,9 @@ public class InvestimentoControl {
             if (body.has("nome")) inv.setNome(body.get("nome").getAsString());
             if (body.has("valorMeta")) inv.setValorMeta(body.get("valorMeta").getAsBigDecimal());
             if (body.has("status")) inv.setStatus(body.get("status").getAsString());
+            if (body.has("dataAbertura")) {
+                inv.setDataAbertura(Data.parseFlexivel(body.get("dataAbertura").getAsString()));
+            }
 
             getInvestimentoFuturo().alterar(conn, inv);
             conn.commit();
@@ -211,17 +214,76 @@ public class InvestimentoControl {
             String dataAporteStr = body.get("dataAporte").getAsString();
             LocalDate dataAporte = Data.parseFlexivel(dataAporteStr);
             aporte.setDataAporte(dataAporte);
-            aporte.setColaboradorId(body.get("colaboradorId").getAsInt());
+            int colaboradorId = body.get("colaboradorId").getAsInt();
+            aporte.setColaboradorId(colaboradorId);
 
             Resposta erroData = validarData(dataAporteStr, dataAporte, "dataAporte");
             if (erroData != null) return erroData;
             if (dataAporte != null && dataAporte.isBefore(LocalDate.now()))
                 return new Resposta(400, "{\"erros\":{\"dataAporte\":\"Não é permitido lançar aporte com data anterior à data atual\"}}");
 
+            if (dataAporte != null && inv.getDataAbertura() != null && dataAporte.isBefore(inv.getDataAbertura())) {
+                boolean antecipar = body.has("anteciparData") && body.get("anteciparData").getAsBoolean();
+                if (!antecipar) {
+                    conn.rollback();
+                    return new Resposta(400, "{\"erro\":\"A data do aporte é anterior à data de abertura do investimento. É necessário antecipar a data de abertura.\"}");
+                }
+                inv.setDataAbertura(dataAporte);
+                getInvestimentoFuturo().alterar(conn, inv);
+            }
+
+            Caixa caixaHelper = new Caixa();
+            Caixa caixaAberto = caixaHelper.buscarCaixaAberto(conn);
+            boolean autoCriouCaixa = false;
+
+            if (caixaAberto == null) {
+                Caixa novoCaixa = new Caixa();
+                novoCaixa.setDataCaixa(LocalDate.now());
+                novoCaixa.setHorarioAbertura(java.time.LocalTime.now());
+                BigDecimal ultimoFechamento = BigDecimal.ZERO;
+                Caixa ultimo = Caixa.getDao().buscarUltimoCaixa(conn);
+                if (ultimo != null && ultimo.getValorFechamento() != null)
+                    ultimoFechamento = ultimo.getValorFechamento();
+                novoCaixa.setValorAbertura(ultimoFechamento);
+                novoCaixa.setSaldo(ultimoFechamento);
+                novoCaixa.setColaboradorAbriuId(colaboradorId);
+                Caixa.getDao().inserir(conn, novoCaixa);
+                caixaAberto = novoCaixa;
+                autoCriouCaixa = true;
+            }
+
+            aporte.setCaixaId(caixaAberto.getId());
+
             getAporteInvestimento().cadastrar(conn, aporte);
+
+            caixaHelper.movimentar(conn, caixaAberto.getId(), aporte.getValorAporte());
+
+            if (autoCriouCaixa) {
+                Caixa caixaAtualizado = caixaHelper.buscarPorId(conn, caixaAberto.getId());
+                Caixa paraFechar = new Caixa();
+                paraFechar.setId(caixaAberto.getId());
+                paraFechar.setValorFechamento(caixaAtualizado.getSaldo());
+                paraFechar.setColaboradorFechouId(colaboradorId);
+                caixaHelper.fechar(conn, paraFechar);
+            }
+
             BigDecimal saldo = getInvestimentoFuturo().calcularSaldo(conn, investimentoId);
+
             conn.commit();
-            return new Resposta(201, "{\"mensagem\":\"Aporte registrado com sucesso\",\"id\":" + aporte.getId() + ",\"saldoAtual\":" + saldo + "}");
+
+            JsonObject resp = new JsonObject();
+            resp.addProperty("mensagem", "Aporte registrado com sucesso");
+            resp.addProperty("id", aporte.getId());
+            resp.addProperty("saldoAtual", saldo);
+            resp.addProperty("caixaId", caixaAberto.getId());
+
+            if (saldo.compareTo(inv.getValorMeta()) > 0) {
+                String aviso = "Valor total de aportes (" + String.format("%.2f", saldo) +
+                        ") ultrapassou o valor previsto (" + String.format("%.2f", inv.getValorMeta()) + ")";
+                resp.addProperty("aviso", aviso);
+            }
+
+            return new Resposta(201, resp.toString());
         } catch (Exception e) {
             if (conn != null) try { conn.rollback(); } catch (SQLException ex) {}
             String msg = e.getMessage();
@@ -267,6 +329,18 @@ public class InvestimentoControl {
         try {
             conn = Conexao.getConexao();
             conn.setAutoCommit(false);
+
+            AporteInvestimento aporte = getAporteInvestimento().buscarPorId(conn, aporteId);
+            if (aporte == null) {
+                conn.rollback();
+                return new Resposta(404, "{\"erro\":\"Aporte não encontrado\"}");
+            }
+
+            if (aporte.getCaixaId() != null) {
+                Caixa caixaHelper = new Caixa();
+                caixaHelper.movimentar(conn, aporte.getCaixaId(), aporte.getValorAporte().negate());
+            }
+
             getAporteInvestimento().excluir(conn, aporteId);
             conn.commit();
             return new Resposta(200, "{\"mensagem\":\"Aporte removido\"}");

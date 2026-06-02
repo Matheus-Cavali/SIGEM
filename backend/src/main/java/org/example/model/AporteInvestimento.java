@@ -65,6 +65,10 @@ public class AporteInvestimento {
         return getAporteInvestimentoDao().listarPorInvestimento(conn, investimentoId);
     }
 
+    public AporteInvestimento buscarPorId(Connection conn, int id) {
+        return getAporteInvestimentoDao().buscarPorId(conn, id);
+    }
+
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
     public int getInvestimentoFuturoId() { return investimentoFuturoId; }

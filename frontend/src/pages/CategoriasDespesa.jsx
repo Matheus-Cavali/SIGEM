@@ -17,7 +17,7 @@ export default function CategoriasDespesa() {
   const [filtroNome, setFiltroNome] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(null)
   const { can } = useAuth()
-  const canManage = can('GERENCIAR_DESPESA')
+  const podeGerenciar = can('GESTAO_DESPESAS')
 
   const load = async (nome) => {
     try {
@@ -92,7 +92,7 @@ export default function CategoriasDespesa() {
 
   return (
     <>
-      <PageHeader title="Categorias de Despesa" subtitle="Gerencie as categorias de despesa da igreja" actionLabel={canManage ? 'Adicionar Categoria' : ''} onAction={openNew} />
+      <PageHeader title="Categorias de Despesa" subtitle="Gerencie as categorias de despesa da igreja" actionLabel={podeGerenciar ? 'Adicionar Categoria' : ''} onAction={openNew} />
 
       <section className="filter-bar">
         <input placeholder="Filtrar por nome..." value={filtroNome} onChange={e => setFiltroNome(e.target.value)} />
@@ -139,8 +139,8 @@ export default function CategoriasDespesa() {
               <h3>{item.nome}</h3>
             </div>
             <div className="card-actions">
-              {canManage && <button className="icon-button" onClick={() => openEdit(item)} title="Editar"><Icon name="edit" size={16} /></button>}
-              {canManage && <button className="icon-button icon-button--danger" onClick={() => remove(item)} title="Excluir"><Icon name="trash" size={16} /></button>}
+              {podeGerenciar && <button className="icon-button" onClick={() => openEdit(item)} title="Editar"><Icon name="edit" size={16} /></button>}
+              {podeGerenciar && <button className="icon-button icon-button--danger" onClick={() => remove(item)} title="Excluir"><Icon name="trash" size={16} /></button>}
             </div>
           </article>
         ))}

@@ -183,6 +183,9 @@ public class UsuarioControl {
                 return new Resposta(400, "{\"erro\":\"Dados inválidos. Email, senha e tipo são obrigatórios.\"}");
             }
 
+            String cpfLimpo = dados.getCpf() != null ? dados.getCpf().replaceAll("[^0-9]", "") : "";
+            dados.setCpf(cpfLimpo);
+
             Map<String, String> erros = dados.validar();
             if (!erros.isEmpty()) return new Resposta(400, gson.toJson(Collections.singletonMap("erros", erros)));
 
@@ -202,9 +205,7 @@ public class UsuarioControl {
             }
 
             String senhaBanco = Criptografia.hashSenha(dados.getSenha());
-            String cpfLimpo = dados.getCpf() != null ? dados.getCpf().replaceAll("[^0-9]", "") : "";
             dados.setSenha(senhaBanco);
-            dados.setCpf(cpfLimpo);
             dados.setNivelAcesso(dados.getNivelAcesso() > 0 ? dados.getNivelAcesso() : 2);
 
             getUsuario().cadastrar(conn, dados);

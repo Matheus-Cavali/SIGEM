@@ -11,7 +11,7 @@ import java.util.List;
 public class AporteInvestimentoDao {
 
     public int inserir(Connection conn, AporteInvestimento aporte) {
-        String sql = "INSERT INTO aporte_investimento (investimento_futuro_id, valor_aporte, data_aporte, colaborador_id) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO aporte_investimento (investimento_futuro_id, valor_aporte, data_aporte, colaborador_id, caixa_id) VALUES (?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setInt(1, aporte.getInvestimentoFuturoId());
             stmt.setBigDecimal(2, aporte.getValorAporte());
@@ -20,6 +20,11 @@ public class AporteInvestimentoDao {
                 stmt.setInt(4, aporte.getColaboradorId());
             } else {
                 stmt.setNull(4, Types.INTEGER);
+            }
+            if (aporte.getCaixaId() != null) {
+                stmt.setInt(5, aporte.getCaixaId());
+            } else {
+                stmt.setNull(5, Types.INTEGER);
             }
             stmt.executeUpdate();
             try (ResultSet rs = stmt.getGeneratedKeys()) {
@@ -66,6 +71,30 @@ public class AporteInvestimentoDao {
         }
     }
 
+    public AporteInvestimento buscarPorId(Connection conn, int id) {
+        String sql = "SELECT a.*, u.nome AS colaborador_nome FROM aporte_investimento a " +
+                "LEFT JOIN usuario u ON u.id = a.colaborador_id WHERE a.id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    AporteInvestimento a = new AporteInvestimento();
+                    a.setId(rs.getInt("id"));
+                    a.setInvestimentoFuturoId(rs.getInt("investimento_futuro_id"));
+                    a.setValorAporte(rs.getBigDecimal("valor_aporte"));
+                    a.setDataAporte(rs.getObject("data_aporte", LocalDate.class));
+                    a.setColaboradorId((Integer) rs.getObject("colaborador_id"));
+                    a.setColaboradorNome(rs.getString("colaborador_nome"));
+                    a.setCaixaId((Integer) rs.getObject("caixa_id"));
+                    return a;
+                }
+            }
+        } catch (SQLException e) {
+            throw new DatabaseException("Erro ao buscar aporte por ID", e);
+        }
+        return null;
+    }
+
     public List<AporteInvestimento> listarPorInvestimento(Connection conn, int investimentoId) {
         String sql = "SELECT a.*, u.nome AS colaborador_nome FROM aporte_investimento a " +
                 "LEFT JOIN usuario u ON u.id = a.colaborador_id " +
@@ -82,6 +111,7 @@ public class AporteInvestimentoDao {
                     a.setDataAporte(rs.getObject("data_aporte", LocalDate.class));
                     a.setColaboradorId((Integer) rs.getObject("colaborador_id"));
                     a.setColaboradorNome(rs.getString("colaborador_nome"));
+                    a.setCaixaId((Integer) rs.getObject("caixa_id"));
                     lista.add(a);
                 }
             }

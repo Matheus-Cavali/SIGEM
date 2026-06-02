@@ -28,6 +28,7 @@ export default function Usuarios() {
   const [filtroTipo, setFiltroTipo] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [confirmToggle, setConfirmToggle] = useState(null)
+  const [saving, setSaving] = useState(false)
 
   const load = async (nome, tipo) => {
     try {
@@ -99,6 +100,7 @@ export default function Usuarios() {
     }
 
     if (!temErros) {
+      setSaving(true)
       try {
         const payload = {
           nome: form.nome,
@@ -131,6 +133,8 @@ export default function Usuarios() {
         } else {
           toast.error(error.message)
         }
+      } finally {
+        setSaving(false)
       }
     }
   }
@@ -267,7 +271,7 @@ export default function Usuarios() {
               </select>
             </div>
             <div className="form-submit">
-              <button className="primary-action">{editing ? 'Salvar Alteracoes' : 'Salvar Usuario'}</button>
+              <button className="primary-action" disabled={saving}>{saving ? 'Salvando...' : (editing ? 'Salvar Alteracoes' : 'Salvar Usuario')}</button>
             </div>
           </form>
         </section>

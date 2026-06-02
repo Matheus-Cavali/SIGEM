@@ -72,8 +72,7 @@ export default function Despesas() {
   const [ajusteErro, setAjusteErro] = useState('')
 
   const { can } = useAuth()
-  const canLancar = can('LANCAR_DESPESA')
-  const canManage = can('GERENCIAR_DESPESA')
+  const podeGerenciar = can('GESTAO_DESPESAS')
 
   const loadTipos = async () => {
     try {
@@ -286,8 +285,8 @@ export default function Despesas() {
       <PageHeader
         title="Despesas"
         subtitle="Gerencie as despesas da igreja"
-        actionLabel={canLancar || canManage ? 'Adicionar Despesa' : ''}
-        onAction={canLancar || canManage ? openNew : null}
+        actionLabel={podeGerenciar ? 'Adicionar Despesa' : ''}
+        onAction={podeGerenciar ? openNew : null}
       />
 
       {/* Saldo + Botão de ajuste */}
@@ -303,7 +302,7 @@ export default function Despesas() {
             }}>
               {moeda(saldo)}
             </span>
-            {canManage && (
+            {podeGerenciar && (
               <button
                 className="icon-button"
                 style={{ marginLeft: 'auto', fontSize: '0.78rem', padding: '0.3rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
@@ -607,7 +606,7 @@ export default function Despesas() {
                   </div>
                 </div>
                 <div className="card-actions">
-                  {(canLancar || canManage) && (
+                  {(podeGerenciar) && (
                     <button
                       className="primary-action"
                       style={{ fontSize: '0.78rem', padding: '0.3rem 0.8rem', background: '#dc2626' }}
@@ -617,12 +616,12 @@ export default function Despesas() {
                       Quitar c/ Juros
                     </button>
                   )}
-                  {canManage && (
+                  {podeGerenciar && (
                     <button className="icon-button" onClick={() => openEdit(item)} title="Editar">
                       <Icon name="edit" size={16} />
                     </button>
                   )}
-                  {canManage && (
+                  {podeGerenciar && (
                     <button className="icon-button icon-button--danger" onClick={() => remove(item)} title="Excluir">
                       <Icon name="trash" size={16} />
                     </button>
@@ -658,7 +657,7 @@ export default function Despesas() {
                   </div>
                 </div>
                 <div className="card-actions">
-                  {(canLancar || canManage) && (
+                  {(podeGerenciar) && (
                     <button
                       className="primary-action"
                       style={{ fontSize: '0.78rem', padding: '0.3rem 0.8rem' }}
@@ -668,12 +667,12 @@ export default function Despesas() {
                       Quitar
                     </button>
                   )}
-                  {canManage && (
+                  {podeGerenciar && (
                     <button className="icon-button" onClick={() => openEdit(item)} title="Editar">
                       <Icon name="edit" size={16} />
                     </button>
                   )}
-                  {canManage && (
+                  {podeGerenciar && (
                     <button className="icon-button icon-button--danger" onClick={() => remove(item)} title="Excluir">
                       <Icon name="trash" size={16} />
                     </button>
@@ -707,7 +706,7 @@ export default function Despesas() {
                 </div>
                 <div className="card-actions">
                   <span className="status closed">Quitada</span>
-                  {canManage && (
+                  {podeGerenciar && (
                     <button
                       className="icon-button icon-button--warning"
                       onClick={() => estornar(item)}
@@ -716,7 +715,7 @@ export default function Despesas() {
                       <Icon name="x" size={16} />
                     </button>
                   )}
-                  {canManage && (
+                  {podeGerenciar && (
                     <button className="icon-button icon-button--danger" onClick={() => remove(item)} title="Excluir">
                       <Icon name="trash" size={16} />
                     </button>

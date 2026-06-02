@@ -16,6 +16,15 @@ function hojeISO() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
+function isDataFutura(dataAbertura) {
+  if (!dataAbertura) return false
+  const partes = dataAbertura.split('/')
+  const data = new Date(parseInt(partes[2]), parseInt(partes[1]) - 1, parseInt(partes[0]))
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
+  return data > hoje
+}
+
 const initialForm = { nome: '', valorMeta: '0,00', dataAbertura: '', status: 'ABERTO' }
 
 export default function Investimentos() {
@@ -30,12 +39,25 @@ export default function Investimentos() {
   const { user, can } = useAuth()
   const canManage = can('REGISTRAR_INVESTIMENTO')
 
+  function statusExibicao(item) {
+    if (item.status === 'ENCERRADO') return { label: 'Encerrado', css: 'closed' }
+    if (item.status === 'ABERTO' && isDataFutura(item.dataAbertura)) return { label: 'Não aberto', css: 'pending' }
+    return { label: 'Em andamento', css: '' }
+  }
+
+  const visibleItems = items.filter(item => {
+    if (!filtroStatus) return true
+    if (filtroStatus === 'FUTURO') return item.status === 'ABERTO' && isDataFutura(item.dataAbertura)
+    if (filtroStatus === 'ABERTO') return item.status === 'ABERTO' && !isDataFutura(item.dataAbertura)
+    return item.status === filtroStatus
+  })
+
   const load = async (nome, status) => {
     try {
       let path = '/api/investimentos'
       const params = []
       if (nome) params.push('nome=' + encodeURIComponent(nome))
-      if (status) params.push('status=' + status)
+      if (status && status !== 'FUTURO') params.push('status=' + status)
       if (params.length) path += '?' + params.join('&')
       const data = await get(path)
       setItems(Array.isArray(data) ? data : [])
@@ -79,7 +101,19 @@ export default function Investimentos() {
     const erros = {}
     if (!form.nome.trim()) erros.nome = 'Nome do investimento é obrigatório'
     if (!form.valorMeta || !valorParaNumero(form.valorMeta)) erros.valorMeta = 'Valor meta deve ser maior que zero'
-    if (!editing && !form.dataAbertura.trim()) erros.dataAbertura = 'Data de abertura é obrigatória'
+    if (!form.dataAbertura.trim()) erros.dataAbertura = 'Data de abertura é obrigatória'
+    else {
+      const partes = form.dataAbertura.split('/')
+      if (partes.length === 3) {
+        const dia = parseInt(partes[0], 10)
+        const mes = parseInt(partes[1], 10) - 1
+        const ano = parseInt(partes[2], 10)
+        const data = new Date(ano, mes, dia)
+        const hoje = new Date()
+        hoje.setHours(0, 0, 0, 0)
+        if (data < hoje) erros.dataAbertura = 'Não é permitido lançar investimento com data anterior à data atual'
+      }
+    }
     return erros
   }
 
@@ -98,7 +132,7 @@ export default function Investimentos() {
         const value = valorParaNumero(form.valorMeta)
 
         if (editing) {
-          await put('/api/investimentos/' + editing, { nome: form.nome, valorMeta: value, status: form.status })
+          await put('/api/investimentos/' + editing, { nome: form.nome, valorMeta: value, status: form.status, dataAbertura: dataParaBackend(form.dataAbertura) })
         } else {
           await post('/api/investimentos', { nome: form.nome, valorMeta: value, dataAbertura: dataParaBackend(form.dataAbertura), colaboradorId: user.id })
         }
@@ -148,6 +182,7 @@ export default function Investimentos() {
         <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}>
           <option value="">Todos os status</option>
           <option value="ABERTO">Em andamento</option>
+          <option value="FUTURO">Não aberto</option>
           <option value="ENCERRADO">Encerrado</option>
         </select>
       </section>
@@ -167,9 +202,7 @@ export default function Investimentos() {
             </div>
             <CurrencyField label="Meta de Valor (R$)" value={form.valorMeta}
               setValue={v => handleFieldChange('valorMeta', v)} error={fieldErrors.valorMeta} required />
-            {!editing && (
-              <DateField label="Data Meta" value={form.dataAbertura} setValue={v => handleFieldChange('dataAbertura', v)} error={fieldErrors.dataAbertura} required minDate={hojeISO()} maxDate="2099-12-31" />
-            )}
+            <DateField label="Data Meta" value={form.dataAbertura} setValue={v => handleFieldChange('dataAbertura', v)} error={fieldErrors.dataAbertura} required={!editing} minDate={hojeISO()} maxDate="2099-12-31" />
             {editing && (
               <div className="field-container">
                 <label className="field-label">Status</label>
@@ -203,7 +236,7 @@ export default function Investimentos() {
       </Modal>
 
       <div className="cards-list">
-        {items.map((item, index) => (
+        {visibleItems.map((item, index) => (
           <article className="finance-card" key={item.id}>
             <div>
               <h3>{item.nome}</h3>
@@ -214,7 +247,7 @@ export default function Investimentos() {
               </div>
             </div>
             <div className="card-actions">
-              <span className={'status ' + (item.status === 'ENCERRADO' ? 'closed' : '')}>{item.status === 'ENCERRADO' ? 'Encerrado' : 'Em andamento'}</span>
+              <span className={'status ' + statusExibicao(item).css}>{statusExibicao(item).label}</span>
               {canManage && <button className="icon-button" onClick={() => openEdit(item)}><Icon name="edit" size={16} /></button>}
               {canManage && <button className="icon-button icon-button--danger" onClick={() => remove(item)}><Icon name="trash" size={16} /></button>}
             </div>
