@@ -33,7 +33,8 @@ public class DespesaControl {
     private boolean usuarioTemPermissao(String auth, String recursoNome) {
         String email = emailDoToken(auth);
         if (email != null) {
-            try (Connection conn = Conexao.getConexao()) {
+            try {
+                Connection conn = Conexao.getConexao();
                 UsuarioDao uDao = new UsuarioDao();
                 Usuario u = uDao.buscarPorEmail(conn, email);
                 if (u != null) {
@@ -52,7 +53,8 @@ public class DespesaControl {
     private boolean usuarioPodeGerenciar(String auth) {
         String email = emailDoToken(auth);
         if (email != null) {
-            try (Connection conn = Conexao.getConexao()) {
+            try {
+                Connection conn = Conexao.getConexao();
                 Usuario u = new UsuarioDao().buscarPorEmail(conn, email);
                 if (u != null) return u.getNivelAcesso() == 1 || usuarioTemPermissao(auth, "GESTAO_DESPESAS");
             } catch (Exception e) {
@@ -77,7 +79,8 @@ public class DespesaControl {
 
         String nome = body.get("nome").getAsString().trim();
 
-        try (Connection conn = Conexao.getConexao()) {
+        Connection conn = Conexao.getConexao();
+        try {
             if (CategoriaDespesa.buscarPorNome(conn, nome) != null) {
                 return new Resposta(409, "{\"erro\":\"Já existe uma categoria de despesa com este nome\"}");
             }
@@ -108,7 +111,8 @@ public class DespesaControl {
                 }
             }
         }
-        try (Connection conn = Conexao.getConexao()) {
+        Connection conn = Conexao.getConexao();
+        try {
             List<CategoriaDespesa> lista = CategoriaDespesa.listar(conn, nome);
             StringBuilder sb = new StringBuilder("[");
             for (int i = 0; i < lista.size(); i++) {
@@ -129,7 +133,8 @@ public class DespesaControl {
         if (!usuarioPodeGerenciar(auth)) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
-        try (Connection conn = Conexao.getConexao()) {
+        Connection conn = Conexao.getConexao();
+        try {
             CategoriaDespesa categoria = CategoriaDespesa.buscarPorId(conn, id);
             if (categoria == null) return new Resposta(404, "{\"erro\":\"Categoria de despesa não encontrada\"}");
 
@@ -156,7 +161,8 @@ public class DespesaControl {
         if (!usuarioPodeGerenciar(auth)) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
-        try (Connection conn = Conexao.getConexao()) {
+        Connection conn = Conexao.getConexao();
+        try {
             if (CategoriaDespesa.buscarPorId(conn, id) == null)
                 return new Resposta(404, "{\"erro\":\"Categoria de despesa não encontrada\"}");
             if (CategoriaDespesa.deletar(conn, id))
@@ -175,7 +181,8 @@ public class DespesaControl {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
 
-        try (Connection conn = Conexao.getConexao()) {
+        Connection conn = Conexao.getConexao();
+        try {
             Gson gson = new Gson();
             JsonObject body = gson.fromJson(json, JsonObject.class);
 
@@ -233,7 +240,8 @@ public class DespesaControl {
                 }
             }
         }
-        try (Connection conn = Conexao.getConexao()) {
+        Connection conn = Conexao.getConexao();
+        try {
             List<Despesa> lista = Despesa.listar(conn, descricao, tipoId);
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
             StringBuilder sb = new StringBuilder("[");
@@ -267,7 +275,8 @@ public class DespesaControl {
         if (!usuarioTemPermissao(auth, "GESTAO_DESPESAS") && !usuarioPodeGerenciar(auth)) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
-        try (Connection conn = Conexao.getConexao()) {
+        Connection conn = Conexao.getConexao();
+        try {
             Despesa d = Despesa.buscarPorId(conn, id);
             if (d == null) return new Resposta(404, "{\"erro\":\"Despesa não encontrada\"}");
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -291,7 +300,8 @@ public class DespesaControl {
         if (!usuarioPodeGerenciar(auth)) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
-        try (Connection conn = Conexao.getConexao()) {
+        Connection conn = Conexao.getConexao();
+        try {
             Despesa despesa = Despesa.buscarPorId(conn, id);
             if (despesa == null) return new Resposta(404, "{\"erro\":\"Despesa não encontrada\"}");
 
@@ -328,7 +338,8 @@ public class DespesaControl {
         if (!usuarioPodeGerenciar(auth)) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
-        try (Connection conn = Conexao.getConexao()) {
+        Connection conn = Conexao.getConexao();
+        try {
             Despesa despesa = Despesa.buscarPorId(conn, id);
             if (despesa == null) return new Resposta(404, "{\"erro\":\"Despesa não encontrada\"}");
             // Usa método de instância com validação de ID (padrão Material)
@@ -347,7 +358,8 @@ public class DespesaControl {
         if (!usuarioTemPermissao(auth, "GESTAO_DESPESAS") && !usuarioPodeGerenciar(auth)) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
-        try (Connection conn = Conexao.getConexao()) {
+        Connection conn = Conexao.getConexao();
+        try {
             Despesa despesa = Despesa.buscarPorId(conn, id);
             if (despesa == null) return new Resposta(404, "{\"erro\":\"Despesa não encontrada\"}");
             if (despesa.getDataPagamento() != null) return new Resposta(409, "{\"erro\":\"Despesa já foi quitada\"}");
@@ -387,7 +399,8 @@ public class DespesaControl {
         if (!usuarioTemPermissao(auth, "GESTAO_DESPESAS") && !usuarioPodeGerenciar(auth)) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
-        try (Connection conn = Conexao.getConexao()) {
+        Connection conn = Conexao.getConexao();
+        try {
             BigDecimal saldo = Despesa.calcularSaldo(conn);
             return new Resposta(200, "{\"saldo\":" + saldo + "}");
         } catch (Exception e) {
@@ -400,7 +413,8 @@ public class DespesaControl {
         if (!usuarioPodeGerenciar(auth)) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
-        try (Connection conn = Conexao.getConexao()) {
+        Connection conn = Conexao.getConexao();
+        try {
             Despesa despesa = Despesa.buscarPorId(conn, id);
             if (despesa == null) return new Resposta(404, "{\"erro\":\"Despesa não encontrada\"}");
             if (despesa.getDataPagamento() == null) return new Resposta(409, "{\"erro\":\"Despesa ainda não foi paga\"}");
@@ -417,7 +431,8 @@ public class DespesaControl {
         if (!usuarioPodeGerenciar(auth)) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
-        try (Connection conn = Conexao.getConexao()) {
+        Connection conn = Conexao.getConexao();
+        try {
             com.google.gson.Gson gson = new com.google.gson.Gson();
             com.google.gson.JsonObject body = gson.fromJson(json, com.google.gson.JsonObject.class);
             if (!body.has("valor") || body.get("valor").isJsonNull())
