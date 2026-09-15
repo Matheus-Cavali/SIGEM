@@ -14,7 +14,7 @@ public class MaterialRouter implements HttpHandler {
 
     public static synchronized MaterialControl getControl() {
         if (control == null)
-            control = new MaterialControl();
+            control = MaterialControl.getInstancia();
         return control;
     }
 

@@ -28,6 +28,15 @@ public class DoacaoFinanceiraControl {
         return doacaoFinanceira;
     }
 
+    private static DoacaoFinanceiraControl instancia;
+
+    private DoacaoFinanceiraControl() {}
+
+    public static synchronized DoacaoFinanceiraControl getInstancia() {
+        if (instancia == null) instancia = new DoacaoFinanceiraControl();
+        return instancia;
+    }
+
     private String emailDoToken(String auth) {
         if(auth != null && auth.startsWith("Bearer "))
             return org.example.util.Token.validarToken(auth.substring(7));

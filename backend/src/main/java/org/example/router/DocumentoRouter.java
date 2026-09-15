@@ -17,7 +17,7 @@ public class DocumentoRouter implements HttpHandler {
 
     public static synchronized DocumentoControl getControl() {
         if (control == null)
-            control = new DocumentoControl();
+            control = DocumentoControl.getInstancia();
         return control;
     }
 

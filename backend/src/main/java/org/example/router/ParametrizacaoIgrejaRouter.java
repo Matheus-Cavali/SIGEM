@@ -17,7 +17,7 @@ public class ParametrizacaoIgrejaRouter implements HttpHandler {
 
     public static synchronized ParametrizacaoIgrejaControl getControl() {
         if (control == null)
-            control = new ParametrizacaoIgrejaControl();
+            control = ParametrizacaoIgrejaControl.getInstancia();
         return control;
     }
 

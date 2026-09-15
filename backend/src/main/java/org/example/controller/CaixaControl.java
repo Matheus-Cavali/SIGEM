@@ -30,7 +30,14 @@ public class CaixaControl {
         return caixa;
     }
 
-    public CaixaControl() {}
+    private static CaixaControl instancia;
+
+    private CaixaControl() {}
+
+    public static synchronized CaixaControl getInstancia() {
+        if (instancia == null) instancia = new CaixaControl();
+        return instancia;
+    }
 
     private String emailDoToken(String auth){
         if(auth != null && auth.startsWith("Bearer ")){

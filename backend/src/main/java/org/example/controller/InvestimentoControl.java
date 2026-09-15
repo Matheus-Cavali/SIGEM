@@ -32,7 +32,14 @@ public class InvestimentoControl {
         return aporteInvestimento;
     }
 
-    public InvestimentoControl() {}
+    private static InvestimentoControl instancia;
+
+    private InvestimentoControl() {}
+
+    public static synchronized InvestimentoControl getInstancia() {
+        if (instancia == null) instancia = new InvestimentoControl();
+        return instancia;
+    }
 
     private final Gson gson = new GsonBuilder()
             .registerTypeAdapter(LocalDate.class, (JsonSerializer<LocalDate>) (src, typeOfSrc, context) ->

@@ -33,7 +33,14 @@ public class EventoControl {
         return evento;
     }
 
-    public EventoControl() {}
+    private static EventoControl instancia;
+
+    private EventoControl() {}
+
+    public static synchronized EventoControl getInstancia() {
+        if (instancia == null) instancia = new EventoControl();
+        return instancia;
+    }
 
     private String emailDoToken(String auth) {
 

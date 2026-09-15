@@ -13,7 +13,7 @@ public class DoacaoFinanceiraRouter implements HttpHandler {
     private static DoacaoFinanceiraControl control;
 
     public static synchronized DoacaoFinanceiraControl getControl() {
-        if(control == null) control = new DoacaoFinanceiraControl();
+        if(control == null) control = DoacaoFinanceiraControl.getInstancia();
         return control;
     }
 

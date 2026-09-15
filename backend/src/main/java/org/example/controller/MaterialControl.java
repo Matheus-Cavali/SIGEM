@@ -24,7 +24,14 @@ public class MaterialControl {
         return material;
     }
 
-    public MaterialControl() {}
+    private static MaterialControl instancia;
+
+    private MaterialControl() {}
+
+    public static synchronized MaterialControl getInstancia() {
+        if (instancia == null) instancia = new MaterialControl();
+        return instancia;
+    }
 
     private String emailDoToken(String auth) {
         if (auth != null && auth.startsWith("Bearer ")) {

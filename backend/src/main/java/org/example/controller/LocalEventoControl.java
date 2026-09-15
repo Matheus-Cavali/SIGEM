@@ -25,7 +25,14 @@ public class LocalEventoControl {
         return localEvento;
     }
 
-    public LocalEventoControl(){}
+    private static LocalEventoControl instancia;
+
+    private LocalEventoControl(){}
+
+    public static synchronized LocalEventoControl getInstancia() {
+        if (instancia == null) instancia = new LocalEventoControl();
+        return instancia;
+    }
 
     private String emailDoToken(String auth) {
         if (auth != null && auth.startsWith("Bearer ")) {

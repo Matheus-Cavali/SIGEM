@@ -12,7 +12,7 @@ import java.nio.charset.StandardCharsets;
 public class CategoriaEventoRouter implements HttpHandler {
 
     private CategoriaEventoControl controller =
-            new CategoriaEventoControl();
+            CategoriaEventoControl.getInstancia();
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {

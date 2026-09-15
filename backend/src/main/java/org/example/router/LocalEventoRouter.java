@@ -15,7 +15,7 @@ public class LocalEventoRouter implements HttpHandler {
 
     public static synchronized LocalEventoControl getControl(){
         if(control == null)
-            control = new LocalEventoControl();
+            control = LocalEventoControl.getInstancia();
 
         return control;
     }

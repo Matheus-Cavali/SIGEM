@@ -14,7 +14,7 @@ public class CaixaRouter implements HttpHandler {
 
     public static synchronized CaixaControl getControl(){
         if(control == null)
-            control = new CaixaControl();
+            control = CaixaControl.getInstancia();
         return control;
     }
 

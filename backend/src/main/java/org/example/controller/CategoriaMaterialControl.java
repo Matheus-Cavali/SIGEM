@@ -24,7 +24,14 @@ public class CategoriaMaterialControl {
         return categoriaMaterial;
     }
 
-    public CategoriaMaterialControl() {}
+    private static CategoriaMaterialControl instancia;
+
+    private CategoriaMaterialControl() {}
+
+    public static synchronized CategoriaMaterialControl getInstancia() {
+        if (instancia == null) instancia = new CategoriaMaterialControl();
+        return instancia;
+    }
 
     private String emailDoToken(String auth) {
         if (auth != null && auth.startsWith("Bearer ")) {

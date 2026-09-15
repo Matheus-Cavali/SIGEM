@@ -16,7 +16,7 @@ public class EventoRouter implements HttpHandler {
     public static synchronized EventoControl getControl() {
 
         if (control == null)
-            control = new EventoControl();
+            control = EventoControl.getInstancia();
 
         return control;
     }

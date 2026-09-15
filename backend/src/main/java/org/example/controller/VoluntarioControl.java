@@ -18,7 +18,14 @@ public class VoluntarioControl {
 
     private final Gson gson = new Gson();
 
-    public VoluntarioControl() {}
+    private static VoluntarioControl instancia;
+
+    private VoluntarioControl() {}
+
+    public static synchronized VoluntarioControl getInstancia() {
+        if (instancia == null) instancia = new VoluntarioControl();
+        return instancia;
+    }
 
     private String emailDoToken(String auth) {
         if (auth != null && auth.startsWith("Bearer ")) {

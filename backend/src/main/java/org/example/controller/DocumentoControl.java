@@ -38,7 +38,14 @@ public class DocumentoControl {
         return documento;
     }
 
-    public DocumentoControl() {}
+    private static DocumentoControl instancia;
+
+    private DocumentoControl() {}
+
+    public static synchronized DocumentoControl getInstancia() {
+        if (instancia == null) instancia = new DocumentoControl();
+        return instancia;
+    }
 
     private String emailDoToken(String auth) {
         if (auth != null && auth.startsWith("Bearer ")) {

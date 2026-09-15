@@ -14,7 +14,7 @@ public class VoluntarioRouter implements HttpHandler {
     private VoluntarioControl control;
 
     public VoluntarioRouter() {
-        control = new VoluntarioControl();
+        control = VoluntarioControl.getInstancia();
     }
 
     public VoluntarioControl getControl() {

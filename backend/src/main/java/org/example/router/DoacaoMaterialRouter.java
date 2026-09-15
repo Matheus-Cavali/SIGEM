@@ -14,7 +14,7 @@ public class DoacaoMaterialRouter implements HttpHandler {
 
     public static synchronized DoacaoMaterialControl getControl() {
         if (control == null)
-            control = new DoacaoMaterialControl();
+            control = DoacaoMaterialControl.getInstancia();
         return control;
     }
 

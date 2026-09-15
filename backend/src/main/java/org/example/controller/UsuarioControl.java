@@ -29,7 +29,14 @@ public class UsuarioControl {
         return usuario;
     }
 
-    public UsuarioControl() {}
+    private static UsuarioControl instancia;
+
+    private UsuarioControl() {}
+
+    public static synchronized UsuarioControl getInstancia() {
+        if (instancia == null) instancia = new UsuarioControl();
+        return instancia;
+    }
 
     private String emailDoToken(String auth) {
         if (auth != null && auth.startsWith("Bearer ")) return Token.validarToken(auth.substring(7));

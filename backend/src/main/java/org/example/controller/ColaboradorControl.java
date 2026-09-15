@@ -22,7 +22,14 @@ public class ColaboradorControl {
                     new JsonPrimitive(src.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))))
             .create();
 
-    public ColaboradorControl() {}
+    private static ColaboradorControl instancia;
+
+    private ColaboradorControl() {}
+
+    public static synchronized ColaboradorControl getInstancia() {
+        if (instancia == null) instancia = new ColaboradorControl();
+        return instancia;
+    }
 
     private String emailDoToken(String auth) {
         if (auth != null && auth.startsWith("Bearer ")) {

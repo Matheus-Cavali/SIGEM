@@ -14,7 +14,7 @@ public class CategoriaMaterialRouter implements HttpHandler {
 
     public static synchronized CategoriaMaterialControl getControl() {
         if (control == null)
-            control = new CategoriaMaterialControl();
+            control = CategoriaMaterialControl.getInstancia();
         return control;
     }
 

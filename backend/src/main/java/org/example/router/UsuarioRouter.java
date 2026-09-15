@@ -14,7 +14,7 @@ public class UsuarioRouter implements HttpHandler {
     private UsuarioControl control;
 
     public UsuarioRouter() {
-        control = new UsuarioControl();
+        control = UsuarioControl.getInstancia();
     }
 
     public UsuarioControl getControl() {

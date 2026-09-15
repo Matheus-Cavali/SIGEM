@@ -13,7 +13,7 @@ public class CategoriaFinanceiraRouter implements HttpHandler {
     private static CategoriaFinanceiraControl control;
 
     public static synchronized CategoriaFinanceiraControl getControl() {
-        if(control == null) control = new CategoriaFinanceiraControl();
+        if(control == null) control = CategoriaFinanceiraControl.getInstancia();
         return control;
     }
 

@@ -21,7 +21,14 @@ public class ParametrizacaoIgrejaControl {
         return parametrizacaoIgreja;
     }
 
-    public ParametrizacaoIgrejaControl() {}
+    private static ParametrizacaoIgrejaControl instancia;
+
+    private ParametrizacaoIgrejaControl() {}
+
+    public static synchronized ParametrizacaoIgrejaControl getInstancia() {
+        if (instancia == null) instancia = new ParametrizacaoIgrejaControl();
+        return instancia;
+    }
 
     private String emailDoToken(String auth) {
         if (auth != null && auth.startsWith("Bearer ")) {

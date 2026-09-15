@@ -20,7 +20,14 @@ import java.util.Map;
 
 public class CategoriaEventoControl {
 
-    public CategoriaEventoControl() {}
+    private static CategoriaEventoControl instancia;
+
+    private CategoriaEventoControl() {}
+
+    public static synchronized CategoriaEventoControl getInstancia() {
+        if (instancia == null) instancia = new CategoriaEventoControl();
+        return instancia;
+    }
 
     private String emailDoToken(String auth) {
 

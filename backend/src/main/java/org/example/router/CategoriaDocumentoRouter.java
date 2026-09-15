@@ -14,7 +14,7 @@ public class CategoriaDocumentoRouter implements HttpHandler {
 
     public static synchronized CategoriaDocumentoControl getControl() {
         if (control == null)
-            control = new CategoriaDocumentoControl();
+            control = CategoriaDocumentoControl.getInstancia();
         return control;
     }
 

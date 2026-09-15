@@ -30,7 +30,14 @@ public class DoacaoMaterialControl {
         return doacaoMaterial;
     }
 
-    public DoacaoMaterialControl() {}
+    private static DoacaoMaterialControl instancia;
+
+    private DoacaoMaterialControl() {}
+
+    public static synchronized DoacaoMaterialControl getInstancia() {
+        if (instancia == null) instancia = new DoacaoMaterialControl();
+        return instancia;
+    }
 
     private String emailDoToken(String auth) {
         if (auth != null && auth.startsWith("Bearer ")) {

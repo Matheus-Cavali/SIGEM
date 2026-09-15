@@ -14,7 +14,7 @@ public class ColaboradorRouter implements HttpHandler {
     private ColaboradorControl control;
 
     public ColaboradorRouter() {
-        control = new ColaboradorControl();
+        control = ColaboradorControl.getInstancia();
     }
 
     public ColaboradorControl getControl() {

@@ -24,7 +24,14 @@ public class CategoriaDocumentoControl {
         return categoriaDocumento;
     }
 
-    public CategoriaDocumentoControl() {}
+    private static CategoriaDocumentoControl instancia;
+
+    private CategoriaDocumentoControl() {}
+
+    public static synchronized CategoriaDocumentoControl getInstancia() {
+        if (instancia == null) instancia = new CategoriaDocumentoControl();
+        return instancia;
+    }
 
     private String emailDoToken(String auth) {
         if (auth != null && auth.startsWith("Bearer ")) {

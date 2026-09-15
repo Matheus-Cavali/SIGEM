@@ -14,7 +14,7 @@ public class InvestimentoRouter implements HttpHandler {
     private InvestimentoControl control;
 
     public InvestimentoRouter() {
-        control = new InvestimentoControl();
+        control = InvestimentoControl.getInstancia();
     }
 
     public InvestimentoControl getControl() {

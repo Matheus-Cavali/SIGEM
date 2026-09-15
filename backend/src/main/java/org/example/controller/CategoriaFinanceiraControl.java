@@ -23,6 +23,15 @@ public class CategoriaFinanceiraControl {
         return categoriaFinanceira;
     }
 
+    private static CategoriaFinanceiraControl instancia;
+
+    private CategoriaFinanceiraControl() {}
+
+    public static synchronized CategoriaFinanceiraControl getInstancia() {
+        if (instancia == null) instancia = new CategoriaFinanceiraControl();
+        return instancia;
+    }
+
     private String emailDoToken(String auth) {
         if(auth != null && auth.startsWith("Bearer "))
             return org.example.util.Token.validarToken(auth.substring(7));
