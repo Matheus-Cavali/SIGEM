@@ -4,6 +4,7 @@ import com.google.gson.*;
 import org.example.conexao.Conexao;
 import org.example.dao.RecursoSistemaDao;
 import org.example.model.*;
+import org.example.strategy.DoacaoStrategy;
 
 import java.math.BigDecimal;
 import java.net.URLDecoder;
@@ -15,12 +16,19 @@ import java.util.List;
 
 import org.example.util.Data;
 
-public class DoacaoFinanceiraControl {
+public class DoacaoFinanceiraControl implements DoacaoStrategy {
     private static DoacaoFinanceira doacaoFinanceira;
     private final Gson gson = new GsonBuilder()
             .registerTypeAdapter(LocalDate.class, (JsonSerializer<LocalDate>) (src, typeOfSrc, context) ->
                     new JsonPrimitive(src.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))))
             .create();
+
+    private DoacaoStrategy proxima;
+
+    @Override
+    public void setProxima(DoacaoStrategy proxima) {
+        this.proxima = proxima;
+    }
 
     public static synchronized DoacaoFinanceira getDoacaoFinanceira(){
         if(doacaoFinanceira == null)
@@ -60,12 +68,14 @@ public class DoacaoFinanceiraControl {
         return false;
     }
 
+    @Override
     public Resposta cadastrar(String auth, String json){
         if(!usuarioTemPermissao(auth, "GESTAO_DOACOES"))
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
-        try{
-            JsonObject jsonObj = gson.fromJson(json, JsonObject.class);
 
+        JsonObject jsonObj = gson.fromJson(json, JsonObject.class);
+
+        try{
             String email = emailDoToken(auth);
             Connection conn = Conexao.getConexao();
             Usuario u = Usuario.buscarPorEmail(conn, email);
@@ -86,6 +96,7 @@ public class DoacaoFinanceiraControl {
                 return new Resposta(400, msg);
             return new Resposta(400, "{\"erro\":\"Falha ao cadastrar doação financeira\"}");
         }
+
     }
 
     public Resposta atualizar(String auth, int id, String json){

@@ -2,6 +2,7 @@ package org.example.router;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import org.example.controller.DoacaoControl;
 import org.example.controller.DoacaoMaterialControl;
 import org.example.model.Resposta;
 
@@ -37,7 +38,7 @@ public class DoacaoMaterialRouter implements HttpHandler {
 
             if("POST".equalsIgnoreCase(metodo) && "/api/doacoes-materiais".equals(path)){
                 String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-                r = getControl().cadastrar(auth, json);
+                r = DoacaoControl.getInstancia().lancar(auth, json);
             }
             else if("GET".equalsIgnoreCase(metodo) && "/api/doacoes-materiais".equals(path)){
                 r = getControl().listar(exchange.getRequestURI().getQuery());

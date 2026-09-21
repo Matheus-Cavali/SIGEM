@@ -7,6 +7,7 @@ import org.example.model.DoacaoMaterial;
 import org.example.model.RecursoSistema;
 import org.example.model.Resposta;
 import org.example.model.Usuario;
+import org.example.strategy.DoacaoStrategy;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -17,12 +18,19 @@ import java.util.List;
 
 import org.example.util.Data;
 
-public class DoacaoMaterialControl {
+public class DoacaoMaterialControl implements DoacaoStrategy {
     private static DoacaoMaterial doacaoMaterial;
     private final Gson gson = new GsonBuilder()
             .registerTypeAdapter(LocalDate.class, (JsonSerializer<LocalDate>) (src, typeOfSrc, context) ->
                     new JsonPrimitive(src.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))))
             .create();
+
+    private DoacaoStrategy proxima;
+
+    @Override
+    public void setProxima(DoacaoStrategy proxima) {
+        this.proxima = proxima;
+    }
 
     public static synchronized DoacaoMaterial getDoacaoMaterial(){
         if(doacaoMaterial == null)
@@ -68,34 +76,44 @@ public class DoacaoMaterialControl {
         return false;
     }
 
+    @Override
     public Resposta cadastrar(String auth, String json){
         if (!usuarioTemPermissao(auth, "GESTAO_DOACOES")) {
             return new Resposta(403, "{\"erro\":\"Acesso negado.\"}");
         }
-        try{
-            JsonObject jsonObj = gson.fromJson(json, JsonObject.class);
 
-            String email = emailDoToken(auth);
-            Connection conn = Conexao.getConexao();
-            Usuario u = Usuario.buscarPorEmail(conn, email);
-            if(u == null)
-                return new Resposta(400, "{\"erro\":\"Usuário não encontrado\"}");
+        JsonObject jsonObj = gson.fromJson(json, JsonObject.class);
 
-            DoacaoMaterial dm = new DoacaoMaterial();
-            dm.setMaterialId(jsonObj.get("materialId").getAsInt());
-            dm.setQuantidade(jsonObj.get("quantidade").getAsInt());
-            dm.setData(LocalDate.now());
-            dm.setColaboradorId(u.getId());
+        if (jsonObj.has("materialId")) {
+            try{
+                String email = emailDoToken(auth);
+                Connection conn = Conexao.getConexao();
+                Usuario u = Usuario.buscarPorEmail(conn, email);
+                if(u == null)
+                    return new Resposta(400, "{\"erro\":\"Usuário não encontrado\"}");
 
-            getDoacaoMaterial().cadastrar(conn, dm);
-            return new Resposta(201, "{\"mensagem\":\"Doação de material cadastrada com sucesso\"}");
-        }
-        catch (Exception e){
-            String msg = e.getMessage();
-            if(msg != null && msg.contains("\"erros\"")){
-                return new Resposta(400, msg);
+                DoacaoMaterial dm = new DoacaoMaterial();
+                dm.setMaterialId(jsonObj.get("materialId").getAsInt());
+                dm.setQuantidade(jsonObj.get("quantidade").getAsInt());
+                dm.setData(LocalDate.now());
+                dm.setColaboradorId(u.getId());
+
+                getDoacaoMaterial().cadastrar(conn, dm);
+                return new Resposta(201, "{\"mensagem\":\"Doação de material cadastrada com sucesso\"}");
             }
-            return new Resposta(400, "{\"erro\":\"Falha ao cadastrar doação de material\"}");
+            catch (Exception e){
+                String msg = e.getMessage();
+                if(msg != null && msg.contains("\"erros\"")){
+                    return new Resposta(400, msg);
+                }
+                return new Resposta(400, "{\"erro\":\"Falha ao cadastrar doação de material\"}");
+            }
+        }
+        // Se não for material, repassa para a próxima da corrente (Ex: Financeira)
+        else if (this.proxima != null) {
+            return this.proxima.cadastrar(auth, json);
+        } else {
+            return new Resposta(400, "{\"erro\":\"Tipo de doação não suportado ou dados incompletos.\"}");
         }
     }
 

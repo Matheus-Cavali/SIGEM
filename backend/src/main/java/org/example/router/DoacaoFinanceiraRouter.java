@@ -2,6 +2,7 @@ package org.example.router;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import org.example.controller.DoacaoControl;
 import org.example.controller.DoacaoFinanceiraControl;
 import org.example.model.Resposta;
 
@@ -34,7 +35,7 @@ public class DoacaoFinanceiraRouter implements HttpHandler {
 
             if("POST".equalsIgnoreCase(metodo) && "/api/doacoes-financeiras".equals(path)){
                 String json = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-                r = getControl().cadastrar(auth, json);
+                r = DoacaoControl.getInstancia().lancar(auth, json);
             }
             else if("GET".equalsIgnoreCase(metodo) && "/api/doacoes-financeiras".equals(path)){
                 r = getControl().listar(exchange.getRequestURI().getQuery());

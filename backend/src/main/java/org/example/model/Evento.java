@@ -2,11 +2,13 @@ package org.example.model;
 
 import com.google.gson.Gson;
 import org.example.dao.EventoDao;
+import org.example.observer.ObservadorEvento;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,8 +28,27 @@ public class Evento {
     private Integer categoriaEventoId;
     private Integer colaboradorCadastrouId;
     private Integer coordenadorId;
-
     private static EventoDao dao;
+    private final List<ObservadorEvento> observadores = new ArrayList<>();
+
+    public void adicionarObservador(ObservadorEvento o) {
+        observadores.add(o);
+    }
+
+    public void removerObservador(ObservadorEvento o) {
+        observadores.remove(o);
+    }
+
+     private List<String> notificarObservadores(Evento evento, BigDecimal resultadoFinanceiro, String observacoesHistorico) {
+        List<String> avisos = new ArrayList<>();
+        for (ObservadorEvento o : observadores) {
+            String aviso = o.update(evento, resultadoFinanceiro, observacoesHistorico);
+            if (aviso != null && !aviso.isBlank()) {
+                avisos.add(aviso);
+            }
+        }
+        return avisos;
+    }
 
     public static synchronized EventoDao getDao() {
         if (dao == null)
@@ -80,9 +101,9 @@ public class Evento {
         if (evento.getDataFim() == null)
             erros.put("dataFim", "Data de fim é obrigatória");
 
-    if (evento.getDataInicio() != null &&
-            evento.getDataFim() != null &&
-            evento.getDataFim().before(evento.getDataInicio())) {
+        if (evento.getDataInicio() != null &&
+                evento.getDataFim() != null &&
+                evento.getDataFim().before(evento.getDataInicio())) {
 
             erros.put("dataFim", "Data de fim não pode ser menor que a data de início");
         }
@@ -168,10 +189,11 @@ public class Evento {
         getDao().alterarStatus(conn, id, "CANCELADO");
     }
 
-    public void encerrar(Connection conn,
-                         Integer id,
-                         BigDecimal resultadoFinanceiro,
-                         String observacoesHistorico) {
+
+    public List<String> encerrar(Connection conn,
+                                 Integer id,
+                                 BigDecimal resultadoFinanceiro,
+                                 String observacoesHistorico) {
 
         if (id == null || id <= 0)
             throw new IllegalArgumentException("ID inválido.");
@@ -186,12 +208,15 @@ public class Evento {
 
         if (resultadoFinanceiro == null)
             throw new IllegalArgumentException("Resultado financeiro é obrigatório.");
-
         getDao().encerrarEvento(conn,
                 id,
                 new Timestamp(System.currentTimeMillis()),
                 observacoesHistorico,
                 resultadoFinanceiro);
+        evento.setStatus("ENCERRADO");
+        evento.setResultadoFinanceiro(resultadoFinanceiro);
+        evento.setObservacoesHistorico(observacoesHistorico);
+        return this.notificarObservadores(evento, resultadoFinanceiro, observacoesHistorico);
     }
 
     public void excluir(Connection conn, Integer id) {

@@ -8,6 +8,8 @@ import org.example.model.Evento;
 import org.example.model.RecursoSistema;
 import org.example.model.Resposta;
 import org.example.model.Usuario;
+import org.example.observer.EventoLogger;
+import org.example.observer.ResultadoFinanceiroNotificador;
 
 import java.math.BigDecimal;
 import java.net.URLDecoder;
@@ -35,7 +37,10 @@ public class EventoControl {
 
     private static EventoControl instancia;
 
-    private EventoControl() {}
+    private EventoControl() {
+        getEvento().adicionarObservador(new EventoLogger());
+        getEvento().adicionarObservador(new ResultadoFinanceiroNotificador());
+    }
 
     public static synchronized EventoControl getInstancia() {
         if (instancia == null) instancia = new EventoControl();
@@ -328,15 +333,18 @@ public class EventoControl {
             String observacoesHistorico =
                     (String) dados.get("observacoesHistorico");
 
-            getEvento().encerrar(
+            List<String> avisos = getEvento().encerrar(
                     Conexao.getConexao(),
                     id,
                     resultadoFinanceiro,
                     observacoesHistorico
             );
 
-            return new Resposta(200,
-                    "{\"mensagem\":\"Evento encerrado com sucesso\"}");
+            com.google.gson.JsonObject resp = new com.google.gson.JsonObject();
+            resp.addProperty("mensagem", "Evento encerrado com sucesso");
+            resp.add("avisos", gson.toJsonTree(avisos));
+
+            return new Resposta(200, resp.toString());
         }
         catch (Exception e) {
 

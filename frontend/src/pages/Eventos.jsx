@@ -370,9 +370,12 @@ export default function Eventos() {
         toast.success('Evento cancelado com sucesso.')
         load(filtroNome, filtroStatus)
       } else if (type === 'encerrar') {
-        await patch('/api/eventos/' + item.id + '/encerrar', payload)
+        const resposta = await patch('/api/eventos/' + item.id + '/encerrar', payload)
         setEncerrarOpen(false)
         toast.success('Evento encerrado com sucesso.')
+        if (resposta?.avisos && resposta.avisos.length > 0) {
+          resposta.avisos.forEach(aviso => toast.warning(aviso))
+        }
         load(filtroNome, filtroStatus)
       }
     } catch (error) {
