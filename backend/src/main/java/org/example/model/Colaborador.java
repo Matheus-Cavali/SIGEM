@@ -6,7 +6,7 @@ import java.sql.Connection;
 import java.time.LocalDate;
 import java.util.List;
 
-public class Colaborador extends Usuario {
+public class Colaborador extends UsuarioCadastravel {
     private LocalDate dataAdmissao;
     private LocalDate dataDemissao;
 
@@ -21,8 +21,9 @@ public class Colaborador extends Usuario {
         super();
     }
 
-    public static void cadastrar(Connection conn, int usuarioId, String data) {
-        getColaboradorDao().inserir(conn, usuarioId, data);
+    @Override
+    protected void cadastrarPapel(Connection conn) {
+        getColaboradorDao().inserir(conn, this.getId(), this.getData());
     }
 
     public static Colaborador buscarPorId(Connection conn, int usuarioId) {

@@ -6,7 +6,7 @@ import java.sql.Connection;
 import java.time.LocalDate;
 import java.util.List;
 
-public class Voluntario extends Usuario {
+public class Voluntario extends UsuarioCadastravel {
     private LocalDate dataInicio;
     private LocalDate dataDesligamento;
 
@@ -21,8 +21,9 @@ public class Voluntario extends Usuario {
         super();
     }
 
-    public static void cadastrar(Connection conn, int usuarioId, String data) {
-        getVoluntarioDao().inserir(conn, usuarioId, data);
+    @Override
+    protected void cadastrarPapel(Connection conn) {
+        getVoluntarioDao().inserir(conn, this.getId(), this.getData());
     }
 
     public static Voluntario buscarPorId(Connection conn, int usuarioId) {

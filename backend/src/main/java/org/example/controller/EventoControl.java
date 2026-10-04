@@ -146,8 +146,10 @@ public class EventoControl {
 
             getEvento().cadastrar(Conexao.getConexao(), evento);
 
+            String aviso = "Novo evento criado: " + evento.getNome();
+
             return new Resposta(201,
-                    "{\"mensagem\":\"Evento cadastrado com sucesso\"}");
+                    "{\"mensagem\":\"Evento cadastrado com sucesso\",\"aviso\":\"" + aviso + "\"}");
         }
         catch (Exception e) {
 

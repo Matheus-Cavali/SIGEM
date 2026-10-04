@@ -185,16 +185,23 @@ public class UsuarioControl {
 
         Connection conn = null;
         try {
-            Usuario dados = gson.fromJson(jsonRecebido, Usuario.class);
-            if (dados == null || dados.getEmail() == null || dados.getSenha() == null || dados.getTipoUsuario() == null) {
-                return new Resposta(400, "{\"erro\":\"Dados inválidos. Email, senha e tipo são obrigatórios.\"}");
+            JsonObject bodyPreview = gson.fromJson(jsonRecebido, JsonObject.class);
+            String tipoPreview = (bodyPreview != null && bodyPreview.has("tipoUsuario") && !bodyPreview.get("tipoUsuario").isJsonNull())
+                    ? bodyPreview.get("tipoUsuario").getAsString().trim()
+                    : null;
+
+            UsuarioCadastravel dados;
+            if ("colaborador".equalsIgnoreCase(tipoPreview)) {
+                dados = gson.fromJson(jsonRecebido, Colaborador.class);
+            } else if ("voluntario".equalsIgnoreCase(tipoPreview)) {
+                dados = gson.fromJson(jsonRecebido, Voluntario.class);
+            } else {
+                return new Resposta(400, "{\"erro\":\"Tipo de usuário inválido. Use 'colaborador' ou 'voluntario'.\"}");
             }
 
-            String cpfLimpo = dados.getCpf() != null ? dados.getCpf().replaceAll("[^0-9]", "") : "";
-            dados.setCpf(cpfLimpo);
-
-            Map<String, String> erros = dados.validar();
-            if (!erros.isEmpty()) return new Resposta(400, gson.toJson(Collections.singletonMap("erros", erros)));
+            if (dados.getEmail() == null || dados.getSenha() == null) {
+                return new Resposta(400, "{\"erro\":\"Dados inválidos. Email, senha e tipo são obrigatórios.\"}");
+            }
 
             conn = Conexao.getConexao();
             conn.setAutoCommit(false);
@@ -202,7 +209,6 @@ public class UsuarioControl {
             Usuario quemCadastra = Usuario.buscarPorEmail(conn, email);
             boolean isAdmin = quemCadastra != null && quemCadastra.getNivelAcesso() == 1;
 
-            String tipo = dados.getTipoUsuario().trim();
             boolean podeCadastrar = isAdmin
                     || usuarioTemPermissaoDb(auth, "GESTAO_USUARIOS");
 
@@ -210,18 +216,7 @@ public class UsuarioControl {
                 conn.rollback();
                 return new Resposta(403, "{\"erro\":\"Acesso negado. Sem permissão.\"}");
             }
-
-            String senhaBanco = Criptografia.hashSenha(dados.getSenha());
-            dados.setSenha(senhaBanco);
-            dados.setNivelAcesso(dados.getNivelAcesso() > 0 ? dados.getNivelAcesso() : 2);
-
-            getUsuario().cadastrar(conn, dados);
-
-            if ("colaborador".equalsIgnoreCase(tipo)) {
-                Colaborador.cadastrar(conn, dados.getId(), dados.getData());
-            } else if ("voluntario".equalsIgnoreCase(tipo)) {
-                Voluntario.cadastrar(conn, dados.getId(), dados.getData());
-            }
+            dados.cadastrarCompleto(conn);
 
             conn.commit();
             return new Resposta(201, "{\"mensagem\":\"Cadastro realizado!\"}");

@@ -289,9 +289,12 @@ export default function Eventos() {
         }
         else {
 
-          await post('/api/eventos', payload)
+          const resposta = await post('/api/eventos', payload)
 
           toast.success('Evento criado com sucesso.')
+          if (resposta?.aviso) {
+            toast.warning(resposta.aviso)
+          }
         }
 
         setEditing(null)
