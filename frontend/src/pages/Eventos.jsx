@@ -56,6 +56,12 @@ export default function Eventos() {
   const [locais, setLocais] = useState([])
   const [coordenadores, setCoordenadores] = useState([])
 
+  // Voluntários (somente frontend, não envia nada ao backend)
+  const [voluntarios, setVoluntarios] = useState([])
+  const [voluntariosPorEvento, setVoluntariosPorEvento] = useState({}) // { [eventoId]: [voluntario, ...] }
+  const [voluntariosEventoId, setVoluntariosEventoId] = useState(null) // evento com o modal aberto
+  const [voluntarioSelecionado, setVoluntarioSelecionado] = useState('')
+
   const getCategoriaNome = (id) =>
   categorias.find(c => c.id === id)?.nome || '-'
 
@@ -142,6 +148,19 @@ export default function Eventos() {
       }
       catch {
         setCoordenadores([])
+      }
+
+      // Se a rota não existir, usa uma lista fake para a demo funcionar
+      try {
+        const voluntariosData = await get('/api/voluntarios')
+        setVoluntarios(Array.isArray(voluntariosData) ? voluntariosData : [])
+      }
+      catch {
+        setVoluntarios([
+          { id: 1, nome: 'Maria Silva' },
+          { id: 2, nome: 'João Souza' },
+          { id: 3, nome: 'Ana Costa' }
+        ])
       }
     }
     catch (error) {
@@ -398,6 +417,39 @@ export default function Eventos() {
       return [...prev, id]
     })
   }
+
+  const openVoluntarios = (item) => {
+    setVoluntariosEventoId(item.id)
+    setVoluntarioSelecionado('')
+  }
+
+  const addVoluntario = () => {
+    if (!voluntarioSelecionado) return
+    const vol = voluntarios.find(v => v.id === Number(voluntarioSelecionado))
+    if (!vol) return
+
+    const atual = voluntariosPorEvento[voluntariosEventoId] || []
+
+    if (atual.some(v => v.id === vol.id)) {
+      toast.warning('Voluntário já está na lista.')
+      return
+    }
+
+    setVoluntariosPorEvento(prev => ({
+      ...prev,
+      [voluntariosEventoId]: [...atual, vol]
+    }))
+    setVoluntarioSelecionado('')
+  }
+
+  const removeVoluntario = (volId) => {
+    setVoluntariosPorEvento(prev => ({
+      ...prev,
+      [voluntariosEventoId]: (prev[voluntariosEventoId] || []).filter(v => v.id !== volId)
+    }))
+  }
+
+  const voluntariosDoEvento = voluntariosPorEvento[voluntariosEventoId] || []
 
   const getStatusClass = (status) => {
 
@@ -712,6 +764,70 @@ export default function Eventos() {
         )}
       </Modal>
 
+      <Modal
+        open={voluntariosEventoId !== null}
+        title="Voluntários do evento"
+        variant="info"
+        onClose={() => setVoluntariosEventoId(null)}
+        footer={
+          <button
+            className="ghost-action"
+            onClick={() => setVoluntariosEventoId(null)}
+          >
+            Fechar
+          </button>
+        }
+      >
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+          <select
+            value={voluntarioSelecionado}
+            onChange={e => setVoluntarioSelecionado(e.target.value)}
+          >
+            <option value="">Selecione um voluntário</option>
+            {voluntarios.map(v => (
+              <option key={v.id} value={v.id}>{v.nome}</option>
+            ))}
+          </select>
+
+          <button
+            className="primary-action"
+            type="button"
+            onClick={addVoluntario}
+          >
+            Adicionar
+          </button>
+        </div>
+
+        {voluntariosDoEvento.length === 0 ? (
+          <p>Nenhum voluntário adicionado.</p>
+        ) : (
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {voluntariosDoEvento.map(v => (
+              <li
+                key={v.id}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '6px 0'
+                }}
+              >
+                <span>{v.nome}</span>
+
+                <button
+                  className="icon-button icon-button--danger"
+                  type="button"
+                  onClick={() => removeVoluntario(v.id)}
+                  title="Remover"
+                >
+                  <Icon name="trash" size={16} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Modal>
+
       <div className="cards-list">
 
         {items.map(item => {
@@ -809,6 +925,28 @@ export default function Eventos() {
                     name={isExpanded ? 'minus' : 'plus'}
                     size={16}
                   />
+                </button>
+
+                <button
+                  className="icon-button"
+                  onClick={() => openVoluntarios(item)}
+                  title="Voluntários"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
                 </button>
 
                 {canManage &&
